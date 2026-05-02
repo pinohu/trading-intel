@@ -38,7 +38,7 @@ import {
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { engineCapabilities, engineWorkflow, type EngineCapability } from "@/lib/engineCatalog";
-import { explainPlain, generateBuyLeads, generateSignals, scoreQuote, type BuyLead, type TradeSignal } from "@/lib/signalEngine";
+import { generateBuyLeads, generateSignals, scoreQuote, type BuyLead, type TradeSignal } from "@/lib/signalEngine";
 import { dayTradingBestPractices, dayTradingRules } from "@/lib/dayTradingPlaybook";
 import { calculatePositionSize } from "@/lib/positionSizing";
 import { marketEvents } from "@/lib/events";
@@ -518,24 +518,9 @@ function formatVolume(value: number) {
   return value.toLocaleString();
 }
 
-function textField(record: Record<string, unknown> | null | undefined, key: string, fallback = "N/A") {
-  const value = record?.[key];
-  if (typeof value === "string" && value.trim()) return value;
-  if (typeof value === "number" && Number.isFinite(value)) return String(value);
-  if (typeof value === "boolean") return value ? "Yes" : "No";
-  return fallback;
-}
-
 function moneyField(record: Record<string, unknown> | null | undefined, key: string) {
   const value = Number(record?.[key]);
   return Number.isFinite(value) ? formatUsd(value) : "N/A";
-}
-
-function dateField(record: Record<string, unknown> | null | undefined, key: string) {
-  const value = record?.[key];
-  if (typeof value !== "string") return "N/A";
-  const date = new Date(value);
-  return Number.isFinite(date.getTime()) ? date.toLocaleString("en-US", { timeZone: "America/New_York" }) : value;
 }
 
 function boolField(record: Record<string, unknown> | null | undefined, key: string) {
@@ -1201,7 +1186,7 @@ export default function Home() {
       <LiveTickerTape quotes={quotes} signals={signals} buyLeads={buyLeads} buyNow={buyNowSignals} secondsAgo={secondsAgo} />
       <section className="border-b border-[var(--border)] bg-[var(--surface)]">
         <div className="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <div className="flex items-center gap-2 text-sm text-[var(--info)]">
                 <span className="relative flex h-3 w-3">
@@ -1211,44 +1196,44 @@ export default function Home() {
                 Trading command center
               </div>
               <h1 className="mt-2 text-3xl font-semibold tracking-normal text-white sm:text-4xl">
-                Signals, Proof, Risk
+                Live Trading Cockpit
               </h1>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--text-secondary)]">
-                {secondsAgo === null ? "Waiting for first quote refresh" : `Updated ${secondsAgo}s ago`} | {feedQuality}. The system turns leads into tickets, then blocks weak or unproven trades.
+                {secondsAgo === null ? "Waiting for quote refresh" : `Quotes ${secondsAgo}s old`} | {feedQuality} | limit orders only.
               </p>
             </div>
-            <button
-              onClick={refresh}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-md border border-[var(--border-strong)] bg-white px-4 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-cyan-100"
-            >
-              <RefreshCcw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-              Refresh
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={refresh}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-md border border-[var(--border-strong)] bg-white px-4 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-cyan-100"
+              >
+                <RefreshCcw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+                Refresh
+              </button>
+              <button
+                onClick={exportWorkspace}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-white/10 bg-white/[0.03] px-3 text-sm font-semibold text-slate-100 transition hover:border-cyan-300/60"
+              >
+                <Download className="h-4 w-4" />
+                Export
+              </button>
+              <button
+                onClick={() => importInputRef.current?.click()}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-white/10 bg-white/[0.03] px-3 text-sm font-semibold text-slate-100 transition hover:border-cyan-300/60"
+              >
+                <Upload className="h-4 w-4" />
+                Import
+              </button>
+              <input
+                ref={importInputRef}
+                type="file"
+                accept="application/json"
+                className="hidden"
+                onChange={(event) => void importWorkspace(event.target.files?.[0])}
+              />
+            </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={exportWorkspace}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-white/10 bg-white/[0.03] px-3 text-sm font-semibold text-slate-100 transition hover:border-cyan-300/60"
-            >
-              <Download className="h-4 w-4" />
-              Export Backup
-            </button>
-            <button
-              onClick={() => importInputRef.current?.click()}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-white/10 bg-white/[0.03] px-3 text-sm font-semibold text-slate-100 transition hover:border-cyan-300/60"
-            >
-              <Upload className="h-4 w-4" />
-              Import Backup
-            </button>
-            <input
-              ref={importInputRef}
-              type="file"
-              accept="application/json"
-              className="hidden"
-              onChange={(event) => void importWorkspace(event.target.files?.[0])}
-            />
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
             <Metric icon={Activity} label="Feed" value={status} />
             <Metric icon={TrendingUp} label="Market Scan" value={`${green}/${quotes.length || watchlist.length} green, ${movers} movers`} />
             <Metric icon={Gauge} label="Proof Coverage" value={`${proofCoveragePct}% live/partial`} />
@@ -1262,23 +1247,44 @@ export default function Home() {
         </div>
       </section>
 
+      <section className="border-b border-[var(--border)] bg-[#090d12]">
+        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(20rem,0.85fr)]">
+            <FastActionQueue
+              buyNow={buyNowSignals}
+              buyLead={topBuyLead}
+              sellSignal={topSell}
+              blocked={blockedBuyNowSignals}
+              activeLeadCount={activeBuyLeads.length}
+              sellCount={sellLeaders.length}
+              secondsAgo={secondsAgo}
+            />
+            <FastExecutionPanel
+              ticket={tradeTicket}
+              status={brokerStatus}
+              mode={brokerMode}
+              message={brokerMessage}
+              acknowledgement={executionAck}
+              placing={placingOrder}
+              onModeChange={changeBrokerMode}
+              onAcknowledgementChange={setExecutionAck}
+              onSavePaperTicket={() => void savePaperTrade(tradeTicket)}
+              onPlaceOrder={() => void placeBrokerOrder(tradeTicket)}
+            />
+            <FastRiskPanel
+              overview={brokerOverview}
+              risk={riskStatus}
+              status={brokerStatus}
+              feedQuality={feedQuality}
+              secondsAgo={secondsAgo}
+              staleCount={staleStocks.length}
+            />
+          </div>
+        </div>
+      </section>
+
       <section className="mx-auto grid max-w-7xl gap-4 px-4 py-5 sm:px-6 lg:grid-cols-[1.5fr_0.9fr] lg:px-8">
         <div className="space-y-4">
-          <Panel>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <SectionTitle icon={Zap} title="Buy Now Signals" />
-                <p className="mt-1 text-sm leading-6 text-slate-400">
-                  This first screen only shows buy-now candidates when live data, trigger, confidence, reward/risk, and position sizing all pass.
-                </p>
-              </div>
-              <div className="rounded-md border border-white/10 bg-black/20 px-3 py-2 text-xs text-slate-400">
-                {secondsAgo === null ? "Waiting for refresh" : `Last checked ${secondsAgo}s ago`}
-              </div>
-            </div>
-            <BuyNowBoard buyNow={buyNowSignals} blocked={blockedBuyNowSignals} />
-          </Panel>
-
           <Panel>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div>
@@ -1357,73 +1363,6 @@ export default function Home() {
               </div>
             </div>
             <IsingBasketPanel basket={isingBasket} />
-          </Panel>
-
-          <Panel>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <SectionTitle icon={Target} title="Right Now" />
-                <p className="mt-1 text-sm leading-6 text-slate-400">
-                  Plain-English top choices from the current rule stack. This is a research signal, not a guaranteed instruction.
-                </p>
-              </div>
-              <div className="rounded-md border border-white/10 bg-black/20 px-3 py-2 text-xs text-slate-400">
-                Data source: {feedQuality}
-              </div>
-            </div>
-            {staleStocks.length > 0 && (
-              <div className="mt-4 rounded-md border border-amber-300/25 bg-amber-300/10 p-3 text-sm leading-6 text-amber-100">
-                Stock data is not fresh enough for real-time buy/sell calls. The app will hold instead of pretending.
-                Stale symbols: {staleStocks.map((signal) => `${signal.symbol} (${signal.dataAgeMinutes ?? "?"}m old)`).join(", ")}.
-              </div>
-            )}
-            <div className="mt-4 grid gap-3 lg:grid-cols-2">
-              <BuyLeadDecisionCard
-                title="What to consider buying"
-                lead={topBuyLead}
-                fallback="No clean buy lead yet. Wait for a fresher or stronger trigger."
-              />
-              <PlainDecisionCard
-                title="What to consider selling or avoiding"
-                signal={topSell}
-                fallback="Nothing is strongly flagged for selling or avoiding right now."
-                tone="red"
-              />
-            </div>
-          </Panel>
-
-          <Panel>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-              <div>
-                <SectionTitle icon={Calculator} title="Trade Ticket" />
-                <p className="mt-1 text-sm leading-6 text-slate-400">
-                  The selected buy lead is converted into an exact plan with entry, stop, target, size, max loss, and no-trade rules.
-                </p>
-              </div>
-              <button
-                onClick={() => void savePaperTrade(tradeTicket)}
-                disabled={!tradeTicket}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-[var(--border-strong)] bg-[var(--buy)] px-3 text-sm font-semibold text-slate-950 transition hover:brightness-110 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
-              >
-                <ClipboardList className="h-4 w-4" />
-                Save Paper Ticket
-              </button>
-            </div>
-            <div className="mt-4">
-              <TradeTicketCard ticket={tradeTicket} />
-            </div>
-            <BrokerExecutionPanel
-              status={brokerStatus}
-              overview={brokerOverview}
-              mode={brokerMode}
-              ticket={tradeTicket}
-              message={brokerMessage}
-              acknowledgement={executionAck}
-              placing={placingOrder}
-              onModeChange={changeBrokerMode}
-              onAcknowledgementChange={setExecutionAck}
-              onPlaceOrder={() => void placeBrokerOrder(tradeTicket)}
-            />
           </Panel>
 
           <Panel>
@@ -2125,45 +2064,210 @@ function ProductionOpsStrip({
   );
 }
 
-function BrokerExecutionPanel({
-  status,
-  overview,
-  mode,
+function FastActionQueue({
+  buyNow,
+  buyLead,
+  sellSignal,
+  blocked,
+  activeLeadCount,
+  sellCount,
+  secondsAgo,
+}: {
+  buyNow: BuyNowSignal[];
+  buyLead: BuyLead | undefined;
+  sellSignal: TradeSignal | undefined;
+  blocked: BlockedBuyNowSignal[];
+  activeLeadCount: number;
+  sellCount: number;
+  secondsAgo: number | null;
+}) {
+  const primaryBuyNow = buyNow[0];
+  const primaryBlocked = blocked.slice(0, 3);
+
+  return (
+    <div className="h-full rounded-md border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm shadow-black/20">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <SectionTitle icon={Zap} title="Action Queue" />
+        </div>
+        <div className="grid grid-cols-3 gap-2 text-xs">
+          <MiniStat label="Buy now" value={`${buyNow.length}`} tone={buyNow.length ? "green" : "amber"} />
+          <MiniStat label="Buy leads" value={`${activeLeadCount}`} tone={activeLeadCount ? "blue" : "plain"} />
+          <MiniStat label="Sell watch" value={`${sellCount}`} tone={sellCount ? "red" : "plain"} />
+        </div>
+      </div>
+
+      <div className="mt-4 space-y-3">
+        {primaryBuyNow ? (
+          <button
+            onClick={() => selectSignalSymbol(primaryBuyNow.symbol)}
+            className="w-full rounded-md border border-emerald-300/40 bg-emerald-300/10 p-3 text-left transition hover:border-emerald-200"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-sm bg-emerald-300 px-2 py-1 text-xs font-black uppercase text-slate-950">Buy now</span>
+                <span className="font-mono text-2xl font-semibold text-white">{primaryBuyNow.symbol}</span>
+                <span className="text-sm text-slate-300">{primaryBuyNow.name}</span>
+              </div>
+              <span className="font-mono text-sm text-emerald-200">Trust {primaryBuyNow.confidence}</span>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+              <MiniStat label="Now" value={formatUsd(primaryBuyNow.price)} tone="plain" />
+              <MiniStat label="Entry" value={formatUsd(primaryBuyNow.entry)} tone="green" />
+              <MiniStat label="Stop" value={formatUsd(primaryBuyNow.stop)} tone="amber" />
+              <MiniStat label="Target" value={formatUsd(primaryBuyNow.target)} tone="blue" />
+            </div>
+          </button>
+        ) : (
+          <button
+            onClick={() => buyLead && selectSignalSymbol(buyLead.symbol)}
+            disabled={!buyLead}
+            className="w-full rounded-md border border-cyan-300/25 bg-cyan-300/10 p-3 text-left transition hover:border-cyan-200 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/[0.03]"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-sm bg-cyan-300 px-2 py-1 text-xs font-black uppercase text-slate-950">Best buy lead</span>
+                <span className="font-mono text-2xl font-semibold text-white">{buyLead?.symbol ?? "None"}</span>
+              </div>
+              <span className="text-xs text-slate-400">{secondsAgo === null ? "waiting" : `${secondsAgo}s old`}</span>
+            </div>
+            {buyLead ? (
+              <>
+                <p className="mt-2 line-clamp-2 text-sm leading-6 text-cyan-100">{buyLead.reason}</p>
+                <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+                  <MiniStat label="Now" value={formatUsd(buyLead.price)} tone="plain" />
+                  <MiniStat label="Trigger" value={formatUsd(buyLead.trigger)} tone="green" />
+                  <MiniStat label="Stop" value={formatUsd(buyLead.stop)} tone="amber" />
+                  <MiniStat label="Score" value={`${buyLead.confidence}`} tone={buyLead.confidence >= 60 ? "green" : "blue"} />
+                </div>
+              </>
+            ) : (
+              <p className="mt-2 text-sm leading-6 text-slate-400">Waiting for a fresh enough lead.</p>
+            )}
+          </button>
+        )}
+
+        <button
+          onClick={() => sellSignal && selectSignalSymbol(sellSignal.symbol)}
+          disabled={!sellSignal}
+          className="w-full rounded-md border border-rose-300/25 bg-rose-300/10 p-3 text-left transition hover:border-rose-200 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/[0.03]"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-sm bg-rose-300 px-2 py-1 text-xs font-black uppercase text-slate-950">Sell / avoid</span>
+              <span className="font-mono text-xl font-semibold text-white">{sellSignal?.symbol ?? "None"}</span>
+            </div>
+            <span className="font-mono text-sm text-rose-100">{sellSignal ? formatUsd(sellSignal.price) : "No flag"}</span>
+          </div>
+          <p className="mt-2 line-clamp-2 text-sm leading-6 text-rose-100">
+            {sellSignal?.reason ?? "No sell/exit-watch setup is currently strong enough."}
+          </p>
+        </button>
+
+        <div className="overflow-hidden rounded-md border border-white/10">
+          <div className="border-b border-white/10 bg-black/20 px-3 py-2 text-xs font-semibold uppercase text-slate-400">
+            Closest blocked names
+          </div>
+          <div className="divide-y divide-white/10">
+            {primaryBlocked.length ? (
+              primaryBlocked.map((item) => (
+                <button
+                  key={item.symbol}
+                  onClick={() => selectSignalSymbol(item.symbol)}
+                  className="grid w-full grid-cols-[2rem_1fr_auto] gap-3 px-3 py-2 text-left text-sm transition hover:bg-white/[0.04]"
+                >
+                  <span className="flex h-7 w-7 items-center justify-center rounded-sm bg-black/30 font-mono text-xs text-white">{item.rank}</span>
+                  <span className="min-w-0">
+                    <span className="font-semibold text-white">{item.symbol}</span>
+                    <span className="ml-2 inline-block max-w-[12rem] truncate align-bottom text-xs text-amber-100 sm:max-w-[18rem]">{item.blockers[0] ?? "Waiting for trigger"}</span>
+                  </span>
+                  <span className="font-mono text-xs text-slate-300">{formatUsd(item.price)}</span>
+                </button>
+              ))
+            ) : (
+              <div className="px-3 py-3 text-sm text-slate-400">No blocked names yet.</div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FastExecutionPanel({
   ticket,
+  status,
+  mode,
   message,
   acknowledgement,
   placing,
   onModeChange,
   onAcknowledgementChange,
+  onSavePaperTicket,
   onPlaceOrder,
 }: {
-  status: BrokerStatus | null;
-  overview: BrokerOverview | null;
-  mode: BrokerMode;
   ticket: TradeTicket | null;
+  status: BrokerStatus | null;
+  mode: BrokerMode;
   message: string;
   acknowledgement: string;
   placing: boolean;
   onModeChange: (mode: BrokerMode) => void;
   onAcknowledgementChange: (value: string) => void;
+  onSavePaperTicket: () => void;
   onPlaceOrder: () => void;
 }) {
   const live = mode === "live";
   const disabled = !status?.orderPlacementReady || !ticket?.tradeable || placing || (live && acknowledgement.trim().length === 0);
 
   return (
-    <div className="mt-4 rounded-md border border-amber-300/25 bg-amber-300/10 p-4">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+    <div className="h-full rounded-md border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm shadow-black/20">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <div className="flex items-center gap-2 font-semibold text-white">
-            <ShieldCheck className="h-4 w-4 text-amber-200" />
-            Broker Execution Rail
-          </div>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-amber-100">
-            {message}
-          </p>
+          <SectionTitle icon={Calculator} title="Ticket And Execute" />
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <span className={`rounded-sm px-2 py-1 text-xs font-bold uppercase ${status?.orderPlacementReady ? "bg-emerald-300 text-slate-950" : "bg-amber-300/20 text-amber-100"}`}>
+          {status?.orderPlacementReady ? `${mode} armed` : "locked"}
+        </span>
+      </div>
+
+      <div className="mt-3 rounded-md border border-white/10 bg-black/20 px-3 py-2 text-sm leading-5 text-slate-300">
+        {message}
+      </div>
+
+      <div className="mt-4 rounded-md border border-white/10 bg-[var(--surface-raised)] p-3">
+        {ticket ? (
+          <>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-mono text-3xl font-semibold text-white">{ticket.symbol}</span>
+                  <span className={`rounded-sm px-2 py-1 text-xs font-bold uppercase ${ticket.tradeable ? "bg-[var(--buy)] text-slate-950" : "bg-[var(--wait-soft)] text-[var(--wait)]"}`}>
+                    {ticket.status}
+                  </span>
+                </div>
+                <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-300">{ticket.reason}</p>
+              </div>
+              <MiniStat label="Mode" value={mode.toUpperCase()} tone={live ? "red" : "blue"} />
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
+              <MiniStat label="Entry" value={formatUsd(ticket.entry)} tone="green" />
+              <MiniStat label="Stop" value={formatUsd(ticket.stop)} tone="amber" />
+              <MiniStat label="Target" value={formatUsd(ticket.target)} tone="blue" />
+              <MiniStat label="Units" value={`${ticket.units}`} tone="plain" />
+              <MiniStat label="Max loss" value={formatUsd(ticket.maxLoss)} tone="red" />
+              <MiniStat label="R/R" value={`${ticket.rewardRisk}R`} tone={ticket.rewardRisk >= 1.5 ? "green" : "red"} />
+            </div>
+          </>
+        ) : (
+          <div className="rounded-md border border-dashed border-white/15 p-4 text-sm text-slate-400">
+            Select a buy lead to generate a ticket.
+          </div>
+        )}
+      </div>
+
+      <div className="mt-4 grid gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="inline-flex rounded-md border border-white/10 bg-black/25 p-1">
             {(["paper", "live"] as const).map((item) => (
               <button
@@ -2177,55 +2281,42 @@ function BrokerExecutionPanel({
               </button>
             ))}
           </div>
-          <span className={`rounded-sm px-2 py-1 text-xs font-bold uppercase ${status?.orderPlacementReady ? "bg-emerald-300 text-slate-950" : "bg-black/30 text-amber-100"}`}>
-            {status?.orderPlacementReady ? `${status.mode} armed` : "locked"}
-          </span>
+          <button
+            onClick={onSavePaperTicket}
+            disabled={!ticket}
+            className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-white/10 bg-white/[0.04] px-3 text-xs font-semibold text-slate-100 transition hover:border-cyan-300/60 disabled:cursor-not-allowed disabled:text-slate-500"
+          >
+            <ClipboardList className="h-4 w-4" />
+            Save Ticket
+          </button>
         </div>
-      </div>
 
-      <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-        <MiniStat label="Provider" value={status?.provider ?? "alpaca"} tone="plain" />
-        <MiniStat label="Mode" value={status?.mode?.toUpperCase() ?? "UNKNOWN"} tone={live ? "red" : "blue"} />
-        <MiniStat label="Max order" value={status ? formatUsd(status.maxOrderNotional) : "N/A"} tone="amber" />
-        <MiniStat label="Audit DB" value={status?.database.schemaReady ? "Ready" : "Missing"} tone={status?.database.schemaReady ? "green" : "red"} />
-      </div>
+        {live && (
+          <label className="block text-sm text-slate-300">
+            <span className="text-amber-100">Live acknowledgement</span>
+            <input
+              value={acknowledgement}
+              onChange={(event) => onAcknowledgementChange(event.target.value)}
+              className="mt-2 h-10 w-full rounded-md border border-white/10 bg-black/30 px-3 text-sm text-white outline-none transition focus:border-amber-200"
+              placeholder="Type the configured live acknowledgement phrase"
+            />
+          </label>
+        )}
 
-      <BrokerAccountSnapshot overview={overview} />
-      <BrokerCapabilityGrid status={status} />
-
-      {status?.missing && status.missing.length > 0 && (
-        <div className="mt-4 rounded-md border border-white/10 bg-black/20 p-3">
-          <div className="text-sm font-semibold text-amber-100">Still required before orders can be placed</div>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {status.missing.map((item) => (
+        {status?.missing && status.missing.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {status.missing.slice(0, 3).map((item) => (
               <span key={item} className="rounded-sm border border-amber-300/25 bg-amber-300/10 px-2 py-1 text-xs text-amber-100">
                 {item}
               </span>
             ))}
           </div>
-        </div>
-      )}
+        )}
 
-      {live && (
-        <label className="mt-4 block text-sm text-slate-300">
-          <span className="text-amber-100">Live execution acknowledgement</span>
-          <input
-            value={acknowledgement}
-            onChange={(event) => onAcknowledgementChange(event.target.value)}
-            className="mt-2 h-10 w-full rounded-md border border-white/10 bg-black/30 px-3 text-sm text-white outline-none transition focus:border-amber-200"
-            placeholder="Type the configured live acknowledgement phrase"
-          />
-        </label>
-      )}
-
-      <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-xs leading-5 text-slate-400">
-          This sends a day limit order only. It does not send market orders, futures aliases, crypto aliases, or cron-triggered orders.
-        </p>
         <button
           onClick={onPlaceOrder}
           disabled={disabled}
-          className={`inline-flex h-10 items-center justify-center gap-2 rounded-md px-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400 ${
+          className={`inline-flex h-11 items-center justify-center gap-2 rounded-md px-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400 ${
             live ? "bg-rose-400 text-slate-950 hover:brightness-110" : "bg-cyan-300 text-slate-950 hover:brightness-110"
           }`}
         >
@@ -2237,120 +2328,80 @@ function BrokerExecutionPanel({
   );
 }
 
-function BrokerAccountSnapshot({ overview }: { overview: BrokerOverview | null }) {
-  if (!overview) {
-    return (
-      <div className="mt-4 rounded-md border border-white/10 bg-black/20 p-3 text-sm text-slate-400">
-        Broker account, positions, orders, portfolio history, activities, clock, and calendar will appear here once the selected Alpaca mode responds.
-      </div>
-    );
-  }
-
-  const account = overview.account;
-  const clock = overview.clock;
-  const positions = overview.positions.slice(0, 4);
-  const orders = overview.orders.slice(0, 4);
+function FastRiskPanel({
+  overview,
+  risk,
+  status,
+  feedQuality,
+  secondsAgo,
+  staleCount,
+}: {
+  overview: BrokerOverview | null;
+  risk: RiskApiResponse | null;
+  status: BrokerStatus | null;
+  feedQuality: string;
+  secondsAgo: number | null;
+  staleCount: number;
+}) {
+  const account = overview?.account ?? null;
+  const clock = overview?.clock ?? null;
   const isOpen = boolField(clock, "is_open");
+  const riskFlags = risk?.report?.riskFlags ?? [];
 
   return (
-    <div className="mt-4 space-y-3">
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+    <div className="h-full rounded-md border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm shadow-black/20">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <SectionTitle icon={ShieldCheck} title="Risk State" />
+        </div>
+        <span className={`rounded-sm px-2 py-1 text-xs font-bold uppercase ${isOpen ? "bg-emerald-300 text-slate-950" : "bg-amber-300/20 text-amber-100"}`}>
+          {isOpen ? "Open" : "Closed"}
+        </span>
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+        <MiniStat label="Buying power" value={moneyField(account, "buying_power")} tone="green" />
         <MiniStat label="Equity" value={moneyField(account, "equity")} tone="plain" />
-        <MiniStat label="Buying Power" value={moneyField(account, "buying_power")} tone="green" />
-        <MiniStat label="Cash" value={moneyField(account, "cash")} tone="blue" />
-        <MiniStat label="Positions" value={`${overview.positions.length}`} tone={overview.positions.length > 0 ? "amber" : "plain"} />
-        <MiniStat label="Open Orders" value={`${overview.orders.length}`} tone={overview.orders.length > 0 ? "amber" : "plain"} />
+        <MiniStat label="Positions" value={`${overview?.positions.length ?? 0}`} tone={(overview?.positions.length ?? 0) ? "amber" : "plain"} />
+        <MiniStat label="Open orders" value={`${overview?.orders.length ?? 0}`} tone={(overview?.orders.length ?? 0) ? "amber" : "plain"} />
       </div>
-      <div className="grid gap-3 lg:grid-cols-3">
-        <div className="rounded-md border border-white/10 bg-black/20 p-3">
-          <div className="flex items-center justify-between gap-2">
-            <div className="text-sm font-semibold text-white">Market Clock</div>
-            <span className={`rounded-sm px-2 py-1 text-xs font-bold uppercase ${isOpen ? "bg-emerald-300 text-slate-950" : "bg-amber-300/20 text-amber-100"}`}>
-              {isOpen ? "Open" : "Closed"}
-            </span>
-          </div>
-          <div className="mt-3 grid gap-2 text-xs text-slate-300">
-            <StatusLine label="Next open" value={dateField(clock, "next_open")} ready={isOpen} />
-            <StatusLine label="Next close" value={dateField(clock, "next_close")} ready={isOpen} />
-          </div>
-        </div>
 
-        <div className="rounded-md border border-white/10 bg-black/20 p-3">
-          <div className="text-sm font-semibold text-white">Positions</div>
-          <div className="mt-3 space-y-2">
-            {positions.length === 0 ? (
-              <div className="text-xs text-slate-500">No open positions in this Alpaca mode.</div>
-            ) : (
-              positions.map((position) => (
-                <div key={textField(position, "symbol")} className="grid grid-cols-[1fr_auto] gap-2 rounded-sm bg-white/[0.04] px-2 py-2 text-xs">
-                  <span className="font-mono text-white">{textField(position, "symbol")}</span>
-                  <span className="text-slate-300">{textField(position, "qty")} @ {moneyField(position, "current_price")}</span>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
+      <div className="mt-3 grid gap-2 text-sm">
+        <StatusLine label="Broker rail" value={status?.orderPlacementReady ? `${status.mode.toUpperCase()} armed` : "Locked"} ready={Boolean(status?.orderPlacementReady)} />
+        <StatusLine label="Data feed" value={`${feedQuality}${secondsAgo === null ? "" : ` / ${secondsAgo}s`}`} ready={staleCount === 0} />
+        <StatusLine label="Daily P/L" value={risk?.report?.dailyPnlPct === null || risk?.report?.dailyPnlPct === undefined ? "N/A" : `${risk.report.dailyPnlPct}%`} ready={Boolean(risk?.ok && (risk?.report?.dailyPnlPct ?? 0) >= -1)} />
+      </div>
 
-        <div className="rounded-md border border-white/10 bg-black/20 p-3">
-          <div className="text-sm font-semibold text-white">Open Orders</div>
-          <div className="mt-3 space-y-2">
-            {orders.length === 0 ? (
-              <div className="text-xs text-slate-500">No open broker orders in this Alpaca mode.</div>
-            ) : (
-              orders.map((order) => (
-                <div key={textField(order, "id")} className="grid grid-cols-[1fr_auto] gap-2 rounded-sm bg-white/[0.04] px-2 py-2 text-xs">
-                  <span className="font-mono text-white">{textField(order, "symbol")}</span>
-                  <span className="text-slate-300">{textField(order, "side").toUpperCase()} {textField(order, "qty")} @ {moneyField(order, "limit_price")}</span>
-                </div>
-              ))
-            )}
-          </div>
+      <div className="mt-3 rounded-md border border-white/10 bg-black/20 p-3">
+        <div className="text-xs font-semibold uppercase text-slate-500">Risk flags</div>
+        <div className="mt-2 space-y-2">
+          {riskFlags.length ? (
+            riskFlags.slice(0, 3).map((flag) => (
+              <div key={flag} className="text-sm leading-5 text-amber-100">{flag}</div>
+            ))
+          ) : (
+            <div className="text-sm text-emerald-200">No active portfolio risk flag returned.</div>
+          )}
         </div>
       </div>
-      {Object.values(overview.errors ?? {}).some(Boolean) && (
-        <div className="rounded-md border border-amber-300/20 bg-amber-300/10 p-3 text-xs leading-5 text-amber-100">
-          Some Alpaca account modules returned partial data. The dashboard kept the pieces that succeeded and left the failed modules out of the snapshot.
-        </div>
-      )}
+
+      <div className="mt-3 grid gap-2">
+        {marketEvents.slice(0, 2).map((event) => (
+          <div key={`${event.market}-${event.name}`} className="rounded-md border border-white/10 bg-white/[0.03] p-2">
+            <div className="flex items-center justify-between gap-2">
+              <div className="truncate text-sm font-semibold text-white">{event.name}</div>
+              <span className="rounded-sm bg-amber-300/10 px-2 py-1 text-xs text-amber-200">{event.risk}</span>
+            </div>
+            <div className="mt-1 line-clamp-1 text-xs text-slate-400">{event.check}</div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
 
-function BrokerCapabilityGrid({ status }: { status: BrokerStatus | null }) {
-  const ready = Boolean(status?.credentialsConfigured);
-  const tradeReady = Boolean(status?.orderPlacementReady);
-  const dataQuality = status?.dataQuality?.toUpperCase() ?? "IEX";
-  const capabilities = [
-    ["Account sync", "Balances, buying power, trade blocks", ready],
-    ["Positions", "Read holdings and close through guarded routes", ready],
-    ["Orders", "List, place, replace, cancel, and cancel all", tradeReady],
-    ["Paper trading", "Paper mode can submit Alpaca orders with the current keys", status?.mode === "paper" && tradeReady],
-    ["Live trading", "Live mode exists but requires live keys, env gates, acknowledgement, and audit DB", status?.mode === "live" && tradeReady],
-    ["Portfolio history", "Equity curve and P/L history for the selected account", ready],
-    ["Activities", "Fills, transfers, dividends, and account events", ready],
-    ["Clock/calendar", "Market open/close and trading calendar", ready],
-    ["Assets/watchlists", "Tradability checks and Alpaca watchlist creation", ready],
-    ["Stocks data", `${dataQuality} snapshots, bars, and Alpaca news`, ready],
-    ["Crypto data", "BTC/USD and ETH/USD snapshots via Alpaca data APIs", ready],
-    ["Options data", "Contracts and snapshots when the account has entitlement", ready],
-    ["Corporate actions", "Splits, dividends, mergers, and related market events", ready],
-  ] as const;
-
-  return (
-    <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-      {capabilities.map(([name, description, isReady]) => (
-        <div key={name} className="rounded-md border border-white/10 bg-black/20 p-3">
-          <div className="flex items-start justify-between gap-2">
-            <div className="text-sm font-semibold text-white">{name}</div>
-            <span className={isReady ? "text-xs font-semibold text-emerald-300" : "text-xs font-semibold text-slate-500"}>
-              {isReady ? "on" : "locked"}
-            </span>
-          </div>
-          <div className="mt-2 text-xs leading-5 text-slate-400">{description}</div>
-        </div>
-      ))}
-    </div>
-  );
+function selectSignalSymbol(symbol: string) {
+  window.dispatchEvent(new CustomEvent("select-signal-symbol", { detail: symbol }));
 }
 
 function IsingBasketPanel({ basket }: { basket: IsingBasketResult }) {
@@ -2431,64 +2482,6 @@ function IsingBasketPanel({ basket }: { basket: IsingBasketResult }) {
   );
 }
 
-function TradeTicketCard({ ticket }: { ticket: TradeTicket | null }) {
-  if (!ticket) {
-    return (
-      <div className="rounded-md border border-dashed border-white/15 p-4 text-sm text-slate-400">
-        No buy lead is selected yet.
-      </div>
-    );
-  }
-
-  return (
-    <div className="rounded-md border border-[var(--border)] bg-[var(--surface-raised)] p-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="font-mono text-2xl font-semibold text-white">{ticket.symbol}</span>
-            <span className={`rounded-sm px-2 py-1 text-xs font-bold uppercase ${ticket.tradeable ? "bg-[var(--buy)] text-slate-950" : "bg-[var(--wait-soft)] text-[var(--wait)]"}`}>
-              {ticket.status}
-            </span>
-          </div>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">{ticket.reason}</p>
-        </div>
-        <div className="rounded-md border border-white/10 bg-black/20 px-3 py-2 text-xs text-slate-400">
-          Planning only. No order placed.
-        </div>
-      </div>
-      <div className="mt-4 grid gap-2 sm:grid-cols-3 lg:grid-cols-6">
-        <MiniStat label="Entry" value={formatUsd(ticket.entry)} tone="green" />
-        <MiniStat label="Stop" value={formatUsd(ticket.stop)} tone="amber" />
-        <MiniStat label="Target" value={formatUsd(ticket.target)} tone="blue" />
-        <MiniStat label="Units" value={`${ticket.units}`} tone="plain" />
-        <MiniStat label="Max Loss" value={formatUsd(ticket.maxLoss)} tone="red" />
-        <MiniStat label="R/R" value={`${ticket.rewardRisk}R`} tone={ticket.rewardRisk >= 1.5 ? "green" : "red"} />
-      </div>
-      <div className="mt-4 grid gap-3 lg:grid-cols-2">
-        <ChecklistBlock title="Must Confirm" items={ticket.mustConfirm} tone="green" />
-        <ChecklistBlock title="Do Not Trade If" items={ticket.doNotTradeIf} tone="amber" />
-      </div>
-    </div>
-  );
-}
-
-function ChecklistBlock({ title, items, tone }: { title: string; items: string[]; tone: "green" | "amber" }) {
-  const color = tone === "green" ? "text-emerald-200" : "text-amber-200";
-  return (
-    <div className="rounded-md border border-white/10 bg-black/15 p-3">
-      <div className={`text-sm font-semibold ${color}`}>{title}</div>
-      <div className="mt-2 space-y-2">
-        {items.map((item) => (
-          <div key={item} className="flex gap-2 text-sm leading-6 text-slate-300">
-            <CheckCircle2 className={`mt-1 h-4 w-4 shrink-0 ${color}`} />
-            <span>{item}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 function TrustOperationsTable({ gaps }: { gaps: typeof trustOperationGaps }) {
   return (
     <div className="mt-4 overflow-hidden rounded-md border border-white/10">
@@ -2564,124 +2557,6 @@ function StatusPill({ status }: { status: TrustStatus }) {
           ? "border-rose-300/25 bg-rose-300/10 text-rose-200"
           : "border-amber-300/25 bg-amber-300/10 text-amber-200";
   return <span className={`inline-flex rounded-sm border px-2 py-1 text-xs font-semibold ${classes}`}>{status}</span>;
-}
-
-function BuyNowBoard({ buyNow, blocked }: { buyNow: BuyNowSignal[]; blocked: BlockedBuyNowSignal[] }) {
-  return (
-    <div className="mt-4 space-y-3">
-      {buyNow.length > 0 ? (
-        <div className="grid gap-3 lg:grid-cols-2">
-          {buyNow.map((signal) => (
-            <BuyNowCard key={signal.symbol} signal={signal} />
-          ))}
-        </div>
-      ) : (
-        <div className="rounded-md border border-amber-300/25 bg-amber-300/10 p-4">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <div className="text-lg font-semibold text-white">No buy-now signal is allowed right now.</div>
-              <p className="mt-1 max-w-3xl text-sm leading-6 text-amber-100">
-                That is useful information: the platform is blocking weak, stale, below-trigger, or under-sized ideas instead of filling the page with pretend entries.
-              </p>
-            </div>
-            <span className="rounded-sm bg-black/20 px-2 py-1 text-xs font-semibold text-amber-100">
-              Strict gate active
-            </span>
-          </div>
-        </div>
-      )}
-
-      <div className="overflow-hidden rounded-md border border-white/10">
-        <div className="border-b border-white/10 bg-black/20 px-3 py-2 text-sm font-semibold text-white">
-          Closest Names And What Blocks Them
-        </div>
-        <div className="divide-y divide-white/10">
-          {blocked.length === 0 ? (
-            <div className="p-3 text-sm text-slate-400">No blocked names to show yet. Waiting for the first quote refresh.</div>
-          ) : (
-            blocked.slice(0, 5).map((signal) => <BlockedBuyNowRow key={signal.symbol} signal={signal} />)
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function BuyNowCard({ signal }: { signal: BuyNowSignal }) {
-  return (
-    <button
-      className="rounded-md border border-emerald-300/35 bg-emerald-300/10 p-4 text-left transition hover:border-emerald-200"
-      onClick={() => window.dispatchEvent(new CustomEvent("select-signal-symbol", { detail: signal.symbol }))}
-    >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-sm bg-emerald-300 px-2 py-1 text-xs font-black uppercase tracking-wide text-slate-950">
-              Buy Now
-            </span>
-            <span className="font-mono text-3xl font-semibold text-white">{signal.symbol}</span>
-            <span className="text-sm text-slate-300">{signal.name}</span>
-          </div>
-          <p className="mt-2 text-sm leading-6 text-emerald-100">
-            The entry trigger is active now. Use the ticket levels below before any manual trade.
-          </p>
-        </div>
-        <div className="rounded-md border border-white/10 bg-black/20 px-3 py-2 text-right">
-          <div className="text-xs text-slate-500">Confidence</div>
-          <div className="font-mono text-xl text-emerald-200">{signal.confidence}</div>
-        </div>
-      </div>
-      <div className="mt-4 grid grid-cols-2 gap-2 text-xs sm:grid-cols-3 lg:grid-cols-6">
-        <MiniStat label="Now" value={formatUsd(signal.price)} tone="plain" />
-        <MiniStat label="Entry" value={formatUsd(signal.entry)} tone="green" />
-        <MiniStat label="Stop" value={formatUsd(signal.stop)} tone="amber" />
-        <MiniStat label="Target" value={formatUsd(signal.target)} tone="blue" />
-        <MiniStat label="Units" value={`${signal.units}`} tone="plain" />
-        <MiniStat label="Max Loss" value={formatUsd(signal.maxLoss)} tone="red" />
-      </div>
-      <div className="mt-4 grid gap-3 lg:grid-cols-[1.1fr_0.9fr]">
-        <div className="space-y-2">
-          {signal.reasons.slice(0, 4).map((reason) => (
-            <div key={reason} className="flex gap-2 text-sm leading-6 text-slate-200">
-              <CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-emerald-300" />
-              <span>{reason}</span>
-            </div>
-          ))}
-        </div>
-        <div className="rounded-md bg-black/20 p-3 text-xs leading-5 text-slate-300">
-          <div className="font-semibold text-white">Data</div>
-          <div className="mt-1">{signal.dataQuality}</div>
-          <div className="mt-1">{signal.source}</div>
-          <div className="mt-1 break-words text-slate-500">{signal.updatedAt}</div>
-        </div>
-      </div>
-      {signal.warnings[0] && <div className="mt-4 rounded-md bg-black/20 p-3 text-sm leading-6 text-amber-100">{signal.warnings[0]}</div>}
-    </button>
-  );
-}
-
-function BlockedBuyNowRow({ signal }: { signal: BlockedBuyNowSignal }) {
-  return (
-    <button
-      className="grid w-full gap-3 p-3 text-left transition hover:bg-white/[0.04] lg:grid-cols-[2rem_0.8fr_1fr_1.5fr]"
-      onClick={() => window.dispatchEvent(new CustomEvent("select-signal-symbol", { detail: signal.symbol }))}
-    >
-      <div className="flex h-8 w-8 items-center justify-center rounded-sm bg-black/30 font-mono text-sm text-white">
-        {signal.rank}
-      </div>
-      <div>
-        <div className="font-semibold text-white">{signal.symbol}</div>
-        <div className="mt-1 truncate text-xs text-slate-500">{signal.name}</div>
-      </div>
-      <div className="grid grid-cols-2 gap-2 text-xs">
-        <span className="rounded-sm bg-black/20 px-2 py-1">Now {formatUsd(signal.price)}</span>
-        <span className="rounded-sm bg-black/20 px-2 py-1">Trigger {formatUsd(signal.trigger)}</span>
-        <span className="rounded-sm bg-black/20 px-2 py-1">Score {signal.confidence}</span>
-        <span className="rounded-sm bg-black/20 px-2 py-1">{signal.dataQuality}</span>
-      </div>
-      <div className="text-sm leading-6 text-amber-100">{signal.blockers.slice(0, 2).join(" ")}</div>
-    </button>
-  );
 }
 
 function LiveTickerTape({
@@ -2824,101 +2699,6 @@ function StatusLine({ label, value, ready = false }: { label: string; value: str
     <div className="flex items-center justify-between gap-3 rounded-sm bg-black/20 px-2 py-2">
       <span className="text-slate-400">{label}</span>
       <span className={ready ? "text-emerald-300" : "text-amber-300"}>{value}</span>
-    </div>
-  );
-}
-
-function PlainDecisionCard({
-  title,
-  signal,
-  fallback,
-  tone,
-}: {
-  title: string;
-  signal: TradeSignal | undefined;
-  fallback: string;
-  tone: "green" | "red";
-}) {
-  const plain = signal ? explainPlain(signal) : null;
-  const toneClass = tone === "green" ? "border-emerald-300/25 bg-emerald-300/10" : "border-rose-300/25 bg-rose-300/10";
-  return (
-    <div className={`rounded-md border p-4 ${toneClass}`}>
-      <div className="text-sm font-semibold text-slate-300">{title}</div>
-      {!signal || !plain ? (
-        <div className="mt-3 text-xl font-semibold text-white">{fallback}</div>
-      ) : (
-        <>
-          <div className="mt-3 text-2xl font-semibold text-white">{plain.headline}</div>
-          <p className="mt-2 text-base leading-7 text-slate-200">{plain.plainAction}</p>
-          <div className="mt-4 grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
-            <MiniStat label="Price" value={formatUsd(signal.price)} tone="plain" />
-            <MiniStat label="Stop" value={formatUsd(signal.invalidation)} tone="amber" />
-            <MiniStat label="Target" value={formatUsd(signal.target)} tone={tone === "green" ? "green" : "red"} />
-            <MiniStat label="Trust" value={`${signal.quality}/${signal.confidence}`} tone="blue" />
-          </div>
-          <div className="mt-4 space-y-2">
-            {plain.simpleWhy.map((why) => (
-              <div key={why} className="flex gap-2 text-sm leading-6 text-slate-200">
-                <CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-cyan-300" />
-                <span>{why}</span>
-              </div>
-            ))}
-          </div>
-          <div className="mt-4 rounded-md bg-black/20 p-3 text-sm leading-6 text-amber-100">{plain.simpleRisk}</div>
-          <div className="mt-2 rounded-md bg-black/20 p-3 text-sm leading-6 text-slate-200">{plain.simpleNextStep}</div>
-        </>
-      )}
-    </div>
-  );
-}
-
-function BuyLeadDecisionCard({
-  title,
-  lead,
-  fallback,
-}: {
-  title: string;
-  lead: BuyLead | undefined;
-  fallback: string;
-}) {
-  const active = lead?.status === "Buy Watch";
-  return (
-    <div className="rounded-md border border-emerald-300/25 bg-emerald-300/10 p-4">
-      <div className="text-sm font-semibold text-slate-300">{title}</div>
-      {!lead ? (
-        <div className="mt-3 text-xl font-semibold text-white">{fallback}</div>
-      ) : (
-        <>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <div className="text-2xl font-semibold text-white">{lead.symbol}</div>
-            <span
-              className={`rounded-sm px-2 py-1 text-xs font-bold uppercase tracking-wide ${
-                active ? "bg-emerald-300 text-slate-950" : "bg-cyan-300 text-slate-950"
-              }`}
-            >
-              {active ? "Buy Watch" : "Buy Lead"}
-            </span>
-          </div>
-          <p className="mt-2 text-base leading-7 text-slate-200">{lead.reason}</p>
-          <div className="mt-4 grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
-            <MiniStat label="Now" value={formatUsd(lead.price)} tone="plain" />
-            <MiniStat label="Trigger" value={formatUsd(lead.trigger)} tone="green" />
-            <MiniStat label="Stop" value={formatUsd(lead.stop)} tone="amber" />
-            <MiniStat label="Target" value={formatUsd(lead.target)} tone="blue" />
-          </div>
-          <div className="mt-4 space-y-2">
-            {lead.simpleWhy.slice(0, 3).map((why) => (
-              <div key={why} className="flex gap-2 text-sm leading-6 text-slate-200">
-                <CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-cyan-300" />
-                <span>{why}</span>
-              </div>
-            ))}
-          </div>
-          {lead.warnings[0] && (
-            <div className="mt-4 rounded-md bg-black/20 p-3 text-sm leading-6 text-amber-100">{lead.warnings[0]}</div>
-          )}
-        </>
-      )}
     </div>
   );
 }
