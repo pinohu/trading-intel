@@ -1,0 +1,63 @@
+# Architecture
+
+## Current System
+
+Trading Intelligence Platform is a Next.js App Router application deployed on Vercel.
+
+Runtime shape:
+
+- Browser dashboard renders the trading command center.
+- Serverless API routes fetch market data, generate rule-based signals, create trade tickets, and expose readiness metadata.
+- The Ising/QUBO optimizer chooses baskets from generated buy leads under budget, risk, max-position, and overlap constraints.
+- Broker routes can connect to Alpaca account, positions, open orders, and guarded order placement when credentials are configured.
+- Vercel Cron calls `/api/monitor` every five minutes.
+- Alerts can be sent through webhook, Twilio, or Resend when configured.
+- Browser `localStorage` stores the current mobile watchlist and local notes.
+- When `DATABASE_URL` is configured and `database/schema.sql` is applied, Postgres stores quote snapshots, signal snapshots, paper trades, model outcomes, provider health, and audit events.
+
+## Production Boundary
+
+The current application is safe for research and paper planning only. It deliberately has no broker execution route.
+
+Production real-money trading requires these external systems before live execution is even considered:
+
+- Licensed real-time market data.
+- Persistent database with the provided schema applied.
+- Paper broker integration beyond the database-backed paper-trade journal.
+- Broker read-only sync.
+- Broker execution account gates, live acknowledgement, and order audit storage.
+- Historical backtesting workers.
+- Signal outcome tracker.
+- Immutable audit retention and export policy beyond the current audit-events table.
+- User auth and RBAC.
+- Compliance, Terms, Privacy, and risk disclosures.
+
+## Target Production Architecture
+
+```mermaid
+flowchart LR
+  UI["Mobile PWA / Next.js UI"] --> BFF["Next.js API / BFF"]
+  BFF --> DB["Postgres: users, watchlists, signals, tickets, outcomes"]
+  BFF --> Cache["Redis/KV: quote cache, rate limits, provider health"]
+  BFF --> Queue["Queue: alerts, backtests, outcome checks"]
+  DataWorker["Market Data Workers"] --> Cache
+  DataWorker --> DB
+  Providers["Licensed + Public Providers"] --> DataWorker
+  SignalWorker["Signal Engine Workers"] --> DB
+  BFF --> Ising["Ising/QUBO Basket Optimizer"]
+  BacktestWorker["Backtest Workers: LEAN/vectorbt/backtesting.py"] --> DB
+  Broker["Broker Paper/Read-Only APIs"] --> BFF
+  BFF --> BrokerExec["Broker Execution API: user-session only, live gated"]
+  Queue --> Alerts["Webhook/SMS/Email/Push"]
+```
+
+## Non-Negotiable Guardrails
+
+- Never synthesize market data in production.
+- Never promote stale quotes to buy/sell actions.
+- Never place live orders from the app until paper results, audit logs, broker permissions, and operator approvals exist.
+- Never allow cron or agent bearer tokens to place broker orders.
+- Never submit a market order from the current execution rail.
+- Never treat the Ising optimizer as a price predictor; it only selects among existing candidates.
+- Never allow auth to fail open.
+- Every signal must have an immutable stored snapshot before it can be evaluated.

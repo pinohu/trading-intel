@@ -6,21 +6,37 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "vitest run",
+    "aitable:bootstrap": "node scripts/bootstrap-aitable.mjs",
+    "worker:autoresearch": "node scripts/autoresearch-lab.mjs",
+    "worker:research": "node scripts/research-worker-dispatch.mjs",
+    "worker:agent-paper": "node scripts/agent-paper-worker.mjs",
+    "quality": "npm run lint && npm run test && npm run build"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
+    "lightweight-charts": "^5.2.0",
+    "lucide-react": "^1.11.0",
     "next": "16.2.4",
+    "pg": "^8.20.0",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "recharts": "^3.8.1"
+  },
+  "overrides": {
+    "postcss": "8.5.10"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/pg": "^8.20.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.5"
   }
 }
