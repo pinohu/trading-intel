@@ -367,6 +367,111 @@ function buildEngineFinding({
     });
   }
 
+  if (key === "vibe-trading") {
+    const value = swarmStrategyScore({ quote, signal, score, backtest, agent, algorithmFindings });
+    return finding({
+      ...base,
+      status,
+      score: value,
+      finding: "Vibe-Trading-style strategy swarm checks whether natural-language thesis, cross-market data, validation, and optimizer pressure point in the same direction.",
+      evidence: [
+        `Data breadth: ${Math.round(qualityScore(quote))}/100`,
+        signal ? `Rule feature: ${signal.action} ${signal.quality}/${signal.confidence}` : "Rule feature missing.",
+        backtest ? `Validation feature: ${backtest.trades} trade(s), ${pct(backtest.totalReturnPct)} return.` : "Validation feature missing.",
+      ],
+    });
+  }
+
+  if (key === "ai-trader") {
+    const value = collectiveSignalScore({ signal, score, backtest, agent, activeBuy });
+    return finding({
+      ...base,
+      status,
+      score: value,
+      finding: "AI-Trader-style collective desk treats the setup as an agent-signal network and punishes disagreement before paper mirroring.",
+      evidence: agreementEvidence({ signal, score, backtest, agent }),
+    });
+  }
+
+  if (key === "polymarket-agents") {
+    const sentiment = sentimentScore(symbolNews);
+    const value = predictionMarketScore({ sentiment: sentiment.score, signal, score, agent });
+    return finding({
+      ...base,
+      status: symbolNews.length ? "proxy" : status,
+      score: value,
+      finding: "Polymarket-agent style RAG/event desk asks whether the trade depends on a catalyst whose probability is still uncertain.",
+      evidence: symbolNews.length ? symbolNews.slice(0, 3).map((item) => `${item.source ?? "news"}: ${item.title}`) : ["No event/news RAG evidence loaded for this symbol."],
+    });
+  }
+
+  if (key === "tensortrade") {
+    const value = tensorTradeRewardScore({ signal, score, backtest, activeBuy });
+    return finding({
+      ...base,
+      status,
+      score: value,
+      finding: "TensorTrade-style RL lab converts the idea into state, action, reward, and risk feedback before it can score as tradable.",
+      evidence: [
+        signal ? `State/action: ${signal.action}, reward/risk ${signal.rewardRisk}R.` : "State/action unavailable.",
+        backtest ? `Reward history: ${pct(backtest.totalReturnPct)} return, ${pct(backtest.maxDrawdownPct)} drawdown.` : "Reward history unavailable.",
+        activeBuy ? "Action is currently executable as a paper candidate." : "Action is not executable yet.",
+      ],
+    });
+  }
+
+  if (key === "tradingagents-cn") {
+    const value = dataConsensusScore({ quote, signal, score });
+    return finding({
+      ...base,
+      status,
+      score: value,
+      finding: "TradingAgents-CN-style data consensus rewards source fallback, synchronized quotes, and clean reportable evidence before analysis.",
+      evidence: [`Quote source: ${quote.source}`, `Quote quality: ${quote.quality}`, `Coverage: ${score?.dataCoveragePct ?? "proxy"}/100`],
+    });
+  }
+
+  if (key === "openalice") {
+    const value = lifecycleGuardScore({ signal, activeBuy, agent, brokerReady });
+    return finding({
+      ...base,
+      status: brokerReady ? "proxy" : "blocked",
+      score: value,
+      finding: "OpenAlice-style lifecycle gate scores staged order quality, versioned approval, guard checks, and exit-management cadence.",
+      evidence: [
+        activeBuy ? "Staged paper order candidate exists." : "No staged order candidate.",
+        agent ? `Management cadence: ${agent.reviewCadence}` : signal?.holdingPeriod.reviewCadence ?? "No management cadence.",
+        brokerReady ? "Broker/control rail is ready." : "Broker/control rail is not ready.",
+      ],
+    });
+  }
+
+  if (key === "quantdinger") {
+    const value = quantOpsScore({ signal, score, backtest, agent, activeBuy, brokerReady });
+    return finding({
+      ...base,
+      status,
+      score: value,
+      finding: "QuantDinger-style quant ops checks whether research, strategy evidence, alerts, execution readiness, and operations continuity exist in one workflow.",
+      evidence: pipelineEvidence({ signal, score, backtest, agent, activeBuy }),
+    });
+  }
+
+  if (key === "autohedge") {
+    const value = autoHedgeRiskScore({ signal, score, backtest, activeBuy, brokerReady });
+    return finding({
+      ...base,
+      status,
+      score: value,
+      finding: "AutoHedge-style swarm stages Director, Quant, Risk, and Execution votes; risk can veto even when alpha looks attractive.",
+      evidence: [
+        score ? `Director thesis score: ${score.ensembleScore}/100.` : "Director thesis unavailable.",
+        backtest ? `Quant evidence: PF ${backtest.profitFactor}, drawdown ${pct(backtest.maxDrawdownPct)}.` : "Quant evidence unavailable.",
+        activeBuy ? `Risk ticket: ${activeBuy.rewardRisk}R, max loss ${money(activeBuy.maxLoss)}.` : "Risk ticket unavailable.",
+      ],
+    });
+  }
+
   return finding({
     ...base,
     status,
@@ -410,6 +515,7 @@ function finding(input: Omit<FusionEngineFinding, "stance" | "impact">): FusionE
 
 function engineKey(engine: EngineCapability) {
   if (engine.repo.includes("OpenBB")) return "openbb";
+  if (engine.repo.includes("TradingAgents-CN")) return "tradingagents-cn";
   if (engine.repo.includes("TradingAgents")) return "tradingagents";
   if (engine.repo.includes("Lean")) return "lean";
   if (engine.repo.includes("backtesting.py")) return "backtesting-py";
@@ -420,6 +526,13 @@ function engineKey(engine: EngineCapability) {
   if (engine.repo.includes("FinRL-Trading")) return "finrl-trading";
   if (engine.repo.includes("FinGPT")) return "fingpt";
   if (engine.repo.includes("jesse")) return "jesse";
+  if (engine.repo.includes("Vibe-Trading")) return "vibe-trading";
+  if (engine.repo.includes("AI-Trader")) return "ai-trader";
+  if (engine.repo.includes("Polymarket/agents")) return "polymarket-agents";
+  if (engine.repo.includes("tensortrade")) return "tensortrade";
+  if (engine.repo.includes("OpenAlice")) return "openalice";
+  if (engine.repo.includes("QuantDinger")) return "quantdinger";
+  if (engine.repo.includes("AutoHedge")) return "autohedge";
   return engine.productName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
 }
 
@@ -436,6 +549,14 @@ function engineWeight(key: string) {
     "finrl-trading": 0.06,
     fingpt: 0.07,
     jesse: 0.035,
+    "vibe-trading": 0.075,
+    "ai-trader": 0.06,
+    "polymarket-agents": 0.045,
+    tensortrade: 0.06,
+    "tradingagents-cn": 0.055,
+    openalice: 0.065,
+    quantdinger: 0.06,
+    autohedge: 0.065,
   };
   return weights[key] ?? 0.04;
 }
@@ -502,6 +623,153 @@ function nautilusExecutionScore({ signal, activeBuy, brokerReady }: { signal?: T
   if (signal.action === "Buy Watch") return 68;
   if (signal.action === "Sell/Exit Watch") return 28;
   return 52;
+}
+
+function swarmStrategyScore({
+  quote,
+  signal,
+  score,
+  backtest,
+  agent,
+  algorithmFindings,
+}: {
+  quote: SignalQuote;
+  signal?: TradeSignal;
+  score?: AlgorithmCouncilScore;
+  backtest?: BacktestSymbolResult;
+  agent?: TradingAgentsDecision;
+  algorithmFindings: FusionAlgorithmFinding[];
+}) {
+  const breadth = [signal, score, backtest, agent].filter(Boolean).length * 5;
+  return clamp(average([qualityScore(quote), signalScore(signal), score?.ensembleScore ?? 50, backtestScore(backtest), agent ? agentScore(agent) : 50, average(algorithmFindings.map((item) => item.score))]) + breadth, 5, 95);
+}
+
+function collectiveSignalScore({
+  signal,
+  score,
+  backtest,
+  agent,
+  activeBuy,
+}: {
+  signal?: TradeSignal;
+  score?: AlgorithmCouncilScore;
+  backtest?: BacktestSymbolResult;
+  agent?: TradingAgentsDecision;
+  activeBuy?: BuyNowSignal;
+}) {
+  const votes = [signalScore(signal), score?.confidence ?? 50, backtestScore(backtest), agent ? agentScore(agent) : 50];
+  const spread = Math.max(...votes) - Math.min(...votes);
+  return clamp(average(votes) + (activeBuy ? 7 : 0) - Math.max(0, spread - 30) * 0.45, 5, 95);
+}
+
+function predictionMarketScore({
+  sentiment,
+  signal,
+  score,
+  agent,
+}: {
+  sentiment: number;
+  signal?: TradeSignal;
+  score?: AlgorithmCouncilScore;
+  agent?: TradingAgentsDecision;
+}) {
+  const dataBlock = !signal?.dataFresh || agent?.rating === "Data Review";
+  const eventUncertaintyPenalty = Math.abs(sentiment - 50) < 8 ? 4 : 0;
+  return clamp(average([sentiment, signalScore(signal), score?.ensembleScore ?? 50, agent ? agentScore(agent) : 50]) - eventUncertaintyPenalty - (dataBlock ? 16 : 0), 5, 95);
+}
+
+function tensorTradeRewardScore({
+  signal,
+  score,
+  backtest,
+  activeBuy,
+}: {
+  signal?: TradeSignal;
+  score?: AlgorithmCouncilScore;
+  backtest?: BacktestSymbolResult;
+  activeBuy?: BuyNowSignal;
+}) {
+  const reward = activeBuy?.rewardRisk ?? signal?.rewardRisk ?? 1;
+  const rewardScore = clamp(40 + reward * 18, 5, 95);
+  const drawdownPenalty = backtest ? Math.min(25, backtest.maxDrawdownPct * 1.1) : 0;
+  return clamp(average([signalScore(signal), score?.ensembleScore ?? 50, backtestScore(backtest), rewardScore]) - drawdownPenalty * 0.35, 5, 95);
+}
+
+function dataConsensusScore({
+  quote,
+  signal,
+  score,
+}: {
+  quote: SignalQuote;
+  signal?: TradeSignal;
+  score?: AlgorithmCouncilScore;
+}) {
+  const sourceScore = quote.source.toLowerCase().includes("fallback") ? 54 : quote.source.toLowerCase().includes("alpaca") ? 82 : 70;
+  return clamp(average([qualityScore(quote), sourceScore, score?.dataCoveragePct ?? 50, signal?.dataFresh ? 82 : 18]), 5, 95);
+}
+
+function lifecycleGuardScore({
+  signal,
+  activeBuy,
+  agent,
+  brokerReady,
+}: {
+  signal?: TradeSignal;
+  activeBuy?: BuyNowSignal;
+  agent?: TradingAgentsDecision;
+  brokerReady: boolean;
+}) {
+  if (!brokerReady) return 28;
+  const management = agent?.reviewCadence || signal?.holdingPeriod.reviewCadence ? 72 : 45;
+  const order = activeBuy ? 82 : signal?.action === "Buy Watch" ? 64 : signal?.action === "Sell/Exit Watch" ? 34 : 50;
+  return clamp(average([signalScore(signal), management, order]) + (agent ? 5 : 0), 5, 95);
+}
+
+function quantOpsScore({
+  signal,
+  score,
+  backtest,
+  agent,
+  activeBuy,
+  brokerReady,
+}: {
+  signal?: TradeSignal;
+  score?: AlgorithmCouncilScore;
+  backtest?: BacktestSymbolResult;
+  agent?: TradingAgentsDecision;
+  activeBuy?: BuyNowSignal;
+  brokerReady: boolean;
+}) {
+  const present = [signal, score, backtest, agent, activeBuy].filter(Boolean).length;
+  const ops = brokerReady ? 72 : 42;
+  return clamp(average([pipelineScore({ signal, score, backtest, agent, activeBuy }), ops]) + present * 2, 5, 95);
+}
+
+function autoHedgeRiskScore({
+  signal,
+  score,
+  backtest,
+  activeBuy,
+  brokerReady,
+}: {
+  signal?: TradeSignal;
+  score?: AlgorithmCouncilScore;
+  backtest?: BacktestSymbolResult;
+  activeBuy?: BuyNowSignal;
+  brokerReady: boolean;
+}) {
+  const director = score?.ensembleScore ?? 50;
+  const quant = backtestScore(backtest);
+  const risk =
+    activeBuy && activeBuy.rewardRisk >= 1.5
+      ? 76
+      : signal?.rewardRisk && signal.rewardRisk >= 1.5
+        ? 66
+        : signal?.action === "Sell/Exit Watch"
+          ? 28
+          : 48;
+  const execution = brokerReady && activeBuy ? 78 : brokerReady ? 58 : 35;
+  return clamp(average([director, quant, risk, execution, signalScore(signal)]), 5, 95);
 }
 
 function reinforcementPolicyScore({
