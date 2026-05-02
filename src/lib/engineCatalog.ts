@@ -26,7 +26,7 @@ export const engineCapabilities: EngineCapability[] = [
     lane: "Multi-agent research",
     bestUse: "LLM analyst, bull/bear researcher, trader, risk, and portfolio-manager debate before any paper-trade promotion.",
     featureUnlocked: "Structured research-only decisions, thesis/risk notes, and portfolio-manager challenges persisted to the research journal.",
-    integrationMode: "Python worker",
+    integrationMode: "Native UI",
     safety: "Research",
     priority: "Now",
   },

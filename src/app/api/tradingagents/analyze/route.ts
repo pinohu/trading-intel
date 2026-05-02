@@ -2,20 +2,20 @@ import { NextResponse } from "next/server";
 import { recordAuditEvent } from "@/lib/audit";
 import { runMomentumBreakoutBacktest } from "@/lib/backtesting";
 import { databaseConfigured } from "@/lib/db";
-import { runExternalWorkerJob } from "@/lib/externalWorkers";
-import { scoreAlgorithmCouncil, rankAlgorithmCouncilScores, type AlgorithmCouncilScore } from "@/lib/factorEngine";
+import { scoreAlgorithmCouncil, rankAlgorithmCouncilScores } from "@/lib/factorEngine";
 import { fetchFundamentalSnapshot } from "@/lib/fundamentals";
 import { fetchInternalMarket } from "@/lib/internalFetch";
 import { insertResearchNote } from "@/lib/persistence";
 import { symbolsParam } from "@/lib/requestGuards";
 import { cleanSecret, hasValidUserSession } from "@/lib/security";
-import { generateSignals, type SignalQuote, type TradeSignal } from "@/lib/signalEngine";
+import { generateSignals } from "@/lib/signalEngine";
+import { buildNativeTradingAgentsDebate, NATIVE_TRADING_AGENTS_SOURCE } from "@/lib/tradingAgentsNative";
 import {
   cleanTradingAgentsDate,
   formatTradingAgentsNote,
-  normalizeTradingAgentsDecisions,
   parseTradingAgentsSymbols,
   validTradingAgentsDepth,
+  type TradingAgentsDecision,
   type TradingAgentsDepth,
 } from "@/lib/tradingAgents";
 
@@ -47,12 +47,9 @@ export async function POST(request: Request) {
   const analysisDate = cleanTradingAgentsDate(payload?.analysisDate);
   const depth: TradingAgentsDepth = validTradingAgentsDepth(payload?.depth) ? payload.depth : "standard";
   const provider = typeof payload?.provider === "string" && payload.provider.length <= 40 ? payload.provider : undefined;
-  const workerConfigured = Boolean(cleanSecret(process.env.TRADINGAGENTS_WORKER_URL));
 
   try {
-    const analysis = workerConfigured
-      ? await runExternalTradingAgents(symbols, analysisDate, depth, provider)
-      : await runNativeRealDataDebate(request, symbols, analysisDate, depth, provider);
+    const analysis = await runNativeCodebaseTradingAgents(request, symbols, analysisDate, depth, provider);
     const persistedNotes = await persistTradingAgentsNotes(analysis.decisions, analysisDate, depth, analysis.source);
 
     await recordAuditEvent("tradingagents.analyze", null, {
@@ -80,34 +77,7 @@ export async function POST(request: Request) {
   }
 }
 
-async function runExternalTradingAgents(
-  symbols: string[],
-  analysisDate: string,
-  depth: TradingAgentsDepth,
-  provider: string | undefined,
-) {
-  const workerResult = await runExternalWorkerJob("tradingagents", {
-    jobType: "agent-debate",
-    symbols,
-    strategy: "multi-agent trading research debate",
-    parameters: {
-      analysisDate,
-      depth,
-      provider,
-      maxDebateRounds: depth === "deep" ? 3 : depth === "standard" ? 2 : 1,
-      outputContract: "Return decisions with symbol, rating/recommendation, thesis, risks, and portfolioDecision.",
-    },
-  });
-
-  return {
-    source: "tradingagents-worker",
-    decisions: normalizeTradingAgentsDecisions(workerResult.data, symbols),
-    raw: workerResult.data,
-    advisory: "TradingAgents output is research-only. Broker execution remains blocked behind the existing paper/live gates.",
-  };
-}
-
-async function runNativeRealDataDebate(
+async function runNativeCodebaseTradingAgents(
   request: Request,
   symbols: string[],
   analysisDate: string,
@@ -141,19 +111,20 @@ async function runNativeRealDataDebate(
     slippageBps: 5,
     feeBps: 1,
   });
-  const decisions = symbols.map((symbol) =>
-    buildNativeDecision({
+  const debates = symbols.map((symbol) =>
+    buildNativeTradingAgentsDebate({
       symbol,
       quote: quotes.find((item) => item.symbol === symbol),
       signal: signals.find((item) => item.symbol === symbol),
       score: scores.find((item) => item.symbol === symbol),
       backtest: backtest.results.find((item) => item.symbol === symbol),
+      depth,
     }),
   );
 
   return {
-    source: "native-real-data-debate",
-    decisions,
+    source: NATIVE_TRADING_AGENTS_SOURCE,
+    decisions: debates.map((debate) => debate.decision),
     raw: {
       market: {
         provider: market.provider,
@@ -163,84 +134,23 @@ async function runNativeRealDataDebate(
       signals,
       algorithmScores: scores,
       backtest,
+      agentDebates: Object.fromEntries(
+        debates.map((debate) => [
+          debate.decision.symbol,
+          {
+            consensusScore: debate.consensusScore,
+            transcript: debate.transcript,
+          },
+        ]),
+      ),
     },
     advisory:
-      "Native real-data debate used because TRADINGAGENTS_WORKER_URL is not configured. It uses live/available quotes, SEC fundamentals, rule signals, and historical backtests. Broker execution remains blocked.",
-  };
-}
-
-function buildNativeDecision({
-  symbol,
-  quote,
-  signal,
-  score,
-  backtest,
-}: {
-  symbol: string;
-  quote?: SignalQuote;
-  signal?: TradeSignal;
-  score?: AlgorithmCouncilScore;
-  backtest?: {
-    trades: number;
-    winRate: number;
-    totalReturnPct: number;
-    maxDrawdownPct: number;
-    profitFactor: number;
-    status: string;
-  };
-}) {
-  const positiveBacktest = Boolean(backtest && backtest.status === "ok" && backtest.trades >= 3 && backtest.totalReturnPct > 0);
-  const weakBacktest = Boolean(backtest && (backtest.status !== "ok" || backtest.trades < 3 || backtest.totalReturnPct <= 0));
-  const scoreBullish = score?.recommendation === "Strong Buy Watch" || score?.recommendation === "Buy Watch";
-  const signalBullish = signal?.action === "Buy Watch";
-  const signalBearish = signal?.action === "Sell/Exit Watch";
-  const rating =
-    signalBearish || score?.recommendation === "Avoid / Sell Watch"
-      ? "Risk Review"
-      : scoreBullish && signalBullish && positiveBacktest
-        ? "Research Buy Watch"
-        : scoreBullish || signalBullish || positiveBacktest
-          ? "Research Watch"
-          : "Hold / No Trade";
-  const action =
-    rating === "Research Buy Watch"
-      ? "Paper-watch candidate only"
-      : rating === "Risk Review"
-        ? "Avoid or reduce risk until evidence improves"
-        : "Monitor; require stronger alignment before paper entry";
-  const backtestSummary = backtest
-    ? `${backtest.trades} trade(s), ${backtest.winRate}% win, ${backtest.totalReturnPct}% total return, ${backtest.maxDrawdownPct}% max drawdown, PF ${backtest.profitFactor}.`
-    : "No backtest result returned.";
-  const thesis = [
-    quote ? `${symbol} last traded at ${quote.price} from ${quote.source} with ${quote.quality} data quality.` : `${symbol} did not return a usable quote.`,
-    signal ? `Rule signal: ${signal.action} (${signal.quality}/${signal.confidence}) because ${signal.reason}` : "No rule signal was available.",
-    score ? `Algorithm Council: ${score.recommendation}, ensemble ${score.ensembleScore}, confidence ${score.confidence}. ${score.thesis}` : "Algorithm Council score was unavailable.",
-    `Historical evidence: ${backtestSummary}`,
-  ].join(" ");
-  const risks = [
-    ...(signal?.warnings ?? []),
-    ...(score?.riskControls ?? []),
-    score?.bearCase,
-    weakBacktest ? "Historical sample is weak or negative; require more paper evidence before promotion." : "",
-    quote?.quality === "Delayed" || quote?.quality === "Unofficial" ? `Data quality is ${quote.quality}; do not treat this as execution-grade.` : "",
-  ].filter((item): item is string => Boolean(item));
-
-  return {
-    symbol,
-    rating,
-    action,
-    summary: thesis.slice(0, 500),
-    thesis,
-    risks: risks.length ? risks.slice(0, 8) : ["No major risk note generated, but this remains research-only."],
-    portfolioDecision:
-      rating === "Research Buy Watch"
-        ? "Eligible for paper watch only. Do not route to live broker execution without fresh data, manual review, and stored audit evidence."
-        : "Not eligible for automatic order placement. Keep in research/watch mode.",
+      "TradingAgents now runs inside this codebase. It uses current quotes, SEC/factor evidence, rule signals, and Alpaca historical bars; manual paper/live execution still happens through the visible broker controls.",
   };
 }
 
 async function persistTradingAgentsNotes(
-  decisions: ReturnType<typeof normalizeTradingAgentsDecisions>,
+  decisions: TradingAgentsDecision[],
   analysisDate: string,
   depth: TradingAgentsDepth,
   source: string,
@@ -253,7 +163,7 @@ async function persistTradingAgentsNotes(
       noteType: "tradingagents",
       title: `TradingAgents ${decision.rating}: ${decision.symbol}`,
       body: formatTradingAgentsNote(decision, analysisDate, depth),
-      tags: [source === "native-real-data-debate" ? "native-real-data" : "tradingagents", "research-only", depth],
+      tags: [source === NATIVE_TRADING_AGENTS_SOURCE ? "native-codebase" : "tradingagents", "research-only", depth],
       source,
     });
     inserted.push(note);

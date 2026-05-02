@@ -2,7 +2,6 @@ import { cleanSecret } from "@/lib/security";
 
 export type ExternalWorkerKey =
   | "openbb"
-  | "tradingagents"
   | "lean"
   | "backtrader"
   | "vectorbt"
@@ -12,13 +11,13 @@ export type ExternalWorkerKey =
   | "jesse";
 
 export type ExternalWorkerJob = {
-  jobType: "fundamentals" | "agent-debate" | "backtest" | "parameter-sweep" | "nlp" | "rl-research" | "crypto-paper";
+  jobType: "fundamentals" | "backtest" | "parameter-sweep" | "nlp" | "rl-research" | "crypto-paper";
   symbols: string[];
   strategy?: string;
   parameters?: Record<string, unknown>;
 };
 
-const externalWorkerJobTypes = ["fundamentals", "agent-debate", "backtest", "parameter-sweep", "nlp", "rl-research", "crypto-paper"];
+const externalWorkerJobTypes = ["fundamentals", "backtest", "parameter-sweep", "nlp", "rl-research", "crypto-paper"];
 
 export const externalWorkerCatalog: Array<{
   key: ExternalWorkerKey;
@@ -33,13 +32,6 @@ export const externalWorkerCatalog: Array<{
     urlEnv: "OPENBB_WORKER_URL",
     purpose: "Fundamentals, macro, options, and provider-key research.",
     allowedJobs: ["fundamentals"],
-  },
-  {
-    key: "tradingagents",
-    label: "TradingAgents",
-    urlEnv: "TRADINGAGENTS_WORKER_URL",
-    purpose: "LangGraph multi-agent analyst, researcher, trader, and portfolio-manager debate for research-only decisions.",
-    allowedJobs: ["agent-debate"],
   },
   {
     key: "lean",

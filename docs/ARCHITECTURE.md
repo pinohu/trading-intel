@@ -43,7 +43,7 @@ flowchart LR
   Providers["Licensed + Public Providers"] --> DataWorker
   SignalWorker["Signal Engine Workers"] --> DB
   BFF --> Ising["Ising/QUBO Basket Optimizer"]
-  BFF --> TradingAgents["TradingAgents Worker: multi-agent debate"]
+  BFF --> TradingAgents["Native TradingAgents: in-code multi-agent debate"]
   TradingAgents --> DB
   BacktestWorker["Backtest Workers: LEAN/vectorbt/backtesting.py"] --> DB
   Broker["Broker Paper/Read-Only APIs"] --> BFF
@@ -57,7 +57,7 @@ flowchart LR
 - Never promote stale quotes to buy/sell actions.
 - Never place live orders from the app until paper results, audit logs, broker permissions, and operator approvals exist.
 - Never allow cron or agent bearer tokens to place broker orders.
-- Never let TradingAgents output bypass native signal, backtest, paper-trade, audit, or broker gates.
+- Never let TradingAgents output place autonomous broker orders; manual paper/live execution stays in the broker controls and audit rail.
 - Never submit a market order from the current execution rail.
 - Never treat the Ising optimizer as a price predictor; it only selects among existing candidates.
 - Never allow auth to fail open.

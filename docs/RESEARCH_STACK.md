@@ -4,8 +4,9 @@ This platform uses a layered research architecture:
 
 1. Credentialed providers when keys exist.
 2. Public/free fallbacks when credentials are missing.
-3. External workers for heavyweight engines that do not belong inside Vercel serverless functions.
-4. Durable SQL storage for signals, notes, backtests, outcomes, and AutoResearch runs.
+3. Native TypeScript research engines for bounded workflows that can safely run inside the app.
+4. External workers for heavyweight engines that do not belong inside Vercel serverless functions.
+5. Durable SQL storage for signals, notes, backtests, outcomes, and AutoResearch runs.
 
 ## Provider Lanes
 
@@ -18,12 +19,31 @@ This platform uses a layered research architecture:
 - SEC EDGAR: free official filings through `data.sec.gov`; set `SEC_USER_AGENT` to a real contact string.
 - Public fallbacks: Nasdaq/CNBC/Yahoo/Stooq/Binance keep the dashboard alive, but are not execution-grade licenses.
 
+## Native TradingAgents Debate
+
+TradingAgents no longer requires `TRADINGAGENTS_WORKER_URL`.
+
+The dashboard button calls:
+
+```text
+POST /api/tradingagents/analyze
+```
+
+That route runs inside the Next.js codebase. It builds a bounded debate across market analyst, fundamentals analyst, bull researcher, bear researcher, trader, risk manager, and portfolio manager roles using:
+
+- current quote/provider output from `/api/market`
+- native rule signals
+- SEC/factor evidence from Algorithm Council
+- native Alpaca historical-bar backtests
+- Postgres research-note persistence when `DATABASE_URL` is configured
+
+It does not place broker orders. Manual paper/live orders still go through the visible broker controls, acknowledgement, and audit logging.
+
 ## External Worker URLs
 
 Set these when you host workers outside Vercel:
 
 - `OPENBB_WORKER_URL`
-- `TRADINGAGENTS_WORKER_URL`
 - `LEAN_WORKER_URL`
 - `BACKTRADER_WORKER_URL`
 - `VECTORBT_WORKER_URL`
@@ -53,29 +73,6 @@ with a payload:
 ```
 
 Use `WORKER_SHARED_SECRET` for worker-to-worker authorization if the external service supports it.
-
-## TradingAgents Worker
-
-TradingAgents is integrated as a research-only external worker. It should run on a machine with Python, the TradingAgents package, and your chosen LLM/provider keys:
-
-```bash
-pip install git+https://github.com/TauricResearch/TradingAgents.git
-npm run worker:tradingagents
-```
-
-Expose the worker URL through `TRADINGAGENTS_WORKER_URL`, for example:
-
-```text
-TRADINGAGENTS_WORKER_URL=https://your-worker.example.com/run
-```
-
-The dashboard button calls:
-
-```text
-POST /api/tradingagents/analyze
-```
-
-That route dispatches an `agent-debate` job, normalizes the returned rating/thesis/risks, and stores research notes when `DATABASE_URL` is configured. It never places broker orders.
 
 ## Free Alternatives
 

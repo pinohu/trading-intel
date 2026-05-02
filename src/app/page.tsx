@@ -324,7 +324,7 @@ type AutoResearchApi = {
 
 type TradingAgentsApi = {
   ok: boolean;
-  source?: "tradingagents-worker" | "native-real-data-debate" | string;
+  source?: "native-codebase-debate" | string;
   requested?: {
     symbols: string[];
     analysisDate: string;
@@ -791,7 +791,7 @@ export default function Home() {
   async function runTradingAgents() {
     setTradingAgentsRunning(true);
     setTradingAgents(null);
-    setQuantMessage("Requesting TradingAgents multi-agent debate.");
+    setQuantMessage("Running in-app TradingAgents debate.");
     try {
       const symbols = [selected, ...watchlist]
         .filter((symbol) => !["GOLD", "SILVER", "OIL", "NATGAS", "COPPER", "CORN", "WHEAT", "SOY"].includes(symbol))
@@ -809,8 +809,8 @@ export default function Home() {
       setTradingAgents(payload);
       setQuantMessage(
         payload.ok
-          ? payload.source === "native-real-data-debate"
-            ? "Real-data debate complete. Decisions are shown below."
+          ? payload.source === "native-codebase-debate"
+            ? "In-app TradingAgents debate complete. Decisions are shown below."
             : "TradingAgents debate complete. Decisions are shown below."
           : (payload.error ?? "TradingAgents could not run."),
       );
@@ -3316,7 +3316,7 @@ function TradingAgentsPanel({ result }: { result: TradingAgentsApi | null }) {
   if (!result) {
     return (
       <div className="mt-4 rounded-md border border-white/10 bg-black/20 p-3 text-sm leading-6 text-slate-400">
-        TradingAgents can run an external multi-agent debate across analysts, bull/bear researchers, trader, and portfolio manager. Results are research-only and can be persisted as notes when Postgres is available.
+        TradingAgents runs inside this app across market, fundamentals, bull/bear, trader, risk, and portfolio-manager roles. Results can be persisted as notes when Postgres is available.
       </div>
     );
   }
@@ -3329,13 +3329,13 @@ function TradingAgentsPanel({ result }: { result: TradingAgentsApi | null }) {
   }
 
   const decisions = result.decisions ?? [];
-  const nativeRealData = result.source === "native-real-data-debate";
+  const nativeCodebase = result.source === "native-codebase-debate";
   return (
     <div className="mt-4 rounded-md border border-blue-300/20 bg-blue-300/10 p-3">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="font-semibold text-white">
-            {nativeRealData ? "Native Real-Data Debate" : "TradingAgents Debate"}
+            {nativeCodebase ? "Native Codebase Debate" : "TradingAgents Debate"}
           </div>
           <div className="mt-1 text-xs leading-5 text-blue-100">
             {result.advisory ?? "Research-only multi-agent debate completed."}
@@ -3343,7 +3343,7 @@ function TradingAgentsPanel({ result }: { result: TradingAgentsApi | null }) {
         </div>
         <span className="rounded-sm bg-black/25 px-2 py-1 text-xs font-semibold text-blue-100">
           {result.requested
-            ? `${result.requested.symbols.length} symbol(s) / ${result.requested.depth}${nativeRealData ? " / real data" : ""}`
+            ? `${result.requested.symbols.length} symbol(s) / ${result.requested.depth}${nativeCodebase ? " / in-app" : ""}`
             : `${decisions.length} decision(s)`}
         </span>
       </div>

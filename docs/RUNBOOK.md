@@ -25,7 +25,7 @@ Then authenticate and check:
 - `/api/monitor` with cron auth
 - `/api/broker/status`
 - `/api/research-workers/readiness`
-- `/api/tradingagents/analyze` with an authenticated session when `TRADINGAGENTS_WORKER_URL` is configured
+- `/api/tradingagents/analyze` with an authenticated session; no worker URL is required
 
 ## Persistence Setup
 
@@ -102,21 +102,21 @@ Response:
 3. For manual verification, call the route with `Authorization: Bearer <CRON_SECRET>` or `x-cron-secret: <CRON_SECRET>`.
 4. Check alert provider env vars.
 
-## TradingAgents Worker
+## Native TradingAgents Debate
 
 Symptoms:
 
 - Quant Lab says TradingAgents is unavailable.
-- `/api/tradingagents/analyze` returns `TRADINGAGENTS_WORKER_URL is not configured`.
-- The worker returns `TradingAgents is not installed`.
+- `/api/tradingagents/analyze` returns a market-data, factor, or backtest error.
+- Decisions are missing expected transcript/evidence in the response `raw.agentDebates`.
 
 Response:
 
-1. Run the worker outside Vercel: `npm run worker:tradingagents`.
-2. Install the Python package in that worker environment: `pip install git+https://github.com/TauricResearch/TradingAgents.git`.
-3. Set at least one LLM provider key for the worker, such as `OPENAI_API_KEY`.
-4. Set `TRADINGAGENTS_WORKER_URL` in Vercel production and redeploy.
-5. Keep `WORKER_SHARED_SECRET` aligned between Vercel and the worker if you require bearer auth.
+1. Confirm the user is authenticated; the endpoint does not accept anonymous calls.
+2. Check `/api/market` for the requested symbols.
+3. Check `/api/research-stack/readiness` for SEC/factor and database readiness.
+4. Check Alpaca historical bars if backtests return `insufficient-data`.
+5. Re-run `npm run quality` before redeploying any route or debate-engine change.
 
 ## Rollback
 
