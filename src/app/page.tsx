@@ -621,6 +621,7 @@ export default function Home() {
   const [backtestRunning, setBacktestRunning] = useState(false);
   const [autoResearchRunning, setAutoResearchRunning] = useState(false);
   const [tradingAgentsRunning, setTradingAgentsRunning] = useState(false);
+  const [quantMessage, setQuantMessage] = useState("Choose a lab action to run evidence before paper promotion.");
   const [agentExecuting, setAgentExecuting] = useState(false);
   const [brokerMessage, setBrokerMessage] = useState("Checking broker rail");
   const [agentMessage, setAgentMessage] = useState("Agent trading is supervised.");
@@ -754,6 +755,7 @@ export default function Home() {
   async function runRealBacktest() {
     setBacktestRunning(true);
     setRealBacktest(null);
+    setQuantMessage("Running historical backtest with slippage and fee assumptions.");
     try {
       const symbols = [selected, ...watchlist.filter((symbol) => !["GOLD", "SILVER", "OIL", "NATGAS", "COPPER", "CORN", "WHEAT", "SOY", "BTCUSD", "ETHUSD"].includes(symbol))]
         .filter(Boolean)
@@ -763,8 +765,10 @@ export default function Home() {
       );
       const payload = await response.json();
       setRealBacktest(payload);
+      setQuantMessage(payload.ok ? "Backtest complete. Results are shown below." : (payload.error ?? "Backtest could not run."));
     } catch {
       setRealBacktest({ ok: false, error: "Backtest request failed." });
+      setQuantMessage("Backtest request failed.");
     } finally {
       setBacktestRunning(false);
     }
@@ -772,6 +776,7 @@ export default function Home() {
 
   async function runAutoResearch() {
     setAutoResearchRunning(true);
+    setQuantMessage("Running AutoResearch candidates against the selected watchlist.");
     try {
       const symbols = [selected, ...watchlist]
         .filter((symbol) => !["GOLD", "SILVER", "OIL", "NATGAS", "COPPER", "CORN", "WHEAT", "SOY", "BTCUSD", "ETHUSD"].includes(symbol))
@@ -788,8 +793,10 @@ export default function Home() {
       });
       const payload = await response.json();
       setAutoResearch(payload);
+      setQuantMessage(payload.ok ? "AutoResearch complete. Champion and experiments are shown below." : (payload.error ?? "AutoResearch could not run."));
     } catch {
       setAutoResearch({ ok: false, error: "AutoResearch request failed." });
+      setQuantMessage("AutoResearch request failed.");
     } finally {
       setAutoResearchRunning(false);
     }
@@ -798,6 +805,7 @@ export default function Home() {
   async function runTradingAgents() {
     setTradingAgentsRunning(true);
     setTradingAgents(null);
+    setQuantMessage("Requesting TradingAgents multi-agent debate.");
     try {
       const symbols = [selected, ...watchlist]
         .filter((symbol) => !["GOLD", "SILVER", "OIL", "NATGAS", "COPPER", "CORN", "WHEAT", "SOY"].includes(symbol))
@@ -813,11 +821,13 @@ export default function Home() {
       });
       const payload = await response.json();
       setTradingAgents(payload);
+      setQuantMessage(payload.ok ? "TradingAgents debate complete. Decisions are shown below." : (payload.error ?? "TradingAgents could not run."));
       if (payload.ok) {
         void refresh();
       }
     } catch {
       setTradingAgents({ ok: false, error: "TradingAgents request failed." });
+      setQuantMessage("TradingAgents request failed.");
     } finally {
       setTradingAgentsRunning(false);
     }
@@ -1741,6 +1751,12 @@ export default function Home() {
                 </button>
               </div>
             </div>
+            <div className="mt-4 rounded-md border border-white/10 bg-black/25 p-3 text-sm leading-6 text-slate-300" role="status">
+              {quantMessage}
+            </div>
+            <RealBacktestPanel result={realBacktest} />
+            <AutoResearchPanel result={autoResearch} />
+            <TradingAgentsPanel result={tradingAgents} />
             <div className="mt-4 grid gap-3 lg:grid-cols-5">
               {strategies.map((strategy) => (
                 <StrategyTile key={strategy.name} strategy={strategy} />
@@ -1752,9 +1768,6 @@ export default function Home() {
                 <span className="font-semibold">{bestStrategy.repo}</span>. Treat this as a ranking signal, not a trade.
               </div>
             )}
-            <RealBacktestPanel result={realBacktest} />
-            <AutoResearchPanel result={autoResearch} />
-            <TradingAgentsPanel result={tradingAgents} />
           </Panel>
 
           <Panel>
