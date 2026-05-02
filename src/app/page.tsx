@@ -536,6 +536,17 @@ function formatUsd(value: number) {
   }).format(value);
 }
 
+function formatSignedUsd(value: number) {
+  if (!Number.isFinite(value) || value === 0) return formatUsd(0);
+  const sign = value > 0 ? "+" : "-";
+  return `${sign}${formatUsd(Math.abs(value))}`;
+}
+
+function formatSignedPct(value: number) {
+  if (!Number.isFinite(value) || value === 0) return "0.00%";
+  return `${value > 0 ? "+" : ""}${value.toFixed(2)}%`;
+}
+
 function formatVolume(value: number) {
   if (value > 1_000_000_000) return `${(value / 1_000_000_000).toFixed(1)}B`;
   if (value > 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
@@ -857,7 +868,6 @@ export default function Home() {
     setQuantMessage("Running Fusion Alpha across the engine map, algorithm council, backtest, and native agent debate.");
     try {
       const symbols = [selected, ...watchlist]
-        .filter((symbol) => !["GOLD", "SILVER", "OIL", "NATGAS", "COPPER", "CORN", "WHEAT", "SOY", "BTCUSD", "ETHUSD"].includes(symbol))
         .filter(Boolean)
         .slice(0, 8);
       const response = await fetch(
@@ -914,13 +924,14 @@ export default function Home() {
     }
   }
 
-  async function placeBrokerOrder(ticket: TradeTicket | null) {
-    if (!ticket || !brokerStatus) return;
+  async function placeBrokerOrder(ticket: TradeTicket | null, modeOverride?: BrokerMode) {
+    if (!ticket) return;
+    const requestedMode = modeOverride ?? brokerMode;
     setPlacingOrder(true);
-    setBrokerMessage("Submitting broker order request");
+    setBrokerMessage(`Submitting ${requestedMode} broker order request`);
     const clientOrderId = `ti-${ticket.symbol}-${crypto.randomUUID().slice(0, 18)}`;
     try {
-      const response = await fetch(`/api/broker/orders?mode=${brokerMode}`, {
+      const response = await fetch(`/api/broker/orders?mode=${requestedMode}`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -1028,6 +1039,9 @@ export default function Home() {
             researchComponents: researchStack?.components ?? [],
             newsItems: news,
             brokerReady: Boolean(brokerStatus?.orderPlacementReady),
+            accountSize,
+            riskPct: draft.risk,
+            maxDailyLossPct,
           }),
     [
       fusionAlpha,
@@ -1042,10 +1056,22 @@ export default function Home() {
       researchStack,
       news,
       brokerStatus,
+      accountSize,
+      draft.risk,
+      maxDailyLossPct,
     ],
   );
   const topFusionPrediction = fusionPredictions[0];
   const selectedFusionPrediction = fusionPredictions.find((prediction) => prediction.symbol === selectedQuote?.symbol) ?? topFusionPrediction;
+  const buyDecision =
+    fusionPredictions.find((prediction) => prediction.direction === "buy" && prediction.action !== "Data Review") ??
+    fusionPredictions.find((prediction) => prediction.direction === "buy") ??
+    topFusionPrediction;
+  const sellDecision =
+    fusionPredictions.find((prediction) => prediction.direction === "sell" && prediction.symbol !== buyDecision?.symbol) ??
+    fusionPredictions.find((prediction) => prediction.direction === "review" && prediction.symbol !== buyDecision?.symbol) ??
+    fusionPredictions.find((prediction) => prediction.symbol !== buyDecision?.symbol) ??
+    topFusionPrediction;
   const topAlgorithmScore = algorithmScores[0];
   const institutionalGrade = institutionalReadiness?.productionInstitutionalReady
     ? "Ready"
@@ -1091,6 +1117,82 @@ export default function Home() {
         maxDailyLossPct,
       })
     : null;
+
+  function selectFusionDecision(prediction: FusionPrediction | undefined) {
+    if (!prediction) return;
+    setSelected(prediction.symbol);
+    setDraft((current) => ({ ...current, symbol: prediction.symbol }));
+  }
+
+  function ticketForFusionPrediction(prediction: FusionPrediction | undefined): TradeTicket | null {
+    if (!prediction || !prediction.entry || !prediction.stop || !prediction.target) return null;
+    const lead = buyLeads.find((item) => item.symbol === prediction.symbol);
+    if (lead) {
+      return buildBuyTradeTicket({
+        lead,
+        accountSize,
+        riskPct: draft.risk,
+        maxDailyLossPct,
+      });
+    }
+
+    const tradeable = prediction.direction === "buy" && prediction.action !== "Data Review" && prediction.forecast.units > 0;
+    return {
+      symbol: prediction.symbol,
+      name: prediction.name,
+      side: "Buy",
+      status: tradeable ? "Ready to Watch" : "Blocked",
+      entry: prediction.entry,
+      stop: prediction.stop,
+      target: prediction.target,
+      units: prediction.forecast.units,
+      notional: prediction.forecast.notional,
+      maxLoss: prediction.forecast.maxLoss,
+      rewardRisk: prediction.rewardRisk ?? 0,
+      riskPct: draft.risk,
+      holdingPeriod: prediction.horizon,
+      expectedHold: prediction.expectedHold,
+      maxHold: prediction.maxHold,
+      reviewCadence: prediction.reviewCadence,
+      exitRule: "Exit at target, stop, max-hold expiry, or when Fusion Alpha downgrades below Hold.",
+      tradeable,
+      reason: prediction.thesis,
+      mustConfirm: [
+        `Holding period: ${prediction.expectedHold}.`,
+        "The quote is fresh and the broker rail accepts this asset class.",
+        "Spread, liquidity, and event risk are acceptable before entry.",
+      ],
+      doNotTradeIf: [
+        "Fusion Alpha returns Data Review or a stale quote warning.",
+        `Price trades through the invalidation level at ${formatUsd(prediction.stop)}.`,
+        "You cannot accept the displayed max loss.",
+      ],
+    };
+  }
+
+  async function handleFusionPaperDecision(prediction: FusionPrediction | undefined) {
+    selectFusionDecision(prediction);
+    if (!prediction) return;
+    if (prediction.direction !== "buy" || prediction.action === "Data Review") {
+      setAgentMessage(`${prediction.symbol}: ${prediction.action}. Paper agent will not open a new long from this decision.`);
+      return;
+    }
+    await runPaperAgent(prediction.symbol);
+  }
+
+  async function handleFusionLiveDecision(prediction: FusionPrediction | undefined) {
+    selectFusionDecision(prediction);
+    if (!prediction) return;
+    if (prediction.direction !== "buy" || prediction.action === "Data Review") {
+      setBrokerMessage(`${prediction.symbol}: ${prediction.action}. No new live long order was submitted from this decision.`);
+      return;
+    }
+    if (brokerMode !== "live") {
+      setBrokerMode("live");
+    }
+    await placeBrokerOrder(ticketForFusionPrediction(prediction), "live");
+  }
+
   const topSell = sellLeaders[0];
   const staleStocks = signals.filter((signal) => !signal.dataFresh && signal.market === "Stock/ETF");
   const operationsSummary = trustSummary();
@@ -1316,6 +1418,22 @@ export default function Home() {
               />
             </div>
           </div>
+          <DecisionCockpitHero
+            buyDecision={buyDecision}
+            sellDecision={sellDecision}
+            brokerStatus={brokerStatus}
+            brokerMode={brokerMode}
+            brokerOverview={brokerOverview}
+            agentTrader={agentTrader}
+            secondsAgo={secondsAgo}
+            feedQuality={feedQuality}
+            paperTradesCount={paperTrades.length}
+            agentExecuting={agentExecuting}
+            placingOrder={placingOrder}
+            onSelect={selectFusionDecision}
+            onPaperDecision={(prediction) => void handleFusionPaperDecision(prediction)}
+            onLiveDecision={(prediction) => void handleFusionLiveDecision(prediction)}
+          />
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
             <Metric icon={Activity} label="Feed" value={status} />
             <Metric icon={TrendingUp} label="Market Scan" value={`${green}/${quotes.length || watchlist.length} green, ${movers} movers`} />
@@ -2111,6 +2229,270 @@ export default function Home() {
 
 function Panel({ children }: { children: React.ReactNode }) {
   return <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm shadow-black/20">{children}</div>;
+}
+
+function DecisionCockpitHero({
+  buyDecision,
+  sellDecision,
+  brokerStatus,
+  brokerMode,
+  brokerOverview,
+  agentTrader,
+  secondsAgo,
+  feedQuality,
+  paperTradesCount,
+  agentExecuting,
+  placingOrder,
+  onSelect,
+  onPaperDecision,
+  onLiveDecision,
+}: {
+  buyDecision: FusionPrediction | undefined;
+  sellDecision: FusionPrediction | undefined;
+  brokerStatus: BrokerStatus | null;
+  brokerMode: BrokerMode;
+  brokerOverview: BrokerOverview | null;
+  agentTrader: AgentTraderApi | null;
+  secondsAgo: number | null;
+  feedQuality: string;
+  paperTradesCount: number;
+  agentExecuting: boolean;
+  placingOrder: boolean;
+  onSelect: (prediction: FusionPrediction | undefined) => void;
+  onPaperDecision: (prediction: FusionPrediction | undefined) => void;
+  onLiveDecision: (prediction: FusionPrediction | undefined) => void;
+}) {
+  const canBuy = Boolean(buyDecision && buyDecision.direction === "buy" && buyDecision.action !== "Data Review");
+  const paperReady = Boolean(agentTrader?.policy?.paperAutomationReady || (brokerStatus?.mode === "paper" && brokerStatus.orderPlacementReady));
+  const liveConfigured = Boolean(brokerStatus?.credentialsConfigured && brokerStatus.liveTradingEnabled && brokerStatus.liveAckConfigured);
+  const liveReady = Boolean(brokerMode === "live" ? brokerStatus?.orderPlacementReady : liveConfigured);
+  const quoteAge = secondsAgo === null ? "Waiting" : `${secondsAgo}s`;
+
+  return (
+    <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(20rem,0.85fr)]">
+      <HeroDecisionCard
+        intent="buy"
+        prediction={buyDecision}
+        primary
+        footer={
+          <div className="grid gap-2 sm:grid-cols-2">
+            <button
+              onClick={() => onPaperDecision(buyDecision)}
+              disabled={!canBuy || agentExecuting}
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-md bg-[var(--buy)] px-4 text-sm font-bold text-slate-950 transition hover:brightness-110 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
+            >
+              <Bot className="h-4 w-4" />
+              {agentExecuting ? "Paper Running" : "Paper Trade"}
+            </button>
+            <button
+              onClick={() => onLiveDecision(buyDecision)}
+              disabled={!canBuy || placingOrder}
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-md bg-rose-300 px-4 text-sm font-bold text-slate-950 transition hover:brightness-110 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
+            >
+              <Zap className="h-4 w-4" />
+              {placingOrder ? "Submitting" : "Live Buy"}
+            </button>
+          </div>
+        }
+      />
+
+      <div className="grid gap-4">
+        <HeroDecisionCard
+          intent="sell"
+          prediction={sellDecision}
+          footer={
+            <button
+              onClick={() => onSelect(sellDecision)}
+              disabled={!sellDecision}
+              className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md border border-rose-300/35 bg-rose-300/10 px-3 text-sm font-semibold text-rose-100 transition hover:border-rose-200 disabled:cursor-not-allowed disabled:border-slate-700 disabled:text-slate-500"
+            >
+              <TrendingDown className="h-4 w-4" />
+              Review Sell / Avoid
+            </button>
+          }
+        />
+
+        <div className="rounded-md border border-white/10 bg-black/20 p-3">
+          <div className="grid gap-2 sm:grid-cols-2">
+            <ReadinessCell
+              label="Paper"
+              value={paperReady ? "Ready" : "Gated"}
+              detail={`${paperTradesCount} saved watches`}
+              tone={paperReady ? "green" : "amber"}
+            />
+            <ReadinessCell
+              label="Live"
+              value={liveReady ? "Ready" : "Gated"}
+              detail={`${brokerMode.toUpperCase()} rail`}
+              tone={liveReady ? "green" : "red"}
+            />
+            <ReadinessCell
+              label="Feed"
+              value={feedQuality}
+              detail={`Age ${quoteAge}`}
+              tone={feedQuality === "Execution Grade" || feedQuality === "Public Real-Time" ? "green" : "amber"}
+            />
+            <ReadinessCell
+              label="Exposure"
+              value={`${brokerOverview?.positions?.length ?? 0} positions`}
+              detail={`${brokerOverview?.orders?.length ?? 0} open orders`}
+              tone={(brokerOverview?.positions?.length ?? 0) > 0 ? "blue" : "plain"}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function HeroDecisionCard({
+  intent,
+  prediction,
+  primary = false,
+  footer,
+}: {
+  intent: "buy" | "sell";
+  prediction: FusionPrediction | undefined;
+  primary?: boolean;
+  footer: React.ReactNode;
+}) {
+  if (!prediction) {
+    return (
+      <div className="rounded-md border border-dashed border-white/15 bg-black/20 p-4 text-sm text-slate-400">
+        Waiting for Fusion Alpha.
+      </div>
+    );
+  }
+
+  const headline = decisionHeadline(prediction, intent);
+  const intentLabel = intent === "buy" ? "Best Buy Decision" : "Sell / Avoid Decision";
+  const forecastAvailable = prediction.forecast.units > 0 && prediction.forecast.projectedPnl !== 0;
+  const forecastLabel = prediction.direction === "sell" ? "Avoided downside" : "Forecast P/L";
+  const actionClass = fusionActionClass(prediction.action);
+  const supports = prediction.topSupports.length ? prediction.topSupports : prediction.engineFindings.filter((finding) => finding.impact === "supports").slice(0, 2);
+  const challenges =
+    prediction.blockers.length > 0
+      ? prediction.blockers
+      : prediction.topChallenges.length > 0
+        ? prediction.topChallenges.map((finding) => finding.finding)
+        : ["No major blocker in current fusion view."];
+  const shell =
+    intent === "buy"
+      ? "border-emerald-300/25 bg-[linear-gradient(135deg,rgba(45,212,163,0.13),rgba(18,24,32,0.94))]"
+      : "border-rose-300/25 bg-[linear-gradient(135deg,rgba(255,92,122,0.12),rgba(18,24,32,0.94))]";
+
+  return (
+    <div className={`rounded-md border p-4 shadow-sm shadow-black/30 ${shell}`}>
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
+          <div className="mb-2 text-xs font-bold uppercase text-slate-500">{intentLabel}</div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className={`rounded-sm px-2 py-1 text-xs font-bold uppercase ${actionClass}`}>{prediction.action}</span>
+            <span className="rounded-sm border border-white/10 bg-black/25 px-2 py-1 text-xs font-semibold text-slate-300">{decisionWindowLabel(prediction)}</span>
+          </div>
+          <div className="mt-3 flex flex-wrap items-end gap-x-3 gap-y-1">
+            <span className={`font-mono font-semibold text-white ${primary ? "text-5xl" : "text-3xl"}`}>{prediction.symbol}</span>
+            <span className={`pb-1 font-semibold uppercase ${intent === "buy" ? "text-emerald-200" : "text-rose-200"}`}>{headline}</span>
+          </div>
+          <p className={`mt-3 text-sm leading-6 ${primary ? "max-w-4xl text-slate-200" : "text-slate-300"}`}>{prediction.thesis}</p>
+        </div>
+
+        <div className="grid min-w-56 grid-cols-2 gap-2 text-xs">
+          <MiniStat label="Fusion" value={`${prediction.score}/100`} tone={prediction.score >= 65 ? "green" : prediction.score <= 44 ? "red" : "amber"} />
+          <MiniStat label="Trust" value={`${prediction.confidence}/100`} tone={prediction.confidence >= 70 ? "green" : "blue"} />
+        </div>
+      </div>
+
+      {primary && <div className="mt-4">{footer}</div>}
+
+      <div className={`mt-4 grid grid-cols-2 gap-2 text-xs ${primary ? "sm:grid-cols-3 xl:grid-cols-6" : "sm:grid-cols-2"}`}>
+        <MiniStat label="Timeframe" value={decisionWindowLabel(prediction)} tone="amber" />
+        <MiniStat label="Expected Hold" value={prediction.expectedHold} tone="blue" />
+        <MiniStat label="Max Hold" value={prediction.maxHold} tone="plain" />
+        <MiniStat label={forecastLabel} value={forecastAvailable ? formatSignedUsd(prediction.forecast.projectedPnl) : "No forecast"} tone={prediction.forecast.projectedPnl >= 0 ? "green" : "red"} />
+        <MiniStat label="Move" value={forecastAvailable ? formatSignedPct(prediction.forecast.expectedMovePct) : "N/A"} tone={prediction.forecast.expectedMovePct >= 0 ? "green" : "red"} />
+        <MiniStat label="Max Loss" value={prediction.forecast.maxLoss > 0 ? formatUsd(prediction.forecast.maxLoss) : "N/A"} tone="red" />
+      </div>
+
+      {primary && (
+        <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+          <MiniStat label="Entry" value={prediction.entry ? formatUsd(prediction.entry) : "No entry"} tone="green" />
+          <MiniStat label="Stop" value={prediction.stop ? formatUsd(prediction.stop) : "No stop"} tone="amber" />
+          <MiniStat label="Target" value={prediction.target ? formatUsd(prediction.target) : "No target"} tone="blue" />
+          <MiniStat label="Units / Notional" value={prediction.forecast.units > 0 ? `${prediction.forecast.units} / ${formatUsd(prediction.forecast.notional)}` : "N/A"} tone="plain" />
+        </div>
+      )}
+
+      <div className="mt-4 grid gap-3 lg:grid-cols-2">
+        <div className="rounded-sm bg-black/20 p-3">
+          <div className="text-xs font-semibold uppercase text-slate-500">Best Evidence</div>
+          <div className="mt-2 space-y-1 text-xs leading-5 text-emerald-100">
+            {supports.slice(0, primary ? 3 : 2).map((finding) => (
+              <div key={finding.key}>{finding.label}: {finding.score}/100</div>
+            ))}
+          </div>
+        </div>
+        <div className="rounded-sm bg-black/20 p-3">
+          <div className="text-xs font-semibold uppercase text-slate-500">Risk Check</div>
+          <div className="mt-2 space-y-1 text-xs leading-5 text-amber-100">
+            {challenges.slice(0, primary ? 3 : 2).map((item) => (
+              <div key={item}>{item}</div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {!primary && <div className="mt-4">{footer}</div>}
+    </div>
+  );
+}
+
+function ReadinessCell({
+  label,
+  value,
+  detail,
+  tone,
+}: {
+  label: string;
+  value: string;
+  detail: string;
+  tone: "green" | "red" | "amber" | "blue" | "plain";
+}) {
+  const color =
+    tone === "green"
+      ? "text-emerald-300"
+      : tone === "red"
+        ? "text-rose-300"
+        : tone === "amber"
+          ? "text-amber-300"
+          : tone === "blue"
+            ? "text-cyan-300"
+            : "text-white";
+  return (
+    <div className="rounded-sm bg-white/[0.03] p-3">
+      <div className="text-xs uppercase text-slate-500">{label}</div>
+      <div className={`mt-1 font-mono text-lg font-semibold ${color}`}>{value}</div>
+      <div className="mt-1 text-xs text-slate-400">{detail}</div>
+    </div>
+  );
+}
+
+function decisionHeadline(prediction: FusionPrediction, intent: "buy" | "sell") {
+  if (intent === "buy" && prediction.direction !== "buy") return "NO BUY NOW";
+  if (prediction.direction === "buy") return "BUY";
+  if (prediction.direction === "sell") return "SELL / AVOID";
+  if (prediction.direction === "review") return "DATA REVIEW";
+  return "HOLD";
+}
+
+function decisionWindowLabel(prediction: FusionPrediction) {
+  const text = `${prediction.horizon} ${prediction.expectedHold} ${prediction.maxHold}`.toLowerCase();
+  if (text.includes("intraday") || text.includes("same-session") || text.includes("day trade")) return "Intraday";
+  if (text.includes("1-5") || text.includes("5 trading") || text.includes("one trading day")) return "1 week";
+  if (text.includes("1-4 weeks") || text.includes("month")) return "1 month";
+  if (text.includes("quarter")) return "1 quarter";
+  if (text.includes("year") || text.includes("long-term")) return "1 year";
+  return prediction.horizon;
 }
 
 function TrustReadinessStrip({
@@ -3328,13 +3710,15 @@ function FusionAlphaPanel({
           </div>
         </div>
 
-        <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2 lg:grid-cols-6">
+        <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
           <MiniStat label="Horizon" value={selected.horizon} tone="amber" />
           <MiniStat label="Expected Hold" value={selected.expectedHold} tone="blue" />
           <MiniStat label="Entry" value={selected.entry ? formatUsd(selected.entry) : "No entry"} tone="green" />
           <MiniStat label="Stop" value={selected.stop ? formatUsd(selected.stop) : "No stop"} tone="amber" />
           <MiniStat label="Target" value={selected.target ? formatUsd(selected.target) : "No target"} tone="blue" />
           <MiniStat label="R/R" value={selected.rewardRisk ? `${selected.rewardRisk}R` : "N/A"} tone="plain" />
+          <MiniStat label="Forecast P/L" value={selected.forecast.units > 0 ? formatSignedUsd(selected.forecast.projectedPnl) : "No forecast"} tone={selected.forecast.projectedPnl >= 0 ? "green" : "red"} />
+          <MiniStat label="Max Loss" value={selected.forecast.maxLoss > 0 ? formatUsd(selected.forecast.maxLoss) : "N/A"} tone="red" />
         </div>
 
         <div className="mt-3 rounded-sm bg-black/20 p-2 text-sm leading-6 text-white">

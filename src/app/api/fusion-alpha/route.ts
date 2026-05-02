@@ -91,6 +91,9 @@ export async function GET(request: Request) {
     tradingAgents: decisions,
     researchComponents: researchStack.components,
     brokerReady: Boolean(readiness?.orderPlacementReady),
+    accountSize,
+    riskPct,
+    maxDailyLossPct,
   });
 
   return NextResponse.json({

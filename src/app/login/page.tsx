@@ -55,7 +55,7 @@ export default function LoginPage() {
         </button>
         <div className="mt-4 flex gap-2 rounded-md border border-white/10 bg-white/[0.03] p-3 text-xs leading-5 text-slate-400">
           <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
-          Research and paper-trading only. Live broker execution is intentionally locked out.
+          Research and paper trading are available. Live broker execution requires the configured manual acknowledgement.
         </div>
       </form>
     </main>

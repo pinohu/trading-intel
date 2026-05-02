@@ -106,6 +106,8 @@ describe("fusionAlpha", () => {
     expect(predictions[0].algorithmFindings).toHaveLength(6);
     expect(predictions[0].score).toBeGreaterThan(65);
     expect(predictions[0].operatorAction).toContain("Paper candidate");
+    expect(predictions[0].forecast.projectedPnl).toBeGreaterThan(0);
+    expect(predictions[0].forecast.units).toBeGreaterThan(0);
   });
 
   it("blocks stale data even when other evidence is constructive", () => {
@@ -123,5 +125,6 @@ describe("fusionAlpha", () => {
 
     expect(predictions[0].action).toBe("Data Review");
     expect(predictions[0].blockers).toContain("Quote is stale or unavailable.");
+    expect(predictions[0].forecast.label).toContain("No revenue forecast");
   });
 });

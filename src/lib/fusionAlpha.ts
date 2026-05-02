@@ -57,6 +57,14 @@ export type FusionPrediction = {
   stop: number | null;
   target: number | null;
   rewardRisk: number | null;
+  forecast: {
+    units: number;
+    notional: number;
+    expectedMovePct: number;
+    projectedPnl: number;
+    maxLoss: number;
+    label: string;
+  };
   thesis: string;
   operatorAction: string;
   conflicts: string[];
@@ -104,6 +112,9 @@ export function buildFusionAlphaPredictions({
   researchComponents = [],
   newsItems = [],
   brokerReady = false,
+  accountSize = 10000,
+  riskPct = 1,
+  maxDailyLossPct = 3,
 }: {
   quotes: SignalQuote[];
   signals: TradeSignal[];
@@ -116,6 +127,9 @@ export function buildFusionAlphaPredictions({
   researchComponents?: FusionResearchComponent[];
   newsItems?: FusionNewsItem[];
   brokerReady?: boolean;
+  accountSize?: number;
+  riskPct?: number;
+  maxDailyLossPct?: number;
 }) {
   const signalBySymbol = bySymbol(signals);
   const leadBySymbol = bySymbol(buyLeads);
@@ -163,6 +177,7 @@ export function buildFusionAlphaPredictions({
       const topSupports = engineFindings.filter((finding) => finding.impact === "supports").sort((a, b) => b.score - a.score).slice(0, 4);
       const topChallenges = engineFindings.filter((finding) => finding.impact === "challenges" || finding.impact === "guards").sort((a, b) => a.score - b.score).slice(0, 4);
       const orderShape = orderShapeFor({ activeBuy, lead, signal });
+      const forecast = forecastFor({ direction, orderShape, activeBuy, accountSize, riskPct, maxDailyLossPct });
 
       return {
         symbol: quote.symbol,
@@ -174,6 +189,7 @@ export function buildFusionAlphaPredictions({
         direction,
         ...horizon,
         ...orderShape,
+        forecast,
         thesis: thesisFor({ quote, action, finalScore, confidence, topSupports, topChallenges, score, backtest, agent }),
         operatorAction: operatorActionFor({ action, activeBuy, lead, signal, blockers }),
         conflicts,
@@ -926,6 +942,52 @@ function orderShapeFor({
     stop: activeBuy?.stop ?? lead?.stop ?? signal?.invalidation ?? null,
     target: activeBuy?.target ?? lead?.target ?? signal?.target ?? null,
     rewardRisk: activeBuy?.rewardRisk ?? lead?.rewardRisk ?? signal?.rewardRisk ?? null,
+  };
+}
+
+function forecastFor({
+  direction,
+  orderShape,
+  activeBuy,
+  accountSize,
+  riskPct,
+  maxDailyLossPct,
+}: {
+  direction: FusionPrediction["direction"];
+  orderShape: ReturnType<typeof orderShapeFor>;
+  activeBuy?: BuyNowSignal;
+  accountSize: number;
+  riskPct: number;
+  maxDailyLossPct: number;
+}) {
+  if (!orderShape.entry || !orderShape.stop || !orderShape.target || direction === "hold" || direction === "review") {
+    return {
+      units: 0,
+      notional: 0,
+      expectedMovePct: 0,
+      projectedPnl: 0,
+      maxLoss: 0,
+      label: direction === "review" ? "No revenue forecast until data refresh" : "No trade forecast",
+    };
+  }
+
+  const entry = orderShape.entry;
+  const stop = orderShape.stop;
+  const target = orderShape.target;
+  const riskBudget = Math.min(accountSize * (Math.max(0, riskPct) / 100), accountSize * (Math.max(0.1, maxDailyLossPct) / 100));
+  const riskDistance = Math.max(Math.abs(entry - stop), entry * 0.0025);
+  const units = activeBuy?.units ?? Math.max(1, Math.floor(riskBudget / riskDistance));
+  const notional = Number((units * entry).toFixed(2));
+  const rawPnl = direction === "sell" ? (entry - target) * units : (target - entry) * units;
+  const rawLoss = direction === "sell" ? Math.max(0, stop - entry) * units : Math.max(0, entry - stop) * units;
+  const expectedMovePct = direction === "sell" ? ((entry - target) / entry) * 100 : ((target - entry) / entry) * 100;
+  return {
+    units,
+    notional,
+    expectedMovePct: Number(expectedMovePct.toFixed(2)),
+    projectedPnl: Number(rawPnl.toFixed(2)),
+    maxLoss: activeBuy?.maxLoss ?? Number(rawLoss.toFixed(2)),
+    label: direction === "sell" ? "Projected downside/avoidance value" : "Projected gross paper P/L at target",
   };
 }
 
