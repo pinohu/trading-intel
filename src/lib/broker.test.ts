@@ -43,6 +43,14 @@ describe("broker", () => {
     expect(brokerConfig("live").credentialsConfigured).toBe(true);
   });
 
+  it("does not require a separate live trading enable flag", () => {
+    delete process.env.ALPACA_LIVE_TRADING_ENABLED;
+    expect(brokerConfig("live").liveTradingEnabled).toBe(true);
+
+    process.env.ALPACA_LIVE_TRADING_ENABLED = "false";
+    expect(brokerConfig("live").liveTradingEnabled).toBe(false);
+  });
+
   it("accepts only whole-share day limit stock/ETF orders inside risk caps", () => {
     process.env.BROKER_MAX_ORDER_NOTIONAL = "1000";
     process.env.BROKER_MAX_ORDER_UNITS = "20";

@@ -1,6 +1,6 @@
 # Broker Execution
 
-The app includes an Alpaca broker execution rail. It is live-capable, but it is locked unless the required environment variables, user session, and audit storage are present.
+The app includes an Alpaca broker execution rail. It is live-capable when live credentials, user session, acknowledgement, audit storage, and pre-trade limits are present.
 
 ## Supported Broker
 
@@ -22,6 +22,7 @@ References:
 - Whole-share stock/ETF symbols only.
 - Configurable max order notional.
 - Configurable max units.
+- Manual live stock/ETF order submission when live Alpaca keys are configured.
 - Live mode requires a per-order acknowledgement phrase.
 - Live mode requires `DATABASE_URL` and `database/schema.sql` applied so order requests are auditable.
 
@@ -65,12 +66,13 @@ Required values:
 ```text
 BROKER_EXECUTION_ENABLED=true
 BROKER_EXECUTION_MODE=live
-ALPACA_LIVE_TRADING_ENABLED=true
 BROKER_LIVE_EXECUTION_ACK=<a private phrase you must type into the app before each live order>
 ALPACA_API_KEY_ID=<live Alpaca key>
 ALPACA_API_SECRET_KEY=<live Alpaca secret>
 DATABASE_URL=<Postgres connection string with schema applied>
 ```
+
+`ALPACA_LIVE_TRADING_ENABLED=false` is an optional emergency lock. If it is absent or any value other than `false`, live mode is allowed to arm once the required credentials and acknowledgement are configured.
 
 Optional risk caps:
 
@@ -89,4 +91,4 @@ After login:
 - `/api/broker/positions`
 - `/api/broker/orders`
 
-`POST /api/broker/orders` should return `503` until the broker rail is fully configured.
+`POST /api/broker/orders?mode=live` should return `503` until live credentials, acknowledgement, audit storage, and pre-trade controls are ready.

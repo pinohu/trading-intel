@@ -50,10 +50,11 @@ Paper mode requires:
 
 Live mode additionally requires:
 
-- `BROKER_EXECUTION_MODE=live`
-- `ALPACA_LIVE_TRADING_ENABLED=true`
+- `ALPACA_LIVE_API_KEY_ID`
+- `ALPACA_LIVE_API_SECRET_KEY`
 - `BROKER_LIVE_EXECUTION_ACK`
 - `DATABASE_URL` with `database/schema.sql` applied
+- Pre-trade controls with `allowLiveOrders=true` and `TRADING_KILL_SWITCH=false`
 
 The app only submits day limit orders. It blocks market orders, futures aliases, current crypto aliases, fractional shares, oversized orders, and extended-hours orders unless explicitly enabled.
 

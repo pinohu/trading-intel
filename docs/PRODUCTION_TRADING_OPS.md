@@ -20,11 +20,12 @@ This platform is now wired as a trading research and broker-operations system wi
 Live broker orders remain locked unless all of these are true:
 
 - `BROKER_EXECUTION_ENABLED=true`
-- `BROKER_EXECUTION_MODE=live`
 - `ALPACA_LIVE_API_KEY_ID` and `ALPACA_LIVE_API_SECRET_KEY` are configured
-- `ALPACA_LIVE_TRADING_ENABLED=true`
 - `BROKER_LIVE_EXECUTION_ACK` is configured and sent with each live order request
 - Postgres schema is ready, so every live order has an audit record
+- Pre-trade controls allow live orders and the kill switch is off
+
+`ALPACA_LIVE_TRADING_ENABLED=false` can still force-disable live trading during an incident.
 
 ## Current Data Policy
 

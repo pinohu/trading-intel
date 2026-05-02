@@ -67,6 +67,7 @@ export function brokerConfig(modeOverride?: BrokerMode): BrokerConfig {
   const configuredMode = parseBrokerMode(cleanSecret(process.env.BROKER_EXECUTION_MODE));
   const mode = modeOverride ?? configuredMode;
   const credentials = credentialsForMode(mode);
+  const liveTradingExplicitlyDisabled = cleanSecret(process.env.ALPACA_LIVE_TRADING_ENABLED)?.toLowerCase() === "false";
   return {
     provider: "alpaca",
     mode,
@@ -77,7 +78,7 @@ export function brokerConfig(modeOverride?: BrokerMode): BrokerConfig {
     dataBaseUrl: normalizeEndpoint(cleanSecret(process.env.ALPACA_DATA_API_ENDPOINT_URL) || "https://data.alpaca.markets"),
     credentialsConfigured: Boolean(credentials.key && credentials.secret),
     executionEnabled: cleanSecret(process.env.BROKER_EXECUTION_ENABLED) === "true",
-    liveTradingEnabled: mode === "live" && cleanSecret(process.env.ALPACA_LIVE_TRADING_ENABLED) === "true",
+    liveTradingEnabled: mode === "live" && !liveTradingExplicitlyDisabled,
     liveAckConfigured: Boolean(cleanSecret(process.env.BROKER_LIVE_EXECUTION_ACK)),
     maxOrderNotional: parseEnvNumber("BROKER_MAX_ORDER_NOTIONAL", 5000, 1, 1_000_000),
     maxOrderUnits: parseEnvNumber("BROKER_MAX_ORDER_UNITS", 100, 1, 1_000_000),
@@ -103,7 +104,7 @@ export async function brokerReadiness(modeOverride?: BrokerMode) {
     missing: [
       !config.executionEnabled ? "BROKER_EXECUTION_ENABLED=true" : "",
       !config.credentialsConfigured ? credentialLabel(config.mode) : "",
-      config.mode === "live" && !config.liveTradingEnabled ? "ALPACA_LIVE_TRADING_ENABLED=true" : "",
+      config.mode === "live" && !config.liveTradingEnabled ? "ALPACA_LIVE_TRADING_ENABLED is set to false" : "",
       config.mode === "live" && !config.liveAckConfigured ? "BROKER_LIVE_EXECUTION_ACK" : "",
       config.mode === "live" && !database.schemaReady ? "DATABASE_URL with database/schema.sql applied" : "",
     ].filter(Boolean),

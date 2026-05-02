@@ -27,13 +27,13 @@ export type PreTradeControlResult = {
 export const defaultTradingControlState: TradingControlState = {
   killSwitch: false,
   allowPaperOrders: true,
-  allowLiveOrders: false,
+  allowLiveOrders: true,
   maxOpenOrders: 10,
   maxOpenOrdersPerSymbol: 2,
   maxDailySubmittedNotional: 10_000,
   maxSingleOrderNotional: 5_000,
   allowedAssetClasses: ["stock", "crypto"],
-  notes: "Default controls favor paper testing and keep live execution locked unless explicitly enabled.",
+  notes: "Default controls allow authenticated manual live orders when broker credentials, acknowledgement, audit storage, and pre-trade limits pass.",
 };
 
 export async function getTradingControlState(): Promise<TradingControlState> {
@@ -101,11 +101,19 @@ export async function evaluatePreTradeControls({
 }
 
 function envBackedControlState(state: TradingControlState) {
+  const allowLiveOrders = cleanEnvFlag(process.env.CONTROL_ALLOW_LIVE_ORDERS);
   return sanitizeControlState({
     ...state,
     killSwitch: process.env.TRADING_KILL_SWITCH === "true" || state.killSwitch,
-    allowLiveOrders: process.env.CONTROL_ALLOW_LIVE_ORDERS === "true" || state.allowLiveOrders,
+    allowLiveOrders: allowLiveOrders ?? state.allowLiveOrders,
   });
+}
+
+function cleanEnvFlag(value: string | undefined) {
+  const clean = value?.trim().toLowerCase();
+  if (clean === "true") return true;
+  if (clean === "false") return false;
+  return null;
 }
 
 function sanitizeControlState(state: TradingControlState): TradingControlState {

@@ -17,14 +17,12 @@ Runtime shape:
 
 ## Production Boundary
 
-The current application is safe for research and paper planning only. It deliberately has no broker execution route.
+The current application is safe-by-default for research, paper planning, and guarded broker operations. It includes broker execution routes for authenticated manual paper and live limit orders when Alpaca credentials, audit storage, acknowledgement, and pre-trade controls are configured.
 
 Production real-money trading requires these external systems before live execution is even considered:
 
 - Licensed real-time market data.
 - Persistent database with the provided schema applied.
-- Paper broker integration beyond the database-backed paper-trade journal.
-- Broker read-only sync.
 - Broker execution account gates, live acknowledgement, and order audit storage.
 - Historical backtesting workers.
 - Signal outcome tracker.

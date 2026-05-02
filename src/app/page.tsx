@@ -1284,11 +1284,11 @@ export default function Home() {
               <div>
                 <SectionTitle icon={Bot} title="AI Agent Trading" />
                 <p className="mt-1 text-sm leading-6 text-slate-400">
-                  Agents can propose trades and paper-trade when explicitly enabled. Live-money orders stay human-approved.
+                  Agents can propose trades and paper-trade when explicitly enabled. Manual live orders go through the Broker Execution Rail.
                 </p>
               </div>
               <div className="rounded-md border border-white/10 bg-black/20 px-3 py-2 text-xs text-slate-400">
-                {agentTrader?.policy?.liveAutonomyAllowed ? "Live autonomy on" : "Live autonomy blocked"}
+                {agentTrader?.policy?.liveAutonomyAllowed ? "Live agent autonomy on" : "Manual live orders only"}
               </div>
             </div>
             <AgentTradingPanel
@@ -3292,13 +3292,13 @@ function AgentTradingPanel({
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
         <MiniStat label="Agent Trading" value={policy?.enabled ? "Enabled" : "Locked"} tone={policy?.enabled ? "green" : "amber"} />
         <MiniStat label="Paper Agent" value={policy?.paperAutomationReady ? "Ready" : "Locked"} tone={policy?.paperAutomationReady ? "green" : "amber"} />
-        <MiniStat label="Live Autonomy" value="Blocked" tone="red" />
+        <MiniStat label="Live Orders" value="Manual rail" tone="amber" />
         <MiniStat label="Min Trust" value={`${policy?.minConfidence ?? 75}`} tone="blue" />
         <MiniStat label="Proposals" value={`${proposals.length}`} tone={proposals.length ? "green" : "plain"} />
       </div>
 
       <div className="rounded-md border border-amber-300/20 bg-amber-300/10 p-3 text-sm leading-6 text-amber-100">
-        {message} Agents may help prepare orders, but they are not allowed to place live-money trades without you.
+        {message} Agents may help prepare orders; live-money submission uses the manual broker rail.
       </div>
 
       {policy?.missing && policy.missing.length > 0 && (
