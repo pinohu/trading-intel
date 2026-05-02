@@ -38,6 +38,7 @@ import {
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { engineCapabilities, engineWorkflow, type EngineCapability } from "@/lib/engineCatalog";
+import { buildFusionAlphaPredictions, type FusionEngineFinding, type FusionPrediction } from "@/lib/fusionAlpha";
 import { generateBuyLeads, generateSignals, scoreQuote, type BuyLead, type TradeSignal } from "@/lib/signalEngine";
 import { dayTradingBestPractices, dayTradingRules } from "@/lib/dayTradingPlaybook";
 import { calculatePositionSize } from "@/lib/positionSizing";
@@ -212,11 +213,15 @@ type BacktestApiResponse = {
   };
   results?: Array<{
     symbol: string;
+    bars: number;
     trades: number;
     winRate: number;
+    avgReturnPct: number;
     totalReturnPct: number;
     maxDrawdownPct: number;
-    status: string;
+    profitFactor: number;
+    status: "ok" | "insufficient-data" | "unsupported";
+    validation?: Record<string, unknown> | null;
   }>;
   advisory?: string;
   error?: string;
@@ -225,7 +230,7 @@ type BacktestApiResponse = {
 type AlgorithmCouncilScore = {
   symbol: string;
   name: string;
-  sector?: string;
+  sector: string;
   recommendation: "Strong Buy Watch" | "Buy Watch" | "Hold/No Trade" | "Avoid / Sell Watch";
   ensembleScore: number;
   confidence: number;
@@ -347,6 +352,19 @@ type TradingAgentsApi = {
     portfolioDecision: string;
   }>;
   persistedNotes?: Array<Record<string, unknown>>;
+  advisory?: string;
+  error?: string;
+};
+
+type FusionAlphaApi = {
+  ok: boolean;
+  source?: "fusion-alpha-v1" | string;
+  modelVersion?: string;
+  generatedAt?: string;
+  mode?: BrokerMode;
+  provider?: string;
+  lookbackDays?: number;
+  predictions?: FusionPrediction[];
   advisory?: string;
   error?: string;
 };
@@ -609,11 +627,13 @@ export default function Home() {
   const [researchStack, setResearchStack] = useState<ResearchStackApi | null>(null);
   const [autoResearch, setAutoResearch] = useState<AutoResearchApi | null>(null);
   const [tradingAgents, setTradingAgents] = useState<TradingAgentsApi | null>(null);
+  const [fusionAlpha, setFusionAlpha] = useState<FusionAlphaApi | null>(null);
   const [agentTrader, setAgentTrader] = useState<AgentTraderApi | null>(null);
   const [researchNotes, setResearchNotes] = useState<ResearchNote[]>([]);
   const [backtestRunning, setBacktestRunning] = useState(false);
   const [autoResearchRunning, setAutoResearchRunning] = useState(false);
   const [tradingAgentsRunning, setTradingAgentsRunning] = useState(false);
+  const [fusionRunning, setFusionRunning] = useState(false);
   const [quantMessage, setQuantMessage] = useState("Choose a lab action to run evidence before paper promotion.");
   const [agentExecuting, setAgentExecuting] = useState(false);
   const [brokerMessage, setBrokerMessage] = useState("Checking broker rail");
@@ -832,6 +852,28 @@ export default function Home() {
     }
   }
 
+  async function runFusionAlpha() {
+    setFusionRunning(true);
+    setQuantMessage("Running Fusion Alpha across the engine map, algorithm council, backtest, and native agent debate.");
+    try {
+      const symbols = [selected, ...watchlist]
+        .filter((symbol) => !["GOLD", "SILVER", "OIL", "NATGAS", "COPPER", "CORN", "WHEAT", "SOY", "BTCUSD", "ETHUSD"].includes(symbol))
+        .filter(Boolean)
+        .slice(0, 8);
+      const response = await fetch(
+        `/api/fusion-alpha?mode=${brokerMode}&symbols=${encodeURIComponent(Array.from(new Set(symbols)).join(","))}&provider=${encodeURIComponent(provider)}&lookbackDays=${Math.max(60, lookback * 3)}&accountSize=${accountSize}&riskPct=${draft.risk}&maxDailyLossPct=${maxDailyLossPct}&depth=standard`,
+      );
+      const payload = await response.json();
+      setFusionAlpha(payload);
+      setQuantMessage(payload.ok ? "Fusion Alpha complete. The highest-level buy/sell prediction is shown above and in the engine map." : (payload.error ?? "Fusion Alpha could not run."));
+    } catch {
+      setFusionAlpha({ ok: false, error: "Fusion Alpha request failed." });
+      setQuantMessage("Fusion Alpha request failed.");
+    } finally {
+      setFusionRunning(false);
+    }
+  }
+
   async function runPaperAgent(symbol?: string) {
     setAgentExecuting(true);
     setAgentMessage("Asking the agent to submit a paper-only order.");
@@ -969,7 +1011,41 @@ export default function Home() {
   );
   const buyNowSignals = buyNowResult.buyNow;
   const blockedBuyNowSignals = buyNowResult.blocked;
-  const algorithmScores = algorithmCouncil?.scores ?? [];
+  const algorithmScores = useMemo(() => algorithmCouncil?.scores ?? [], [algorithmCouncil]);
+  const fusionPredictions = useMemo(
+    () =>
+      fusionAlpha?.ok && fusionAlpha.predictions?.length
+        ? fusionAlpha.predictions
+        : buildFusionAlphaPredictions({
+            quotes,
+            signals,
+            buyLeads,
+            buyNow: buyNowSignals,
+            blockedBuyNow: blockedBuyNowSignals,
+            algorithmScores,
+            backtestResults: realBacktest?.results ?? [],
+            tradingAgents: tradingAgents?.decisions ?? [],
+            researchComponents: researchStack?.components ?? [],
+            newsItems: news,
+            brokerReady: Boolean(brokerStatus?.orderPlacementReady),
+          }),
+    [
+      fusionAlpha,
+      quotes,
+      signals,
+      buyLeads,
+      buyNowSignals,
+      blockedBuyNowSignals,
+      algorithmScores,
+      realBacktest,
+      tradingAgents,
+      researchStack,
+      news,
+      brokerStatus,
+    ],
+  );
+  const topFusionPrediction = fusionPredictions[0];
+  const selectedFusionPrediction = fusionPredictions.find((prediction) => prediction.symbol === selectedQuote?.symbol) ?? topFusionPrediction;
   const topAlgorithmScore = algorithmScores[0];
   const institutionalGrade = institutionalReadiness?.productionInstitutionalReady
     ? "Ready"
@@ -1240,11 +1316,12 @@ export default function Home() {
               />
             </div>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
             <Metric icon={Activity} label="Feed" value={status} />
             <Metric icon={TrendingUp} label="Market Scan" value={`${green}/${quotes.length || watchlist.length} green, ${movers} movers`} />
             <Metric icon={Gauge} label="Proof Coverage" value={`${proofCoveragePct}% live/partial`} />
             <Metric icon={BellRing} label="Signals" value={`${buyNowSignals.length} buy-now, ${activeBuyLeads.length} buy leads`} />
+            <Metric icon={Sparkles} label="Fusion Alpha" value={topFusionPrediction ? `${topFusionPrediction.symbol} ${topFusionPrediction.score}/100` : "Loading"} />
             <Metric icon={Brain} label="Algorithm Council" value={topAlgorithmScore ? `${topAlgorithmScore.symbol} ${topAlgorithmScore.ensembleScore}/100` : "Loading"} />
             <Metric icon={ShieldCheck} label="Institutional Gates" value={institutionalGrade} />
             <Metric icon={ServerCog} label="Research Stack" value={researchStack ? `${researchStack.configured}/${researchStack.total} ${researchStack.grade}` : "Checking"} />
@@ -1292,6 +1369,30 @@ export default function Home() {
 
       <section className="mx-auto grid max-w-7xl gap-4 px-4 py-5 sm:px-6 lg:grid-cols-[1.5fr_0.9fr] lg:px-8">
         <div className="space-y-4">
+          <Panel>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <SectionTitle icon={Sparkles} title="Fusion Alpha Command" />
+                <p className="mt-1 text-sm leading-6 text-slate-400">
+                  Every mapped repo, research worker, factor family, rule signal, backtest, agent debate, and catalyst proxy is forced into one weighted buy/sell prediction.
+                </p>
+              </div>
+              <div className="rounded-md border border-white/10 bg-black/20 px-3 py-2 text-xs text-slate-400">
+                {fusionAlpha?.ok ? `Full run ${fusionAlpha.lookbackDays ?? lookback}D` : "Live proxy until full run"}
+              </div>
+            </div>
+            <FusionAlphaPanel
+              predictions={fusionPredictions}
+              selected={selectedFusionPrediction}
+              generatedAt={fusionAlpha?.generatedAt}
+              error={fusionAlpha?.ok === false ? fusionAlpha.error : undefined}
+              onSelect={(symbol) => {
+                setSelected(symbol);
+                setDraft((current) => ({ ...current, symbol }));
+              }}
+            />
+          </Panel>
+
           <Panel>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div>
@@ -1702,6 +1803,14 @@ export default function Home() {
                   <Bot className={`h-4 w-4 ${tradingAgentsRunning ? "animate-spin" : ""}`} />
                   Run TradingAgents Debate
                 </button>
+                <button
+                  onClick={() => void runFusionAlpha()}
+                  disabled={fusionRunning}
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-md border border-fuchsia-300/40 bg-fuchsia-300 px-3 text-sm font-semibold text-slate-950 transition hover:bg-fuchsia-200 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400 sm:col-span-2"
+                >
+                  <Sparkles className={`h-4 w-4 ${fusionRunning ? "animate-spin" : ""}`} />
+                  Run Fusion Alpha
+                </button>
               </div>
             </div>
             <div className="mt-4 rounded-md border border-white/10 bg-black/25 p-3 text-sm leading-6 text-slate-300" role="status">
@@ -1726,12 +1835,11 @@ export default function Home() {
           <Panel>
             <SectionTitle icon={Layers} title="Engine Fusion Map" />
             <p className="mt-1 text-sm leading-6 text-slate-400">
-              The requested GitHub repos are now represented as product capabilities, with the heavy Python/C#/Rust
-              engines kept behind worker or external-engine boundaries so Vercel stays fast on your phone.
+              This is now an active evidence map for {selectedFusionPrediction?.symbol ?? "the watchlist"}. Every repo contributes a weighted finding to Fusion Alpha; unavailable workers are marked as proxy or blocked rather than treated as decorative labels.
             </p>
             <div className="mt-4 grid gap-3 md:grid-cols-2">
               {engineCapabilities.map((engine) => (
-                <EngineCard key={engine.repo} engine={engine} />
+                <EngineCard key={engine.repo} engine={engine} finding={selectedFusionPrediction?.engineFindings.find((item) => item.repo === engine.repo)} />
               ))}
             </div>
           </Panel>
@@ -3170,6 +3278,140 @@ function AgentTradingPanel({
   );
 }
 
+function FusionAlphaPanel({
+  predictions,
+  selected,
+  generatedAt,
+  error,
+  onSelect,
+}: {
+  predictions: FusionPrediction[];
+  selected: FusionPrediction | undefined;
+  generatedAt?: string;
+  error?: string;
+  onSelect: (symbol: string) => void;
+}) {
+  if (error) {
+    return (
+      <div className="mt-4 rounded-md border border-rose-300/25 bg-rose-300/10 p-3 text-sm leading-6 text-rose-100">
+        {error}
+      </div>
+    );
+  }
+  if (!selected) {
+    return (
+      <div className="mt-4 rounded-md border border-dashed border-white/15 p-4 text-sm text-slate-400">
+        Waiting for quotes before Fusion Alpha can score the engine map.
+      </div>
+    );
+  }
+
+  const activeEngines = selected.engineFindings.filter((finding) => finding.status === "active").length;
+  const proxyEngines = selected.engineFindings.filter((finding) => finding.status === "proxy").length;
+  const blockedEngines = selected.engineFindings.filter((finding) => finding.status === "blocked").length;
+  const actionClass = fusionActionClass(selected.action);
+
+  return (
+    <div className="mt-4 space-y-3">
+      <div className="rounded-md border border-cyan-300/20 bg-cyan-300/10 p-3">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-mono text-3xl font-semibold text-white">{selected.symbol}</span>
+              <span className={`rounded-sm px-2 py-1 text-xs font-bold uppercase ${actionClass}`}>{selected.action}</span>
+            </div>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-cyan-100">{selected.thesis}</p>
+          </div>
+          <div className="grid min-w-56 grid-cols-2 gap-2 text-xs">
+            <MiniStat label="Fusion" value={`${selected.score}/100`} tone={selected.score >= 65 ? "green" : selected.score <= 44 ? "red" : "amber"} />
+            <MiniStat label="Trust" value={`${selected.confidence}/100`} tone={selected.confidence >= 70 ? "green" : "blue"} />
+          </div>
+        </div>
+
+        <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2 lg:grid-cols-6">
+          <MiniStat label="Horizon" value={selected.horizon} tone="amber" />
+          <MiniStat label="Expected Hold" value={selected.expectedHold} tone="blue" />
+          <MiniStat label="Entry" value={selected.entry ? formatUsd(selected.entry) : "No entry"} tone="green" />
+          <MiniStat label="Stop" value={selected.stop ? formatUsd(selected.stop) : "No stop"} tone="amber" />
+          <MiniStat label="Target" value={selected.target ? formatUsd(selected.target) : "No target"} tone="blue" />
+          <MiniStat label="R/R" value={selected.rewardRisk ? `${selected.rewardRisk}R` : "N/A"} tone="plain" />
+        </div>
+
+        <div className="mt-3 rounded-sm bg-black/20 p-2 text-sm leading-6 text-white">
+          {selected.operatorAction}
+        </div>
+
+        <div className="mt-3 grid gap-3 lg:grid-cols-3">
+          <div className="rounded-sm bg-black/20 p-3">
+            <div className="text-xs font-semibold uppercase text-slate-500">Engine Coverage</div>
+            <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
+              <MiniStat label="Active" value={`${activeEngines}`} tone="green" />
+              <MiniStat label="Proxy" value={`${proxyEngines}`} tone="blue" />
+              <MiniStat label="Blocked" value={`${blockedEngines}`} tone={blockedEngines ? "red" : "plain"} />
+            </div>
+          </div>
+          <div className="rounded-sm bg-black/20 p-3">
+            <div className="text-xs font-semibold uppercase text-slate-500">Top Support</div>
+            <div className="mt-2 space-y-1 text-xs leading-5 text-emerald-100">
+              {(selected.topSupports.length ? selected.topSupports : selected.engineFindings.slice(0, 2)).slice(0, 3).map((finding) => (
+                <div key={finding.key}>{finding.label}: {finding.score}/100</div>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-sm bg-black/20 p-3">
+            <div className="text-xs font-semibold uppercase text-slate-500">Critical Friction</div>
+            <div className="mt-2 space-y-1 text-xs leading-5 text-amber-100">
+              {(selected.blockers.length ? selected.blockers : selected.conflicts.length ? selected.conflicts : ["No major blocker in current fusion view."]).slice(0, 3).map((item) => (
+                <div key={item}>{item}</div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-3 grid gap-1 text-xs leading-5 text-blue-100 sm:grid-cols-2">
+          {selected.algorithmFindings.map((finding) => (
+            <div key={finding.key} className="rounded-sm bg-black/20 px-2 py-1">
+              {finding.name}: {finding.score}/100
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid gap-2 lg:grid-cols-4">
+        {predictions.slice(0, 4).map((prediction) => (
+          <button
+            key={prediction.symbol}
+            onClick={() => onSelect(prediction.symbol)}
+            className={`rounded-md border p-3 text-left transition ${
+              prediction.symbol === selected.symbol
+                ? "border-cyan-300 bg-cyan-300/10"
+                : "border-white/10 bg-white/[0.03] hover:border-white/25"
+            }`}
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <div className="font-mono text-lg font-semibold text-white">{prediction.symbol}</div>
+                <div className="mt-1 text-xs text-slate-500">{prediction.expectedHold}</div>
+              </div>
+              <span className={`rounded-sm px-2 py-1 text-[10px] font-bold uppercase ${fusionActionClass(prediction.action)}`}>
+                {prediction.action}
+              </span>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+              <MiniStat label="Fusion" value={`${prediction.score}`} tone={prediction.score >= 65 ? "green" : prediction.score <= 44 ? "red" : "amber"} />
+              <MiniStat label="Trust" value={`${prediction.confidence}`} tone="blue" />
+            </div>
+          </button>
+        ))}
+      </div>
+
+      <div className="text-xs leading-5 text-slate-500">
+        {generatedAt ? `Full Fusion Alpha run: ${new Date(generatedAt).toLocaleString()}` : "Live proxy updates with the dashboard; run Fusion Alpha for backtest and native debate refresh."}
+      </div>
+    </div>
+  );
+}
+
 function ResearchStackPanel({ stack, autoResearch }: { stack: ResearchStackApi | null; autoResearch: AutoResearchApi | null }) {
   if (!stack) {
     return (
@@ -3504,13 +3746,21 @@ function RealBacktestPanel({ result }: { result: BacktestApiResponse | null }) {
   );
 }
 
-function EngineCard({ engine }: { engine: EngineCapability }) {
+function EngineCard({ engine, finding }: { engine: EngineCapability; finding?: FusionEngineFinding }) {
   const safetyClass =
     engine.safety === "Live capable, gated"
       ? "border-amber-300/25 bg-amber-300/10 text-amber-100"
       : engine.safety === "Paper trading"
         ? "border-blue-300/25 bg-blue-300/10 text-blue-100"
         : "border-emerald-300/25 bg-emerald-300/10 text-emerald-100";
+  const findingClass =
+    finding?.impact === "supports"
+      ? "border-emerald-300/25 bg-emerald-300/10 text-emerald-100"
+      : finding?.impact === "challenges"
+        ? "border-rose-300/25 bg-rose-300/10 text-rose-100"
+        : finding?.impact === "guards"
+          ? "border-amber-300/25 bg-amber-300/10 text-amber-100"
+          : "border-white/10 bg-white/10 text-slate-200";
 
   return (
     <div className="rounded-md border border-white/10 bg-white/[0.03] p-3">
@@ -3527,8 +3777,29 @@ function EngineCard({ engine }: { engine: EngineCapability }) {
         <span className="rounded-sm bg-white/10 px-2 py-1 text-xs text-slate-300">{engine.priority}</span>
       </div>
       <p className="mt-3 text-sm leading-6 text-slate-400">{engine.featureUnlocked}</p>
+      {finding && (
+        <div className={`mt-3 rounded-sm border p-2 text-xs leading-5 ${findingClass}`}>
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-semibold uppercase">{finding.impact}</span>
+            <span className="font-mono">{finding.score}/100 | w {finding.weight.toFixed(2)}</span>
+          </div>
+          <div className="mt-2 text-slate-100">{finding.finding}</div>
+          <div className="mt-2 font-mono text-[10px] uppercase tracking-wide opacity-80">
+            {finding.status} | {finding.stance}
+          </div>
+        </div>
+      )}
     </div>
   );
+}
+
+function fusionActionClass(action: FusionPrediction["action"]) {
+  if (action === "Strong Buy / Paper Candidate") return "bg-emerald-300 text-slate-950";
+  if (action === "Buy Watch") return "bg-cyan-300 text-slate-950";
+  if (action === "Sell / Avoid") return "bg-rose-300 text-slate-950";
+  if (action === "Reduce / Avoid Adds") return "bg-amber-300 text-slate-950";
+  if (action === "Data Review") return "bg-slate-300 text-slate-950";
+  return "bg-white/10 text-slate-200";
 }
 
 function MiniStat({
