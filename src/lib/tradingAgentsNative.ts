@@ -75,6 +75,8 @@ export function buildNativeTradingAgentsDebate({
             : "Stand aside";
 
   const risks = buildRisks({ quote, signal, score, backtest, weakBacktest, dataConcern });
+  const holding = holdingPeriodForNativeDecision({ rating, signal, score, robustBacktest, scoreBullish, dataConcern });
+  const evidenceSummary = buildEvidenceSummary({ quote, signal, score, backtest, consensusScore });
   const transcript = buildTranscript({
     symbol,
     quote,
@@ -101,6 +103,13 @@ export function buildNativeTradingAgentsDebate({
       symbol,
       rating,
       action,
+      holdingPeriod: holding.label,
+      expectedHold: holding.expectedHold,
+      maxHold: holding.maxHold,
+      reviewCadence: holding.reviewCadence,
+      exitRule: holding.exitRule,
+      evidenceGrade: evidenceGradeFor({ quote, signal, score, dataConcern, robustBacktest, positiveBacktest }),
+      evidenceSummary,
       summary: thesis.slice(0, 500),
       thesis,
       risks,
@@ -221,6 +230,115 @@ function buildTranscript({
         portfolioDecisionFor(rating),
       ],
     },
+  ];
+}
+
+function holdingPeriodForNativeDecision({
+  rating,
+  signal,
+  score,
+  robustBacktest,
+  scoreBullish,
+  dataConcern,
+}: {
+  rating: string;
+  signal?: TradeSignal;
+  score?: AlgorithmCouncilScore;
+  robustBacktest: boolean;
+  scoreBullish: boolean;
+  dataConcern: boolean;
+}) {
+  if (dataConcern || rating === "Data Review") {
+    return {
+      label: "No trade / refresh first",
+      expectedHold: "No position until market data is fresh enough",
+      maxHold: "None",
+      reviewCadence: "Refresh data before acting",
+      exitRule: "No order while quote quality or freshness is blocked",
+    };
+  }
+  if (rating === "Risk Review" || signal?.action === "Sell/Exit Watch") {
+    return {
+      label: "Risk-off / same session",
+      expectedHold: "Protect or avoid immediately; do not add exposure",
+      maxHold: "Same trading session for protection decision",
+      reviewCadence: "Review every 5-15 minutes while exposed",
+      exitRule: "Reduce or stand aside while sell/exit evidence remains active",
+    };
+  }
+  if (rating === "Research Buy Watch" && signal?.holdingPeriod) {
+    return {
+      label: signal.holdingPeriod.label,
+      expectedHold: robustBacktest ? "Intraday entry with 1-5 trading-day paper validation window" : signal.holdingPeriod.expectedHold,
+      maxHold: robustBacktest ? "5 trading days for this tested breakout model; shorter if stop/target hits" : signal.holdingPeriod.maxHold,
+      reviewCadence: signal.holdingPeriod.reviewCadence,
+      exitRule: signal.holdingPeriod.exitRule,
+    };
+  }
+  if (scoreBullish && score && score.confidence >= 75) {
+    return {
+      label: "Position research",
+      expectedHold: "1-4 weeks while factor thesis and tape remain aligned",
+      maxHold: "1 quarter without a refreshed thesis",
+      reviewCadence: "Review daily, and after earnings, filings, or major news",
+      exitRule: "Exit research watch if factor score deteriorates, bear case triggers, or price action breaks risk controls",
+    };
+  }
+  return {
+    label: "Research watch",
+    expectedHold: "No immediate position; revisit after stronger evidence",
+    maxHold: "Reset after one trading day unless new evidence appears",
+    reviewCadence: "Review on each refresh or scheduled research run",
+    exitRule: "No order without fresh signal, defined stop, and evidence alignment",
+  };
+}
+
+function evidenceGradeFor({
+  quote,
+  signal,
+  score,
+  dataConcern,
+  robustBacktest,
+  positiveBacktest,
+}: {
+  quote?: SignalQuote;
+  signal?: TradeSignal;
+  score?: AlgorithmCouncilScore;
+  dataConcern: boolean;
+  robustBacktest: boolean;
+  positiveBacktest: boolean;
+}) {
+  if (dataConcern) return "Blocked by data quality";
+  const coverage = [
+    quote ? 1 : 0,
+    signal ? 1 : 0,
+    score && score.dataCoveragePct >= 70 ? 1 : 0,
+    robustBacktest ? 1 : positiveBacktest ? 0.5 : 0,
+  ].reduce((sum, value) => sum + value, 0);
+  if (coverage >= 3.5) return "Strong multi-source evidence";
+  if (coverage >= 2.5) return "Moderate multi-source evidence";
+  return "Thin evidence";
+}
+
+function buildEvidenceSummary({
+  quote,
+  signal,
+  score,
+  backtest,
+  consensusScore,
+}: {
+  quote?: SignalQuote;
+  signal?: TradeSignal;
+  score?: AlgorithmCouncilScore;
+  backtest?: BacktestSymbolResult;
+  consensusScore: number;
+}) {
+  return [
+    quote ? `Quote: ${quote.source}, ${quote.quality ?? "unknown"} quality, last ${formatUsd(quote.price)}, ${formatPct(quote.changePct)} move.` : "Quote unavailable.",
+    signal ? `Signal: ${signal.action}, ${signal.setup}, ${signal.quality}/${signal.confidence}, hold ${signal.holdingPeriod.expectedHold}.` : "Signal unavailable.",
+    score ? `Algorithm Council: ${score.recommendation}, ensemble ${score.ensembleScore}, confidence ${score.confidence}, coverage ${score.dataCoveragePct}%.` : "Algorithm Council unavailable.",
+    backtest ? `Backtest: ${backtest.trades} trades, ${backtest.winRate}% win, ${formatPct(backtest.totalReturnPct)} return, ${formatPct(backtest.maxDrawdownPct)} max drawdown, PF ${backtest.profitFactor}.` : "Backtest unavailable.",
+    `Native agent consensus score: ${consensusScore}.`,
   ];
 }
 

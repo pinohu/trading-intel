@@ -289,7 +289,7 @@ type ResearchStackApi = {
     label: string;
     category: string;
     ready: boolean;
-    mode: "credentialed" | "free-fallback" | "worker" | "missing";
+    mode: "credentialed" | "free-fallback" | "worker" | "native" | "missing";
     detail: string;
     freeAlternative?: string;
     env: string[];
@@ -334,6 +334,13 @@ type TradingAgentsApi = {
     symbol: string;
     rating: string;
     action: string;
+    holdingPeriod: string;
+    expectedHold: string;
+    maxHold: string;
+    reviewCadence: string;
+    exitRule: string;
+    evidenceGrade: string;
+    evidenceSummary: string[];
     summary: string;
     thesis: string;
     risks: string[];
@@ -1290,7 +1297,7 @@ export default function Home() {
               <div>
                 <SectionTitle icon={Bot} title="AI Agent Trading" />
                 <p className="mt-1 text-sm leading-6 text-slate-400">
-                  Agents can propose trades and paper-trade when explicitly enabled. Manual live orders go through the Broker Execution Rail.
+                  Agents can submit paper orders when Alpaca paper execution is ready. Manual live orders go through the Broker Execution Rail.
                 </p>
               </div>
               <div className="rounded-md border border-white/10 bg-black/20 px-3 py-2 text-xs text-slate-400">
@@ -2111,11 +2118,12 @@ function FastActionQueue({
               </div>
               <span className="font-mono text-sm text-emerald-200">Trust {primaryBuyNow.confidence}</span>
             </div>
-            <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+            <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-5">
               <MiniStat label="Now" value={formatUsd(primaryBuyNow.price)} tone="plain" />
               <MiniStat label="Entry" value={formatUsd(primaryBuyNow.entry)} tone="green" />
               <MiniStat label="Stop" value={formatUsd(primaryBuyNow.stop)} tone="amber" />
               <MiniStat label="Target" value={formatUsd(primaryBuyNow.target)} tone="blue" />
+              <MiniStat label="Hold" value={primaryBuyNow.expectedHold} tone="amber" />
             </div>
           </button>
         ) : (
@@ -2134,11 +2142,12 @@ function FastActionQueue({
             {buyLead ? (
               <>
                 <p className="mt-2 line-clamp-2 text-sm leading-6 text-cyan-100">{buyLead.reason}</p>
-                <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+                <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-5">
                   <MiniStat label="Now" value={formatUsd(buyLead.price)} tone="plain" />
                   <MiniStat label="Trigger" value={formatUsd(buyLead.trigger)} tone="green" />
                   <MiniStat label="Stop" value={formatUsd(buyLead.stop)} tone="amber" />
                   <MiniStat label="Score" value={`${buyLead.confidence}`} tone={buyLead.confidence >= 60 ? "green" : "blue"} />
+                  <MiniStat label="Hold" value={buyLead.holdingPeriod.expectedHold} tone="amber" />
                 </div>
               </>
             ) : (
@@ -2162,6 +2171,11 @@ function FastActionQueue({
           <p className="mt-2 line-clamp-2 text-sm leading-6 text-rose-100">
             {sellSignal?.reason ?? "No sell/exit-watch setup is currently strong enough."}
           </p>
+          {sellSignal && (
+            <div className="mt-3 text-xs text-rose-100">
+              Horizon: {sellSignal.holdingPeriod.expectedHold}
+            </div>
+          )}
         </button>
 
         <div className="overflow-hidden rounded-md border border-white/10">
@@ -2250,13 +2264,15 @@ function FastExecutionPanel({
               </div>
               <MiniStat label="Mode" value={mode.toUpperCase()} tone={live ? "red" : "blue"} />
             </div>
-            <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
+            <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
               <MiniStat label="Entry" value={formatUsd(ticket.entry)} tone="green" />
               <MiniStat label="Stop" value={formatUsd(ticket.stop)} tone="amber" />
               <MiniStat label="Target" value={formatUsd(ticket.target)} tone="blue" />
               <MiniStat label="Units" value={`${ticket.units}`} tone="plain" />
               <MiniStat label="Max loss" value={formatUsd(ticket.maxLoss)} tone="red" />
               <MiniStat label="R/R" value={`${ticket.rewardRisk}R`} tone={ticket.rewardRisk >= 1.5 ? "green" : "red"} />
+              <MiniStat label="Hold" value={ticket.expectedHold} tone="amber" />
+              <MiniStat label="Review" value={ticket.reviewCadence} tone="blue" />
             </div>
           </>
         ) : (
@@ -2735,6 +2751,8 @@ function BuyLeadCard({ lead, rank }: { lead: BuyLead; rank: number }) {
         <MiniStat label="Stop" value={formatUsd(lead.stop)} tone="amber" />
         <MiniStat label="Target" value={formatUsd(lead.target)} tone="blue" />
         <MiniStat label="Score" value={`${lead.confidence}`} tone={lead.confidence >= 60 ? "green" : "plain"} />
+        <MiniStat label="Horizon" value={lead.holdingPeriod.label} tone="amber" />
+        <MiniStat label="Hold" value={lead.holdingPeriod.expectedHold} tone="blue" />
       </div>
       <p className="mt-3 line-clamp-3 text-sm leading-6 text-slate-300">{lead.reason}</p>
       <div className="mt-3 text-xs text-slate-500">
@@ -2771,6 +2789,8 @@ function SignalCard({ signal }: { signal: TradeSignal }) {
         <MiniStat label="Quality" value={`${signal.quality} / ${signal.confidence}`} tone="blue" />
         <MiniStat label="Invalidation" value={formatUsd(signal.invalidation)} tone="amber" />
         <MiniStat label="R/R" value={`${signal.rewardRisk}R`} tone={signal.rewardRisk >= 1.5 ? "green" : "red"} />
+        <MiniStat label="Horizon" value={signal.holdingPeriod.label} tone="amber" />
+        <MiniStat label="Hold" value={signal.holdingPeriod.expectedHold} tone="blue" />
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
         <span className="rounded-sm bg-black/20 px-2 py-1 text-xs text-slate-200">{signal.market}</span>
@@ -2879,7 +2899,7 @@ function BuyLeadColumn({ leads }: { leads: BuyLead[] }) {
                   <span className="rounded-sm bg-black/20 px-2 py-1">Trigger {formatUsd(lead.trigger)}</span>
                   <span className="rounded-sm bg-black/20 px-2 py-1">Stop {formatUsd(lead.stop)}</span>
                   <span className="rounded-sm bg-black/20 px-2 py-1">Target {formatUsd(lead.target)}</span>
-                  <span className="rounded-sm bg-black/20 px-2 py-1">Score {lead.confidence}</span>
+                  <span className="rounded-sm bg-black/20 px-2 py-1">Hold {lead.holdingPeriod.expectedHold}</span>
                 </div>
                 {lead.warnings.length > 0 && (
                   <div className="mt-2 truncate text-xs text-amber-200">{lead.warnings[0]}</div>
@@ -3120,7 +3140,10 @@ function AgentTradingPanel({
             <MiniStat label="Entry" value={formatUsd(top.orderDraft.limitPrice)} tone="green" />
             <MiniStat label="Stop" value={formatUsd(top.orderDraft.stopLossStopPrice ?? top.ticket.stop)} tone="amber" />
             <MiniStat label="Target" value={formatUsd(top.orderDraft.takeProfitLimitPrice ?? top.ticket.target)} tone="blue" />
-            <MiniStat label="Max Loss" value={formatUsd(top.ticket.maxLoss)} tone="red" />
+            <MiniStat label="Hold" value={top.ticket.expectedHold} tone="amber" />
+          </div>
+          <div className="mt-3 rounded-sm bg-black/20 p-2 text-xs leading-5 text-cyan-100">
+            Exit rule: {top.ticket.exitRule}
           </div>
           <div className="mt-3 space-y-1">
             {top.reasons.slice(0, 3).map((reason) => (
@@ -3229,6 +3252,7 @@ function stackModeClass(component: ResearchStackApi["components"][number]) {
   if (component.ready && component.mode === "credentialed") return "bg-emerald-300 text-slate-950";
   if (component.ready && component.mode === "free-fallback") return "bg-cyan-300 text-slate-950";
   if (component.ready && component.mode === "worker") return "bg-blue-300 text-slate-950";
+  if (component.ready && component.mode === "native") return "bg-emerald-300 text-slate-950";
   return "bg-amber-300/20 text-amber-100";
 }
 
@@ -3363,6 +3387,20 @@ function TradingAgentsPanel({ result }: { result: TradingAgentsApi | null }) {
             <p className="mt-3 text-sm leading-6 text-slate-200">{decision.summary}</p>
             <div className="mt-3 text-xs leading-5 text-blue-100">
               Portfolio: {decision.portfolioDecision}
+            </div>
+            <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2">
+              <MiniStat label="Horizon" value={decision.holdingPeriod} tone="amber" />
+              <MiniStat label="Expected Hold" value={decision.expectedHold} tone="blue" />
+              <MiniStat label="Max Hold" value={decision.maxHold} tone="plain" />
+              <MiniStat label="Evidence" value={decision.evidenceGrade} tone={decision.evidenceGrade.toLowerCase().includes("strong") ? "green" : decision.evidenceGrade.toLowerCase().includes("blocked") ? "red" : "amber"} />
+            </div>
+            <div className="mt-3 text-xs leading-5 text-slate-300">
+              Exit: {decision.exitRule}
+            </div>
+            <div className="mt-3 grid gap-1 text-xs leading-5 text-blue-100">
+              {decision.evidenceSummary.slice(0, 3).map((item) => (
+                <div key={item}>Evidence: {item}</div>
+              ))}
             </div>
             <div className="mt-3 grid gap-1 text-xs leading-5 text-amber-100">
               {decision.risks.slice(0, 3).map((risk) => (
@@ -3515,7 +3553,7 @@ function MiniStat({
   return (
     <div className="rounded-sm bg-black/20 p-2">
       <div className="text-slate-500">{label}</div>
-      <div className={`mt-1 font-mono ${color}`}>{value}</div>
+      <div className={`mt-1 break-words font-mono leading-5 ${color}`}>{value}</div>
     </div>
   );
 }

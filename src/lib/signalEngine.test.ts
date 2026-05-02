@@ -28,7 +28,10 @@ describe("signalEngine", () => {
     expect(signal.action).toBe("Buy Watch");
     expect(signal.quality).toMatch(/A|B/);
     expect(signal.rewardRisk).toBeGreaterThanOrEqual(1.5);
+    expect(signal.holdingPeriod.label).toBe("Day trade");
+    expect(signal.holdingPeriod.expectedHold).toContain("Intraday");
     expect(lead.status).toBe("Buy Watch");
+    expect(lead.holdingPeriod.maxHold).toContain("Same trading day");
   });
 
   it("forces stale quote data to no-trade behavior", () => {
@@ -38,6 +41,7 @@ describe("signalEngine", () => {
 
     expect(signal.action).toBe("Hold/No Trade");
     expect(signal.dataFresh).toBe(false);
+    expect(signal.holdingPeriod.label).toBe("No trade");
     expect(lead.status).toBe("No Buy");
     expect(lead.warnings.some((warning) => warning.includes("stale"))).toBe(true);
   });

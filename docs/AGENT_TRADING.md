@@ -5,7 +5,7 @@ The platform supports supervised agent trading:
 - agents can scan markets,
 - create trade proposals,
 - draft bracket limit orders,
-- auto-submit paper orders only when explicitly enabled,
+- auto-submit paper orders when Alpaca paper execution is ready,
 - block live-money autonomous execution.
 
 Live orders must still go through the human-approved broker execution rail.
@@ -21,9 +21,9 @@ POST /api/agent-trader/execute?mode=live
 
 `mode=live` always returns a blocked/manual-approval response. It includes the order draft so a human can review it, but it does not place the order.
 
-## Optional Paper Automation
+## Paper Automation
 
-Set all of these to allow agents to submit Alpaca paper orders:
+Paper-agent automation is on by default unless either agent flag is set to `false`. Set these broker values so agents can submit Alpaca paper orders:
 
 ```bash
 AGENT_TRADING_ENABLED=true
@@ -44,6 +44,10 @@ BROKER_MAX_ORDER_UNITS=100
 ```
 
 ## Start The Paper Agent Worker
+
+Production Vercel runs `/api/agent-trader/paper-run` every 5 minutes. That route uses `CRON_SECRET`, calls the in-app `/api/agent-trader/execute?mode=paper` endpoint, and only submits a paper bracket-limit order when the strict buy-now gate, broker readiness, and pre-trade controls all pass.
+
+For a local long-running worker, use:
 
 ```bash
 npm run worker:agent-paper

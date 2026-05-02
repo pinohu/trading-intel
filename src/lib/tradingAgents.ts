@@ -4,6 +4,13 @@ export type TradingAgentsDecision = {
   symbol: string;
   rating: string;
   action: string;
+  holdingPeriod: string;
+  expectedHold: string;
+  maxHold: string;
+  reviewCadence: string;
+  exitRule: string;
+  evidenceGrade: string;
+  evidenceSummary: string[];
   summary: string;
   thesis: string;
   risks: string[];
@@ -54,11 +61,24 @@ export function normalizeTradingAgentsDecisions(data: unknown, symbols: string[]
       readString(record, ["portfolio_decision", "portfolioDecision", "portfolio_manager", "portfolioManager", "final_decision"]) ??
       rating;
     const risks = readStringArray(record, ["risks", "risk_controls", "riskControls", "warnings", "concerns"]);
+    const holdingPeriod = readString(record, ["holdingPeriod", "holding_period", "horizon", "timeHorizon"]) ?? "Research review";
+    const expectedHold = readString(record, ["expectedHold", "expected_hold", "holdTime", "holdingTime"]) ?? "Not specified by worker";
+    const maxHold = readString(record, ["maxHold", "max_hold", "maxHoldingPeriod"]) ?? "Not specified by worker";
+    const reviewCadence = readString(record, ["reviewCadence", "review_cadence"]) ?? "Review before acting";
+    const exitRule = readString(record, ["exitRule", "exit_rule", "invalidation"]) ?? "Do not trade without a defined invalidation.";
+    const evidenceSummary = readStringArray(record, ["evidenceSummary", "evidence_summary", "evidence", "sources"]);
 
     return {
       symbol,
       rating: clampText(rating, 80),
       action: clampText(action, 80),
+      holdingPeriod: clampText(holdingPeriod, 80),
+      expectedHold: clampText(expectedHold, 160),
+      maxHold: clampText(maxHold, 160),
+      reviewCadence: clampText(reviewCadence, 160),
+      exitRule: clampText(exitRule, 240),
+      evidenceGrade: clampText(readString(record, ["evidenceGrade", "evidence_grade"]) ?? "External worker output", 80),
+      evidenceSummary: evidenceSummary.length ? evidenceSummary.slice(0, 8).map((item) => clampText(item, 240)) : ["External worker did not return structured evidence."],
       summary: clampText(thesis, 500),
       thesis: clampText(thesis, 1600),
       risks: risks.length ? risks.slice(0, 8).map((risk) => clampText(risk, 240)) : ["Treat as research-only until backtested and paper-validated."],
@@ -75,6 +95,12 @@ export function formatTradingAgentsNote(decision: TradingAgentsDecision, analysi
     `Depth: ${depth}`,
     `Rating: ${decision.rating}`,
     `Action: ${decision.action}`,
+    `Holding period: ${decision.holdingPeriod}`,
+    `Expected hold: ${decision.expectedHold}`,
+    `Max hold: ${decision.maxHold}`,
+    `Review cadence: ${decision.reviewCadence}`,
+    `Exit rule: ${decision.exitRule}`,
+    `Evidence grade: ${decision.evidenceGrade}`,
     "",
     "Thesis",
     decision.thesis,
@@ -84,6 +110,9 @@ export function formatTradingAgentsNote(decision: TradingAgentsDecision, analysi
     "",
     "Risks",
     ...decision.risks.map((risk) => `- ${risk}`),
+    "",
+    "Evidence",
+    ...decision.evidenceSummary.map((item) => `- ${item}`),
     "",
     "Boundary",
     "Research-only output. This is not financial advice and cannot place broker orders.",

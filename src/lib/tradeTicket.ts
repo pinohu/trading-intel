@@ -14,6 +14,11 @@ export type TradeTicket = {
   maxLoss: number;
   rewardRisk: number;
   riskPct: number;
+  holdingPeriod: string;
+  expectedHold: string;
+  maxHold: string;
+  reviewCadence: string;
+  exitRule: string;
   tradeable: boolean;
   reason: string;
   mustConfirm: string[];
@@ -53,9 +58,15 @@ export function buildBuyTradeTicket({
     maxLoss: sizing.riskDollars,
     rewardRisk: lead.rewardRisk,
     riskPct: sizing.riskPct,
+    holdingPeriod: lead.holdingPeriod.label,
+    expectedHold: lead.holdingPeriod.expectedHold,
+    maxHold: lead.holdingPeriod.maxHold,
+    reviewCadence: lead.holdingPeriod.reviewCadence,
+    exitRule: lead.holdingPeriod.exitRule,
     tradeable,
     reason: lead.reason,
     mustConfirm: [
+      `Holding period: ${lead.holdingPeriod.expectedHold}.`,
       `Price reaches or clears ${money(lead.trigger)} with fresh data.`,
       "No major breaking news contradicts the trade.",
       "Spread and liquidity are acceptable before entry.",
@@ -86,6 +97,11 @@ export function buildSellProtectionTicket(signal: TradeSignal | undefined): Trad
     maxLoss: 0,
     rewardRisk: signal.rewardRisk,
     riskPct: signal.positionRiskPct,
+    holdingPeriod: signal.holdingPeriod.label,
+    expectedHold: signal.holdingPeriod.expectedHold,
+    maxHold: signal.holdingPeriod.maxHold,
+    reviewCadence: signal.holdingPeriod.reviewCadence,
+    exitRule: signal.holdingPeriod.exitRule,
     tradeable: false,
     reason: signal.reason,
     mustConfirm: [

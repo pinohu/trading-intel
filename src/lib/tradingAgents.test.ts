@@ -66,6 +66,14 @@ describe("TradingAgents adapter", () => {
       target: 208,
       rewardRisk: 2,
       positionRiskPct: 1,
+      holdingPeriod: {
+        label: "Day trade",
+        expectedHold: "Intraday to same-session only",
+        maxHold: "Same trading day",
+        reviewCadence: "Review every 5-15 minutes",
+        exitRule: "Exit on stop, target, stale data, or setup failure",
+        evidenceBasis: "Test signal",
+      },
       reason: "Trend, range location, liquidity, and risk/reward align.",
       confirmations: ["Price above open", "Liquidity filter passed"],
       warnings: [],
@@ -110,6 +118,8 @@ describe("TradingAgents adapter", () => {
 
     expect(NATIVE_TRADING_AGENTS_SOURCE).toBe("native-codebase-debate");
     expect(debate.decision.rating).toBe("Research Buy Watch");
+    expect(debate.decision.expectedHold).toContain("1-5 trading-day");
+    expect(debate.decision.evidenceGrade).toBe("Strong multi-source evidence");
     expect(debate.decision.portfolioDecision).toContain("broker controls");
     expect(debate.transcript.map((vote) => vote.agent)).toContain("Portfolio Manager");
   });

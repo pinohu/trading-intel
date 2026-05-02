@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildAgentTradeProposals, orderDraftFromTicket } from "@/lib/agentTrader";
+import { buildAgentTradeProposals, buildAgentTradingPolicy, orderDraftFromTicket } from "@/lib/agentTrader";
 import type { BuyNowSignal } from "@/lib/buyNowEngine";
 import type { TradeTicket } from "@/lib/tradeTicket";
 
@@ -16,6 +16,11 @@ const ticket: TradeTicket = {
   maxLoss: 9,
   rewardRisk: 2,
   riskPct: 1,
+  holdingPeriod: "Day trade",
+  expectedHold: "Intraday to same-session only",
+  maxHold: "Same trading day",
+  reviewCadence: "Review every 5-15 minutes",
+  exitRule: "Exit on stop, target, stale data, or setup failure",
   tradeable: true,
   reason: "test",
   mustConfirm: ["fresh quote"],
@@ -34,6 +39,10 @@ const buyNow: BuyNowSignal = {
   units: 3,
   maxLoss: 9,
   rewardRisk: 2,
+  holdingPeriod: "Day trade",
+  expectedHold: "Intraday to same-session only",
+  maxHold: "Same trading day",
+  reviewCadence: "Review every 5-15 minutes",
   confidence: 82,
   dataQuality: "Public Real-Time",
   source: "test",
@@ -77,5 +86,12 @@ describe("agent trader", () => {
     });
 
     expect(proposals).toHaveLength(0);
+  });
+
+  it("enables supervised paper-agent policy by default", () => {
+    const policy = buildAgentTradingPolicy("paper");
+    expect(policy.enabled).toBe(true);
+    expect(policy.paperAutomationEnabled).toBe(true);
+    expect(policy.liveAutonomyAllowed).toBe(false);
   });
 });

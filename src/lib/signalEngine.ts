@@ -28,6 +28,7 @@ export type TradeSignal = {
   target: number;
   rewardRisk: number;
   positionRiskPct: number;
+  holdingPeriod: HoldingPeriod;
   reason: string;
   confirmations: string[];
   warnings: string[];
@@ -49,6 +50,7 @@ export type BuyLead = {
   stop: number;
   target: number;
   rewardRisk: number;
+  holdingPeriod: HoldingPeriod;
   moveFromOpenPct: number;
   reason: string;
   simpleWhy: string[];
@@ -66,6 +68,15 @@ export type PlainDecision = {
   simpleWhy: string[];
   simpleRisk: string;
   simpleNextStep: string;
+};
+
+export type HoldingPeriod = {
+  label: "No trade" | "Day trade" | "Swing trade" | "Position trade" | "Long-term research";
+  expectedHold: string;
+  maxHold: string;
+  reviewCadence: string;
+  exitRule: string;
+  evidenceBasis: string;
 };
 
 const commodityProxies = new Set(["GLD", "SLV", "USO", "UNG", "DBA", "CPER"]);
@@ -101,6 +112,63 @@ function marketForSymbol(symbol: string): TradeSignal["market"] {
 
 function isCommodityMarket(market: TradeSignal["market"]) {
   return market === "Commodity ETF" || market === "Commodity Future";
+}
+
+function intradayHoldingPeriod(action: TradeSignal["action"], market: TradeSignal["market"], fresh: boolean): HoldingPeriod {
+  if (!fresh) {
+    return {
+      label: "No trade",
+      expectedHold: "Do not enter until fresh data returns",
+      maxHold: "None",
+      reviewCadence: "Refresh data before making a decision",
+      exitRule: "No new order while the quote is stale",
+      evidenceBasis: "Freshness gate failed",
+    };
+  }
+  if (action === "Hold/No Trade") {
+    return {
+      label: "No trade",
+      expectedHold: "No position recommended",
+      maxHold: "None",
+      reviewCadence: "Review on the next quote refresh",
+      exitRule: "Wait for a cleaner setup",
+      evidenceBasis: "Rule stack does not show enough edge",
+    };
+  }
+  if (action === "Sell/Exit Watch") {
+    return {
+      label: "Day trade",
+      expectedHold: "Immediate protection or same-session avoidance",
+      maxHold: "Same trading session",
+      reviewCadence: "Review every 5-15 minutes while exposed",
+      exitRule: "Protect, reduce, or stand aside while sell/exit rules are active",
+      evidenceBasis: "Intraday exit/avoidance rules",
+    };
+  }
+  const commodityNote = isCommodityMarket(market) ? " with commodity headline/session risk checked first" : "";
+  return {
+    label: "Day trade",
+    expectedHold: `Intraday to same-session only${commodityNote}`,
+    maxHold: "Same trading day unless a separate swing/position thesis is created",
+    reviewCadence: "Review every 5-15 minutes and at target/stop touch",
+    exitRule: "Exit if stop hits, target hits, data turns stale, or price loses the setup confirmation",
+    evidenceBasis: "Intraday trend, range, liquidity, and reward/risk rules",
+  };
+}
+
+function leadHoldingPeriod(status: BuyLead["status"], market: TradeSignal["market"], fresh: boolean): HoldingPeriod {
+  if (status === "Buy Watch") return intradayHoldingPeriod("Buy Watch", market, fresh);
+  if (status === "Buy Lead - Wait for Trigger") {
+    return {
+      label: "Day trade",
+      expectedHold: "Watch for an intraday trigger; no entry yet",
+      maxHold: "Same trading day after trigger, otherwise reset the idea",
+      reviewCadence: "Review every 5-15 minutes until the trigger either clears or fails",
+      exitRule: "Do not enter unless trigger clears with fresh data; exit by stop/target if paper-entered",
+      evidenceBasis: "Near-trigger intraday setup, not a buy-now signal",
+    };
+  }
+  return intradayHoldingPeriod("Hold/No Trade", market, fresh);
 }
 
 function quoteShape(quote: SignalQuote) {
@@ -245,6 +313,7 @@ export function generateSignal(quote: SignalQuote, riskPct = 1): TradeSignal {
       : action === "Sell/Exit Watch"
         ? "Exit/avoidance rules triggered from downside pressure, failed breakout, or extension risk."
         : "No clean edge from the current rule set. Preserve capital and wait.";
+  const holdingPeriod = intradayHoldingPeriod(action, market, fresh);
 
   return {
     symbol: quote.symbol,
@@ -260,6 +329,7 @@ export function generateSignal(quote: SignalQuote, riskPct = 1): TradeSignal {
     target: Number(target.toFixed(2)),
     rewardRisk: Number(rewardRisk.toFixed(2)),
     positionRiskPct: isCommodityMarket(market) ? Number(Math.min(riskPct, 0.5).toFixed(2)) : riskPct,
+    holdingPeriod,
     reason,
     confirmations,
     warnings,
@@ -344,6 +414,7 @@ export function generateBuyLead(quote: SignalQuote, riskPct = 1): BuyLead {
         : signal.action === "Sell/Exit Watch"
           ? "This is not a buy candidate right now because sell/exit rules are active."
         : "This is not a buy candidate right now. Wait for strength, fresh data, and a cleaner trigger.";
+  const holdingPeriod = leadHoldingPeriod(status, market, fresh);
 
   return {
     symbol: quote.symbol,
@@ -356,6 +427,7 @@ export function generateBuyLead(quote: SignalQuote, riskPct = 1): BuyLead {
     stop: roundMoney(safeStop),
     target: roundMoney(target),
     rewardRisk: Number(rewardRisk.toFixed(2)),
+    holdingPeriod,
     moveFromOpenPct: Number(shape.dayMovePct.toFixed(2)),
     reason,
     simpleWhy,

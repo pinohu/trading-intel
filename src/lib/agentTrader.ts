@@ -32,8 +32,8 @@ export type AgentTradeProposal = {
 
 export function buildAgentTradingPolicy(mode: BrokerMode = "paper"): AgentTradingPolicy {
   const config = brokerConfig(mode);
-  const enabled = cleanSecret(process.env.AGENT_TRADING_ENABLED) === "true";
-  const paperAutomationEnabled = cleanSecret(process.env.AGENT_PAPER_TRADING_ENABLED) === "true";
+  const enabled = cleanSecret(process.env.AGENT_TRADING_ENABLED) !== "false";
+  const paperAutomationEnabled = cleanSecret(process.env.AGENT_PAPER_TRADING_ENABLED) !== "false";
   const minConfidence = parseEnvNumber("AGENT_MIN_CONFIDENCE", 75, 1, 100);
   const maxProposals = Math.round(parseEnvNumber("AGENT_MAX_PROPOSALS", 5, 1, 20));
   const maxPaperOrdersPerRun = Math.round(parseEnvNumber("AGENT_MAX_PAPER_ORDERS_PER_RUN", 1, 1, 5));
@@ -50,14 +50,14 @@ export function buildAgentTradingPolicy(mode: BrokerMode = "paper"): AgentTradin
     maxProposals,
     maxPaperOrdersPerRun,
     missing: [
-      !enabled ? "AGENT_TRADING_ENABLED=true" : "",
-      !paperAutomationEnabled ? "AGENT_PAPER_TRADING_ENABLED=true for paper automation" : "",
+      !enabled ? "AGENT_TRADING_ENABLED is set to false" : "",
+      !paperAutomationEnabled ? "AGENT_PAPER_TRADING_ENABLED is set to false" : "",
       !paperConfig.executionEnabled ? "BROKER_EXECUTION_ENABLED=true" : "",
       !paperConfig.credentialsConfigured ? "Alpaca paper credentials" : "",
     ].filter(Boolean),
     restrictions: [
       "Agents cannot autonomously place live-money orders.",
-      "Agents may only auto-submit paper orders when paper automation is explicitly enabled.",
+      "Agents may auto-submit paper orders when Alpaca paper execution is ready.",
       "Live orders require a logged-in human, the live acknowledgement phrase, and the existing broker order route.",
       "Only limit or bracket-limit stock orders are drafted.",
       `Minimum agent confidence is ${minConfidence}.`,
@@ -140,6 +140,11 @@ function ticketFromBuyNow(signal: BuyNowSignal): TradeTicket {
     maxLoss: signal.maxLoss,
     rewardRisk: signal.rewardRisk,
     riskPct: signal.ticket.riskPct,
+    holdingPeriod: signal.holdingPeriod,
+    expectedHold: signal.expectedHold,
+    maxHold: signal.maxHold,
+    reviewCadence: signal.reviewCadence,
+    exitRule: signal.ticket.exitRule,
     tradeable: true,
     reason: signal.reasons.join(" "),
     mustConfirm: signal.reasons,

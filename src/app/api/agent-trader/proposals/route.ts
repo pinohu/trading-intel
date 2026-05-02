@@ -49,7 +49,7 @@ export async function GET(request: Request) {
       advisory:
         mode === "live"
           ? "Live proposals are drafts only. A human must approve through the broker execution rail."
-          : "Paper proposals can be auto-submitted only when agent paper automation is explicitly enabled.",
+          : "Paper proposals can be auto-submitted when Alpaca paper execution is ready.",
     },
     { status: ok ? 200 : status },
   );

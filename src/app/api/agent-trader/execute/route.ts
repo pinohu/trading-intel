@@ -163,7 +163,7 @@ export async function POST(request: Request) {
         liveMoney: false,
         proposal,
         brokerOrder,
-        advisory: "The agent submitted a paper order only. Live-money autonomy remains blocked.",
+        advisory: "The agent submitted a paper bracket-limit order only. Use the paper fill as a mirror candidate; live-money autonomy remains blocked.",
       },
       { status: 201 },
     );

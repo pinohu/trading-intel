@@ -3,6 +3,10 @@
     {
       "path": "/api/monitor",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/agent-trader/paper-run",
+      "schedule": "*/5 * * * *"
     }
   ]
 }

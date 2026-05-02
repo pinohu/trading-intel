@@ -13,6 +13,10 @@ export type BuyNowSignal = {
   units: number;
   maxLoss: number;
   rewardRisk: number;
+  holdingPeriod: TradeTicket["holdingPeriod"];
+  expectedHold: string;
+  maxHold: string;
+  reviewCadence: string;
   confidence: number;
   dataQuality: SignalQuote["quality"];
   source: string;
@@ -32,6 +36,8 @@ export type BlockedBuyNowSignal = {
   trigger: number;
   confidence: number;
   rewardRisk: number;
+  holdingPeriod: TradeTicket["holdingPeriod"];
+  expectedHold: string;
   dataQuality: SignalQuote["quality"];
   blockers: string[];
   reasons: string[];
@@ -97,6 +103,10 @@ export function generateBuyNowSignals({
         units: ticket.units,
         maxLoss: ticket.maxLoss,
         rewardRisk: ticket.rewardRisk,
+        holdingPeriod: ticket.holdingPeriod,
+        expectedHold: ticket.expectedHold,
+        maxHold: ticket.maxHold,
+        reviewCadence: ticket.reviewCadence,
         confidence: lead.confidence,
         dataQuality: quote.quality,
         source: quote.source,
@@ -122,6 +132,8 @@ export function generateBuyNowSignals({
       trigger: lead.trigger,
       confidence: lead.confidence,
       rewardRisk: lead.rewardRisk,
+      holdingPeriod: lead.holdingPeriod.label,
+      expectedHold: lead.holdingPeriod.expectedHold,
       dataQuality: quote.quality,
       blockers,
       reasons: lead.simpleWhy.slice(0, 2),
