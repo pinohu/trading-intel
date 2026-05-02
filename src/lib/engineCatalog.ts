@@ -21,6 +21,16 @@ export const engineCapabilities: EngineCapability[] = [
     priority: "Next",
   },
   {
+    repo: "TauricResearch/TradingAgents",
+    productName: "TradingAgents Debate Desk",
+    lane: "Multi-agent research",
+    bestUse: "LLM analyst, bull/bear researcher, trader, risk, and portfolio-manager debate before any paper-trade promotion.",
+    featureUnlocked: "Structured research-only decisions, thesis/risk notes, and portfolio-manager challenges persisted to the research journal.",
+    integrationMode: "Python worker",
+    safety: "Research",
+    priority: "Now",
+  },
+  {
     repo: "QuantConnect/Lean",
     productName: "LEAN Engine Bridge",
     lane: "Institutional backtesting",
@@ -114,6 +124,7 @@ export const engineCapabilities: EngineCapability[] = [
 
 export const engineWorkflow = [
   "Collect data with OpenBB-style connectors and current quote/news APIs.",
+  "Challenge interesting tickers with TradingAgents multi-agent debate before writing a trade thesis.",
   "Run simple first-pass validation in the native Backtest Lab.",
   "Stress-test parameters with a vectorbt-style sweep before trusting a setup.",
   "Promote only robust ideas to LEAN or Backtrader for event-driven simulation.",

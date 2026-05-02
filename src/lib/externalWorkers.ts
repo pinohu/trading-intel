@@ -2,6 +2,7 @@ import { cleanSecret } from "@/lib/security";
 
 export type ExternalWorkerKey =
   | "openbb"
+  | "tradingagents"
   | "lean"
   | "backtrader"
   | "vectorbt"
@@ -11,11 +12,13 @@ export type ExternalWorkerKey =
   | "jesse";
 
 export type ExternalWorkerJob = {
-  jobType: "fundamentals" | "backtest" | "parameter-sweep" | "nlp" | "rl-research" | "crypto-paper";
+  jobType: "fundamentals" | "agent-debate" | "backtest" | "parameter-sweep" | "nlp" | "rl-research" | "crypto-paper";
   symbols: string[];
   strategy?: string;
   parameters?: Record<string, unknown>;
 };
+
+const externalWorkerJobTypes = ["fundamentals", "agent-debate", "backtest", "parameter-sweep", "nlp", "rl-research", "crypto-paper"];
 
 export const externalWorkerCatalog: Array<{
   key: ExternalWorkerKey;
@@ -30,6 +33,13 @@ export const externalWorkerCatalog: Array<{
     urlEnv: "OPENBB_WORKER_URL",
     purpose: "Fundamentals, macro, options, and provider-key research.",
     allowedJobs: ["fundamentals"],
+  },
+  {
+    key: "tradingagents",
+    label: "TradingAgents",
+    urlEnv: "TRADINGAGENTS_WORKER_URL",
+    purpose: "LangGraph multi-agent analyst, researcher, trader, and portfolio-manager debate for research-only decisions.",
+    allowedJobs: ["agent-debate"],
   },
   {
     key: "lean",
@@ -98,7 +108,7 @@ export function validExternalWorkerJob(payload: unknown): payload is ExternalWor
   const item = payload as Partial<ExternalWorkerJob>;
   return (
     typeof item.jobType === "string" &&
-    ["fundamentals", "backtest", "parameter-sweep", "nlp", "rl-research", "crypto-paper"].includes(item.jobType) &&
+    externalWorkerJobTypes.includes(item.jobType) &&
     Array.isArray(item.symbols) &&
     item.symbols.length > 0 &&
     item.symbols.length <= 50 &&
@@ -133,6 +143,11 @@ export async function runExternalWorkerJob(workerKey: ExternalWorkerKey, job: Ex
         symbols: job.symbols.map((symbol) => symbol.trim().toUpperCase()),
         requestedAt: new Date().toISOString(),
         source: "trading-intel-platform",
+        safety: {
+          researchOnly: true,
+          noAutonomousExecution: true,
+          brokerOrdersBlocked: true,
+        },
       }),
       signal: controller.signal,
     });

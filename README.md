@@ -35,7 +35,8 @@ This is a mobile-first trading research and intelligence cockpit. It is built fo
 - `/api/provider-stack/readiness` for market/news/database provider status without exposing secrets
 - `/api/research-notes` for database-backed notes across devices
 - AutoResearch Lab at `/api/autoresearch/lab`, with bounded candidate experiments, champion scoring, run history, and a research-only guardrail
-- External worker bridge at `/api/research-workers/run` and `/api/research-workers/readiness` for OpenBB, LEAN, Backtrader, vectorbt, NautilusTrader, FinGPT, FinRL, and Jesse workers outside Vercel
+- External worker bridge at `/api/research-workers/run` and `/api/research-workers/readiness` for OpenBB, TradingAgents, LEAN, Backtrader, vectorbt, NautilusTrader, FinGPT, FinRL, and Jesse workers outside Vercel
+- TradingAgents integration at `/api/tradingagents/analyze` for research-only multi-agent analyst/researcher/trader/portfolio-manager debate persisted to research notes when Postgres is configured
 - Supervised agent-trading rail at `/api/agent-trader/policy`, `/api/agent-trader/proposals`, and `/api/agent-trader/execute`; agents can draft orders and optionally paper-trade, while live-money autonomy is blocked
 - Options volatility context at `/api/options/volatility` using Alpaca contracts/snapshots where available, with OPRA/indicative/contract-only quality labels
 - Walk-forward holdout metadata in new backtest runs, plus persisted model-validation reports
@@ -55,7 +56,7 @@ This is a mobile-first trading research and intelligence cockpit. It is built fo
 - Agent desk showing how Codex, OpenClaw, Hermes, and KiloCode should split research work
 - Risk constitution to prevent impulsive execution
 - Demo-only fallback quotes when `DEMO_MARKET_DATA=true`; production live routes return unavailable instead of inventing prices
-- Engine Fusion Map covering OpenBB, LEAN, backtesting.py, vectorbt, Backtrader, Nautilus Trader, FinRL, FinRL-Trading, FinGPT, and Jesse
+- Engine Fusion Map covering OpenBB, TradingAgents, LEAN, backtesting.py, vectorbt, Backtrader, Nautilus Trader, FinRL, FinRL-Trading, FinGPT, and Jesse
 - Quant Lab with first-pass strategy simulation inspired by lightweight and vectorized backtesting workflows
 - Research Pipeline that promotes ideas from data collection to simple tests, parameter sweeps, event-driven simulation, NLP challenge checks, and paper/live gates
 - `/api/engines` endpoint exposing the integrated engine catalog and guardrails
@@ -112,6 +113,7 @@ npm run build
 npm run quality
 npm run worker:autoresearch
 npm run worker:research
+npm run worker:tradingagents
 npm run worker:agent-paper
 vercel --prod --yes
 ```
@@ -163,6 +165,7 @@ Public no-key data is useful for prototyping, but professional trading research 
 - Benzinga, Finnhub, or NewsAPI for structured news when API keys are provided
 - SEC EDGAR APIs for filings with no paid key required
 - OpenBB external worker hook for deeper fundamentals and macro workflows
+- TradingAgents external worker hook for LLM analyst, bull/bear researcher, trader, and portfolio-manager debate
 - LEAN, Backtrader, vectorbt, and Nautilus external worker hooks for real historical backtests outside Vercel serverless limits
 - FinGPT/FinRL worker hooks for research-only NLP and reinforcement-learning experiments
 - Jesse worker hook for a separate crypto paper-trading lane

@@ -138,6 +138,17 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
       docs: "https://docs.openbb.co/",
     },
     {
+      key: "tradingagents",
+      label: "TradingAgents debate worker",
+      category: "ai-research",
+      ready: workerReady("TRADINGAGENTS_WORKER_URL"),
+      mode: workerReady("TRADINGAGENTS_WORKER_URL") ? "worker" : "missing",
+      env: ["TRADINGAGENTS_WORKER_URL", "WORKER_SHARED_SECRET"],
+      detail: "External LangGraph worker that runs analyst, bull/bear researcher, trader, and portfolio-manager debate for research-only decisions.",
+      freeAlternative: "Native rule-based signals, Algorithm Council scores, and AutoResearch lab.",
+      docs: "https://github.com/TauricResearch/TradingAgents",
+    },
+    {
       key: "lean",
       label: "QuantConnect LEAN worker",
       category: "backtesting",
@@ -266,6 +277,12 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
         urlEnv: "OPENBB_WORKER_URL",
       },
       {
+        name: "TradingAgents worker",
+        purpose: "Multi-agent analyst/researcher/trader/portfolio-manager debate for research notes.",
+        command: "python workers/tradingagents_worker.py",
+        urlEnv: "TRADINGAGENTS_WORKER_URL",
+      },
+      {
         name: "LEAN worker",
         purpose: "Event-driven historical backtests and paper/live promotion trials.",
         command: "lean backtest \"TradingIntelStrategy\"",
@@ -295,7 +312,7 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
       "OPRA/options data entitlement for production options flow and volatility signals.",
       "CME/ICE/commodity futures market-data licenses for production futures signals.",
       "Paid structured-news terms if Benzinga/Finnhub/NewsAPI use exceeds free tiers.",
-      "Separate external worker hosting for LEAN, OpenBB, Backtrader, vectorbt, NautilusTrader, FinGPT, FinRL, and Jesse.",
+      "Separate external worker hosting for TradingAgents, LEAN, OpenBB, Backtrader, vectorbt, NautilusTrader, FinGPT, FinRL, and Jesse.",
     ],
   };
 }

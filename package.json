@@ -11,6 +11,7 @@
     "aitable:bootstrap": "node scripts/bootstrap-aitable.mjs",
     "worker:autoresearch": "node scripts/autoresearch-lab.mjs",
     "worker:research": "node scripts/research-worker-dispatch.mjs",
+    "worker:tradingagents": "python workers/tradingagents_worker.py",
     "worker:agent-paper": "node scripts/agent-paper-worker.mjs",
     "quality": "npm run lint && npm run test && npm run build"
   },

@@ -322,6 +322,27 @@ type AutoResearchApi = {
   error?: string;
 };
 
+type TradingAgentsApi = {
+  ok: boolean;
+  requested?: {
+    symbols: string[];
+    analysisDate: string;
+    depth: "fast" | "standard" | "deep";
+  };
+  decisions?: Array<{
+    symbol: string;
+    rating: string;
+    action: string;
+    summary: string;
+    thesis: string;
+    risks: string[];
+    portfolioDecision: string;
+  }>;
+  persistedNotes?: Array<Record<string, unknown>>;
+  advisory?: string;
+  error?: string;
+};
+
 type AgentTraderApi = {
   ok: boolean;
   mode: BrokerMode;
@@ -594,10 +615,12 @@ export default function Home() {
   const [institutionalReadiness, setInstitutionalReadiness] = useState<InstitutionalReadinessApi | null>(null);
   const [researchStack, setResearchStack] = useState<ResearchStackApi | null>(null);
   const [autoResearch, setAutoResearch] = useState<AutoResearchApi | null>(null);
+  const [tradingAgents, setTradingAgents] = useState<TradingAgentsApi | null>(null);
   const [agentTrader, setAgentTrader] = useState<AgentTraderApi | null>(null);
   const [researchNotes, setResearchNotes] = useState<ResearchNote[]>([]);
   const [backtestRunning, setBacktestRunning] = useState(false);
   const [autoResearchRunning, setAutoResearchRunning] = useState(false);
+  const [tradingAgentsRunning, setTradingAgentsRunning] = useState(false);
   const [agentExecuting, setAgentExecuting] = useState(false);
   const [brokerMessage, setBrokerMessage] = useState("Checking broker rail");
   const [agentMessage, setAgentMessage] = useState("Agent trading is supervised.");
@@ -769,6 +792,34 @@ export default function Home() {
       setAutoResearch({ ok: false, error: "AutoResearch request failed." });
     } finally {
       setAutoResearchRunning(false);
+    }
+  }
+
+  async function runTradingAgents() {
+    setTradingAgentsRunning(true);
+    setTradingAgents(null);
+    try {
+      const symbols = [selected, ...watchlist]
+        .filter((symbol) => !["GOLD", "SILVER", "OIL", "NATGAS", "COPPER", "CORN", "WHEAT", "SOY"].includes(symbol))
+        .filter(Boolean)
+        .slice(0, 4);
+      const response = await fetch("/api/tradingagents/analyze", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          symbols: Array.from(new Set(symbols)),
+          depth: "standard",
+        }),
+      });
+      const payload = await response.json();
+      setTradingAgents(payload);
+      if (payload.ok) {
+        void refresh();
+      }
+    } catch {
+      setTradingAgents({ ok: false, error: "TradingAgents request failed." });
+    } finally {
+      setTradingAgentsRunning(false);
     }
   }
 
@@ -1680,6 +1731,14 @@ export default function Home() {
                   <Brain className={`h-4 w-4 ${autoResearchRunning ? "animate-spin" : ""}`} />
                   Run AutoResearch Lab
                 </button>
+                <button
+                  onClick={() => void runTradingAgents()}
+                  disabled={tradingAgentsRunning}
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-md border border-blue-300/40 bg-blue-300 px-3 text-sm font-semibold text-slate-950 transition hover:bg-blue-200 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400 sm:col-span-2"
+                >
+                  <Bot className={`h-4 w-4 ${tradingAgentsRunning ? "animate-spin" : ""}`} />
+                  Run TradingAgents Debate
+                </button>
               </div>
             </div>
             <div className="mt-4 grid gap-3 lg:grid-cols-5">
@@ -1695,6 +1754,7 @@ export default function Home() {
             )}
             <RealBacktestPanel result={realBacktest} />
             <AutoResearchPanel result={autoResearch} />
+            <TradingAgentsPanel result={tradingAgents} />
           </Panel>
 
           <Panel>
@@ -3446,6 +3506,70 @@ function AutoResearchPanel({ result }: { result: AutoResearchApi | null }) {
               </div>
             </div>
           ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TradingAgentsPanel({ result }: { result: TradingAgentsApi | null }) {
+  if (!result) {
+    return (
+      <div className="mt-4 rounded-md border border-white/10 bg-black/20 p-3 text-sm leading-6 text-slate-400">
+        TradingAgents can run an external multi-agent debate across analysts, bull/bear researchers, trader, and portfolio manager. Results are research-only and can be persisted as notes when Postgres is available.
+      </div>
+    );
+  }
+  if (!result.ok) {
+    return (
+      <div className="mt-4 rounded-md border border-rose-300/25 bg-rose-300/10 p-3 text-sm leading-6 text-rose-100">
+        {result.error ?? "TradingAgents is unavailable."}
+      </div>
+    );
+  }
+
+  const decisions = result.decisions ?? [];
+  return (
+    <div className="mt-4 rounded-md border border-blue-300/20 bg-blue-300/10 p-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <div className="font-semibold text-white">TradingAgents Debate</div>
+          <div className="mt-1 text-xs leading-5 text-blue-100">
+            {result.advisory ?? "Research-only multi-agent debate completed."}
+          </div>
+        </div>
+        <span className="rounded-sm bg-black/25 px-2 py-1 text-xs font-semibold text-blue-100">
+          {result.requested ? `${result.requested.symbols.length} symbol(s) / ${result.requested.depth}` : `${decisions.length} decision(s)`}
+        </span>
+      </div>
+
+      <div className="mt-3 grid gap-3 lg:grid-cols-2">
+        {decisions.map((decision) => (
+          <div key={decision.symbol} className="rounded-md border border-blue-300/20 bg-black/20 p-3">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <div className="text-sm font-semibold text-white">{decision.symbol}</div>
+                <div className="mt-1 text-xs text-slate-400">{decision.action}</div>
+              </div>
+              <span className="rounded-sm bg-blue-300 px-2 py-1 text-xs font-semibold text-slate-950">
+                {decision.rating}
+              </span>
+            </div>
+            <p className="mt-3 text-sm leading-6 text-slate-200">{decision.summary}</p>
+            <div className="mt-3 text-xs leading-5 text-blue-100">
+              Portfolio: {decision.portfolioDecision}
+            </div>
+            <div className="mt-3 grid gap-1 text-xs leading-5 text-amber-100">
+              {decision.risks.slice(0, 3).map((risk) => (
+                <div key={risk}>- {risk}</div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      {result.persistedNotes && result.persistedNotes.length > 0 && (
+        <div className="mt-3 text-xs leading-5 text-blue-100">
+          Stored {result.persistedNotes.length} TradingAgents note(s) in the research journal.
         </div>
       )}
     </div>

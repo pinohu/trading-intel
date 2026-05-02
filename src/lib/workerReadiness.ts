@@ -68,11 +68,11 @@ export function buildWorkerReadiness(): WorkerReadiness {
     {
       key: "ai-research-workers",
       label: "AI research workers",
-      ready: Boolean(process.env.FINGPT_WORKER_URL || process.env.FINRL_WORKER_URL),
+      ready: Boolean(process.env.TRADINGAGENTS_WORKER_URL || process.env.FINGPT_WORKER_URL || process.env.FINRL_WORKER_URL),
       detail:
-        process.env.FINGPT_WORKER_URL || process.env.FINRL_WORKER_URL
+        process.env.TRADINGAGENTS_WORKER_URL || process.env.FINGPT_WORKER_URL || process.env.FINRL_WORKER_URL
           ? "At least one AI research worker URL is configured."
-          : "Set FINGPT_WORKER_URL or FINRL_WORKER_URL for research-only NLP/RL experiments.",
+          : "Set TRADINGAGENTS_WORKER_URL, FINGPT_WORKER_URL, or FINRL_WORKER_URL for research-only AI experiments.",
     },
   ];
   const readyCount = components.filter((item) => item.ready).length;
@@ -104,6 +104,12 @@ export function buildWorkerReadiness(): WorkerReadiness {
         purpose: "Run bounded AutoResearch-style strategy experiments and store champions.",
         cadence: "nightly or on demand",
         command: "node scripts/autoresearch-lab.mjs",
+      },
+      {
+        name: "tradingagents-worker",
+        purpose: "Run TauricResearch TradingAgents multi-agent debate and return research-only portfolio-manager decisions.",
+        cadence: "on demand / scheduled research jobs",
+        command: "python workers/tradingagents_worker.py",
       },
       {
         name: "external-quant-worker",

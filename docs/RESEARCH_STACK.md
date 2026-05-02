@@ -23,6 +23,7 @@ This platform uses a layered research architecture:
 Set these when you host workers outside Vercel:
 
 - `OPENBB_WORKER_URL`
+- `TRADINGAGENTS_WORKER_URL`
 - `LEAN_WORKER_URL`
 - `BACKTRADER_WORKER_URL`
 - `VECTORBT_WORKER_URL`
@@ -52,6 +53,29 @@ with a payload:
 ```
 
 Use `WORKER_SHARED_SECRET` for worker-to-worker authorization if the external service supports it.
+
+## TradingAgents Worker
+
+TradingAgents is integrated as a research-only external worker. It should run on a machine with Python, the TradingAgents package, and your chosen LLM/provider keys:
+
+```bash
+pip install git+https://github.com/TauricResearch/TradingAgents.git
+npm run worker:tradingagents
+```
+
+Expose the worker URL through `TRADINGAGENTS_WORKER_URL`, for example:
+
+```text
+TRADINGAGENTS_WORKER_URL=https://your-worker.example.com/run
+```
+
+The dashboard button calls:
+
+```text
+POST /api/tradingagents/analyze
+```
+
+That route dispatches an `agent-debate` job, normalizes the returned rating/thesis/risks, and stores research notes when `DATABASE_URL` is configured. It never places broker orders.
 
 ## Free Alternatives
 
