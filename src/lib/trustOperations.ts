@@ -7,6 +7,7 @@ export type TrustOperationGap = {
   whyItMatters: string;
   priority: TrustPriority;
   status: TrustStatus;
+  proofStatus: TrustStatus;
   evidenceStandard: string;
   currentState: string;
   nextAction: string;
@@ -19,7 +20,8 @@ export const trustOperationGaps: TrustOperationGap[] = [
     issue: "Execution-grade stock and futures coverage is still incomplete.",
     whyItMatters: "Public/free feeds are useful for research, but live trading decisions need licensed, timestamped data with known entitlements.",
     priority: "Critical",
-    status: "Partial",
+    status: "Live",
+    proofStatus: "Partial",
     evidenceStandard: "Every live-capable signal must identify the feed, entitlement level, timestamp age, and whether the quote is research-only.",
     currentState: "Public Nasdaq/CNBC/Yahoo/Binance/Stooq feeds are labeled and freshness-gated; Alpaca is used when credentials allow.",
     nextAction: "Add SIP stock feed credentials and a licensed futures data provider, then fail closed when a trade depends on unlicensed data.",
@@ -34,7 +36,8 @@ export const trustOperationGaps: TrustOperationGap[] = [
     issue: "The platform records outcomes, but needs enough samples across market regimes before promoting strategies as durable.",
     whyItMatters: "The core proof question is whether this exact signal survives slippage, fees, spreads, stale data, and different market conditions.",
     priority: "Critical",
-    status: "Partial",
+    status: "Live",
+    proofStatus: "Partial",
     evidenceStandard: "A strategy needs live or paper outcomes at 5m, 15m, 1h, 1d, and multi-day horizons, plus slippage, fees, spreads, and cost-adjusted backtests across regimes.",
     currentState: "Signal snapshots and outcome checks are stored in SQL/AITable, and the monitor evaluates 5m, 15m, 1h, and 1d follow-through.",
     nextAction: "Require minimum sample sizes, slippage/fee assumptions, and regime labels before any strategy can be called proven.",
@@ -50,6 +53,7 @@ export const trustOperationGaps: TrustOperationGap[] = [
     whyItMatters: "Before real money, the app should place simulated trades and track whether signals actually work.",
     priority: "Critical",
     status: "Live",
+    proofStatus: "Live",
     evidenceStandard: "Every paper order should be tied to the ticket, broker mode, signal evidence, risk settings, and later outcome checks.",
     currentState: "Alpaca paper execution is wired through the broker rail, with SQL/AITable order mirrors and paper-trade storage.",
     nextAction: "Keep paper mode as the default proving lane before any live order is considered.",
@@ -64,6 +68,7 @@ export const trustOperationGaps: TrustOperationGap[] = [
     whyItMatters: "Every buy/sell lead needs entry trigger, stop, target, position size, max loss, reason, and a do-not-trade checklist.",
     priority: "Critical",
     status: "Live",
+    proofStatus: "Live",
     evidenceStandard: "No trade card can be actionable unless trigger, stop, target, reward/risk, position size, risk dollars, and blockers are present.",
     currentState: "The dashboard generates a trade ticket from the selected buy lead, live quote, and risk settings.",
     nextAction: "Keep broker placement downstream of the ticket so execution cannot bypass the plan.",
@@ -78,6 +83,7 @@ export const trustOperationGaps: TrustOperationGap[] = [
     whyItMatters: "Strategies must be tested across symbols, regimes, slippage, spreads, fees, and drawdowns before trust.",
     priority: "Critical",
     status: "Live",
+    proofStatus: "Live",
     evidenceStandard: "Backtests must disclose trade count, return, max drawdown, profit factor, slippage, fees, and out-of-sample validation.",
     currentState: "The Quant Lab can run Alpaca historical-bars backtests with slippage, fees, drawdown, validation metadata, and SQL storage.",
     nextAction: "Promote robust strategies into deeper vectorbt/LEAN worker tests when external compute is added.",
@@ -92,6 +98,7 @@ export const trustOperationGaps: TrustOperationGap[] = [
     whyItMatters: "The app should know existing exposure, daily P/L, max loss, and overlap risk before a new trade.",
     priority: "Critical",
     status: "Live",
+    proofStatus: "Live",
     evidenceStandard: "Every trade decision should see account value, cash, open positions, open orders, concentration, daily P/L, and risk flags.",
     currentState: "Alpaca account, positions, orders, exposure, concentration, daily P/L, and risk flags are synced and stored.",
     nextAction: "Add broker-specific risk limits per strategy and user role.",
@@ -106,6 +113,7 @@ export const trustOperationGaps: TrustOperationGap[] = [
     whyItMatters: "Signals, trades, outcomes, watchlists, alerts, and model performance need durable storage.",
     priority: "High",
     status: "Live",
+    proofStatus: "Live",
     evidenceStandard: "Trust data should survive refreshes and be queryable by signal, strategy, broker event, backtest, and outcome horizon.",
     currentState: "Neon Postgres is connected with tables for signals, trades, outcomes, alerts, backtests, risk snapshots, broker events, and validation reports.",
     nextAction: "Add migrations and retention policies as usage grows.",
@@ -119,7 +127,8 @@ export const trustOperationGaps: TrustOperationGap[] = [
     issue: "Catalyst coverage is useful but not complete enough for full event-risk proof.",
     whyItMatters: "Signals need earnings, Fed events, SEC filings, EIA oil/gas inventories, USDA crop/weather events, and breaking headlines.",
     priority: "High",
-    status: "Partial",
+    status: "Live",
+    proofStatus: "Partial",
     evidenceStandard: "A signal should list known market-moving events and identify when catalyst coverage is only a proxy.",
     currentState: "Yahoo headlines, SEC filing routes, and static event-risk rules exist.",
     nextAction: "Add earnings calendars, EIA/USDA calendars, and paid news when keys exist.",
@@ -133,7 +142,8 @@ export const trustOperationGaps: TrustOperationGap[] = [
     issue: "Adapters exist, but delivery subscriptions and provider credentials need production configuration.",
     whyItMatters: "Users need alerts when a trigger is hit, stale data appears, or a stop/target is touched.",
     priority: "High",
-    status: "Partial",
+    status: "Live",
+    proofStatus: "Partial",
     evidenceStandard: "Each alert path should show channel, subscription state, last delivery result, and whether it is browser-only or off-device.",
     currentState: "Browser notifications, webhook/SMS/email adapters, and SQL alert event storage are implemented.",
     nextAction: "Configure Twilio/Resend/webhook keys and persist alert subscriptions.",
@@ -148,6 +158,7 @@ export const trustOperationGaps: TrustOperationGap[] = [
     whyItMatters: "Before execution, the app should pull real positions and balances read-only.",
     priority: "High",
     status: "Live",
+    proofStatus: "Live",
     evidenceStandard: "Broker state should include account, positions, orders, activities, calendar, portfolio history, and reconciliation evidence.",
     currentState: "Alpaca account, positions, open orders, activities, calendar, and portfolio history are available in the broker panel.",
     nextAction: "Add optional read-only sync for any non-Alpaca broker accounts.",
@@ -161,7 +172,8 @@ export const trustOperationGaps: TrustOperationGap[] = [
     issue: "Outcome summaries exist; per-strategy false-positive and regime dashboards need enough samples.",
     whyItMatters: "The app must show which signals made money, failed, win rate, average gain/loss, drawdown, and false positives.",
     priority: "High",
-    status: "Partial",
+    status: "Live",
+    proofStatus: "Partial",
     evidenceStandard: "Performance should be grouped by strategy, horizon, symbol class, regime, signal quality, and action type.",
     currentState: "Signal snapshots are persisted, model-performance API summaries outcomes, and the ops strip surfaces the best available proof count.",
     nextAction: "Add per-strategy false-positive, drawdown, and regime dashboards once enough live samples accumulate.",
@@ -175,7 +187,8 @@ export const trustOperationGaps: TrustOperationGap[] = [
     issue: "Options context is partial and depends on provider permissions.",
     whyItMatters: "Options flow, implied volatility, put/call activity, and unusual volume improve stock context.",
     priority: "Medium",
-    status: "Partial",
+    status: "Live",
+    proofStatus: "Partial",
     evidenceStandard: "Options-derived context should disclose provider, snapshot age, contract selection, and whether IV/history is missing.",
     currentState: "Alpaca option contracts, option snapshots, and a contract-selection workflow are available when permissions allow.",
     nextAction: "Add paid options-flow and implied-volatility history when credentials exist.",
@@ -189,7 +202,8 @@ export const trustOperationGaps: TrustOperationGap[] = [
     issue: "Commodity proxies are labeled, but professional futures proof still needs licensed data and roll logic.",
     whyItMatters: "A serious commodities system needs licensed futures data, roll handling, contract calendars, spreads, and inventory/weather calendars.",
     priority: "High",
-    status: "Partial",
+    status: "Live",
+    proofStatus: "Partial",
     evidenceStandard: "Commodity signals should identify ETF/proxy/futures source, contract month, roll risk, spread context, and inventory/weather events.",
     currentState: "Commodity ETFs and public futures aliases exist, with explicit unofficial labels.",
     nextAction: "Add CME-licensed futures data, contract metadata, roll rules, and spread monitoring.",
@@ -203,7 +217,8 @@ export const trustOperationGaps: TrustOperationGap[] = [
     issue: "Baseline controls exist; production user roles and secret rotation are still open.",
     whyItMatters: "Strong auth, rate limits, audit logs, secret rotation, and separate admin/user views are required for real use.",
     priority: "High",
-    status: "Partial",
+    status: "Live",
+    proofStatus: "Partial",
     evidenceStandard: "Sensitive operations should be authenticated, authorized, rate-limited, audited, and separated by role.",
     currentState: "Private access code gate, rate limits, SQL audit events, security headers, and live-order acknowledgement gates exist.",
     nextAction: "Add a proper auth provider, role-based access, and secret rotation workflow.",
@@ -217,7 +232,8 @@ export const trustOperationGaps: TrustOperationGap[] = [
     issue: "The app is installable, but push and offline behavior need product polish.",
     whyItMatters: "The phone app should support installability, saved views, background refresh hints, and lock-screen style alerts.",
     priority: "Medium",
-    status: "Partial",
+    status: "Live",
+    proofStatus: "Partial",
     evidenceStandard: "Mobile should preserve readability, target sizes, installability, and clear alert capability state.",
     currentState: "Manifest, app icons, responsive dashboard, high-contrast tokens, and fast mobile ticker are present.",
     nextAction: "Add a service worker and richer push-alert subscription management.",
@@ -262,7 +278,7 @@ export const trustBuildOrder = [
 ];
 
 export function unresolvedTrustGaps(gaps = trustOperationGaps) {
-  return gaps.filter((gap) => gap.status !== "Live");
+  return gaps.filter((gap) => gap.proofStatus !== "Live");
 }
 
 export function criticalUnresolvedTrustGaps(gaps = trustOperationGaps) {
@@ -270,17 +286,18 @@ export function criticalUnresolvedTrustGaps(gaps = trustOperationGaps) {
 }
 
 export function sortedTrustGaps(gaps = trustOperationGaps) {
-  return [...gaps].sort((a, b) => statusRank(a.status) - statusRank(b.status) || priorityRank(a.priority) - priorityRank(b.priority) || a.capability.localeCompare(b.capability));
+  return [...gaps].sort((a, b) => statusRank(a.proofStatus) - statusRank(b.proofStatus) || priorityRank(a.priority) - priorityRank(b.priority) || a.capability.localeCompare(b.capability));
 }
 
 export function trustSummary(gaps = trustOperationGaps) {
   const unresolved = unresolvedTrustGaps(gaps);
   const criticalUnresolved = criticalUnresolvedTrustGaps(gaps);
   const live = gaps.filter((gap) => gap.status === "Live").length;
-  const partial = gaps.filter((gap) => gap.status === "Partial").length;
-  const blocked = gaps.filter((gap) => gap.status === "Blocked").length;
-  const planned = gaps.filter((gap) => gap.status === "Planned").length;
-  const proofCoveragePct = gaps.length === 0 ? 0 : Math.round(((live + partial * 0.5) / gaps.length) * 100);
+  const proven = gaps.filter((gap) => gap.proofStatus === "Live").length;
+  const partial = gaps.filter((gap) => gap.proofStatus === "Partial").length;
+  const blocked = gaps.filter((gap) => gap.proofStatus === "Blocked").length;
+  const planned = gaps.filter((gap) => gap.proofStatus === "Planned").length;
+  const proofCoveragePct = gaps.length === 0 ? 0 : Math.round(((proven + partial * 0.5) / gaps.length) * 100);
 
   return {
     total: gaps.length,
@@ -289,7 +306,8 @@ export function trustSummary(gaps = trustOperationGaps) {
     partial,
     blocked,
     planned,
-    resolved: live,
+    proven,
+    resolved: proven,
     unresolved: unresolved.length,
     criticalUnresolved: criticalUnresolved.length,
     proofCoveragePct,

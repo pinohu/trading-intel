@@ -161,7 +161,7 @@ Trade tickets show entry trigger, stop, target, position size, maximum loss, rew
 
 ### Trust Matrix
 
-The trust matrix lists platform trust capabilities by priority, current status, evidence standard, acceptance criteria, and remaining fix. It must not call a live capability "missing." Critical unresolved items should remain visible until implemented or proven with durable outcomes after slippage, fees, and different market conditions.
+The trust matrix lists platform trust capabilities by priority, live tracking status, proof state, evidence standard, acceptance criteria, and remaining fix. Every issue row should have live tracking status so users know it is actively monitored; proof state remains separate so unfinished data, durability, security, or alerting work is not mislabeled as proven. It must not call a live capability "missing." Critical unresolved proof items should remain visible until implemented or proven with durable outcomes after slippage, fees, and different market conditions.
 
 ### Signal Rows
 

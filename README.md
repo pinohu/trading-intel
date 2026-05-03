@@ -74,7 +74,7 @@ This is a mobile-first trading research and intelligence cockpit. It is built fo
 - `/api/buy-now` endpoint for current buy-now candidates plus blocked near-misses and the exact blockers
 - `/api/buy-leads` endpoint for ranked buy candidates with trigger, stop, target, confidence, source warnings, and session status
 - `/api/trade-ticket` endpoint for server-generated planning tickets
-- `/api/trust-ops` endpoint exposing the trustworthy-trading-operation proof matrix, unresolved issues, critical open items, and build order
+- `/api/trust-ops` endpoint exposing the trustworthy-trading-operation proof matrix, live-tracked issue status, proof readiness, unresolved proof items, critical open items, and build order
 - Stock, commodity ETF, commodity futures proxy, and crypto default watchlist including `GLD`, `SLV`, `USO`, `UNG`, `GOLD`, `SILVER`, `OIL`, `NATGAS`, `COPPER`, `CORN`, `WHEAT`, and `SOY`
 - Day Trading Playbook covering VWAP continuation, opening-range breakout, failed breakout, exhaustion, commodity volatility gates, futures session/roll caution, and risk-first sizing
 - Signal quality grades, setup labels, reward/risk, confirmations, and warnings
@@ -86,7 +86,7 @@ This is a mobile-first trading research and intelligence cockpit. It is built fo
 - `/api/position-size` endpoint and dashboard position sizing calculator
 - `/api/events` endpoint and event-risk calendar for stocks and commodity proxies
 - Paper analytics summary from saved research notes
-- Trust Matrix covering licensed data, durable outcome proof, paper trading, backtesting, database, broker sync, alerts, news/catalysts, model performance, security, and PWA readiness with explicit evidence standards and acceptance criteria
+- Trust Matrix covering licensed data, durable outcome proof, paper trading, backtesting, database, broker sync, alerts, news/catalysts, model performance, security, and PWA readiness with every issue status live plus separate proof states, evidence standards, and acceptance criteria
 - Plain-English `Right Now` board at the top of the dashboard
 - `/api/now` endpoint that returns current buy-now candidates, top buy-watch, top buy lead, and sell/avoid-watch in simple language
 - Provider adapter layer: Alpaca-ready, composite public stocks, Nasdaq, CNBC, Yahoo commodity futures aliases, Yahoo unofficial, Stooq delayed, Binance public crypto

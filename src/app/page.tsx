@@ -849,7 +849,7 @@ const sectionExplanations: Record<string, string> = {
   "Live Buy Leads": "Ranks symbols closest to a buy setup. These are candidates to watch, not automatic orders.",
   "Live Buy / Sell Leaderboard": "Compares the strongest buy leads against sell or exit watches using confidence, risk, and urgency.",
   "Always-On Trading OS": "Operational controls for monitoring, broker readiness, position sizing, and paper-trade analytics.",
-  "Trust Matrix": "The proof matrix. It separates resolved trust capabilities from open issues and shows the evidence required before strategies can be trusted.",
+  "Trust Matrix": "The proof matrix. It shows every issue as live-tracked while keeping proof readiness separate from tracking status.",
   "Market Signal Monitor": "Rule-based market scan that flags buy-watch and sell-watch setups from fresh quote data.",
   "Day Trading Playbook": "The rules used to judge whether a setup is actionable or should be avoided.",
   "Data Feed Control": "Controls the quote provider and shows which feeds are active, public, unofficial, delayed, or licensed.",
@@ -922,9 +922,12 @@ const statExplanations: Record<string, string> = {
   Reports: "Reference reports currently summarized into the system rules.",
   Research: "Reference-report lessons categorized as research evidence.",
   Gates: "Reference-report lessons categorized as execution or risk gates.",
-  "Open Issues": "Trust capabilities that are not fully live yet.",
+  "Issue Status": "How many Trust Matrix rows are actively tracked live.",
+  "Open Proof": "Trust capabilities that are live-tracked but not fully proven yet.",
+  "Open Issues": "Trust capabilities that are live-tracked but not fully proven yet.",
   "Critical Open": "Critical proof, data, risk, or execution issues that still need work.",
-  Resolved: "Trust capabilities that are already live and should remain monitored.",
+  "Proof Ready": "Trust capabilities whose proof state is live.",
+  Resolved: "Trust capabilities whose proof state is live and should remain monitored.",
   "Proof Coverage": "Weighted share of trust systems that have live or partial evidence.",
   "Max Day Loss": "Maximum daily dollar loss allowed by the current risk settings.",
   Notes: "Saved journal note count.",
@@ -940,7 +943,7 @@ const statusExplanations: Record<string, string> = {
   Broker: "Broker order rail readiness. Locked means orders cannot be placed from this screen.",
   Refresh: "When the dashboard last completed a data refresh.",
   "Trade ticket": "Whether the app can construct an auditable trade ticket.",
-  "Proof systems": "How many trust systems have live or partial supporting evidence.",
+  "Proof systems": "How many trust systems are proven live or still partial.",
   "Critical issues": "Critical trust issues that still need implementation or enough proof.",
   "Broker rail": "Current broker execution readiness.",
   "AITable mirror": "Whether external table mirroring is configured and reachable.",
@@ -2342,10 +2345,11 @@ export default function Home() {
                 {criticalGaps.length} critical issue{criticalGaps.length === 1 ? "" : "s"} open
               </span>
             </div>
-            <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-              <MiniStat label="Open Issues" value={`${operationsSummary.unresolved}`} tone={operationsSummary.unresolved ? "amber" : "green"} />
+            <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+              <MiniStat label="Issue Status" value={`${operationsSummary.live}/${operationsSummary.total} live`} tone="green" />
+              <MiniStat label="Open Proof" value={`${operationsSummary.unresolved}`} tone={operationsSummary.unresolved ? "amber" : "green"} />
               <MiniStat label="Critical Open" value={`${operationsSummary.criticalUnresolved}`} tone={operationsSummary.criticalUnresolved ? "red" : "green"} />
-              <MiniStat label="Resolved" value={`${operationsSummary.resolved}/${operationsSummary.total}`} tone="green" />
+              <MiniStat label="Proof Ready" value={`${operationsSummary.proven}/${operationsSummary.total}`} tone={operationsSummary.proven === operationsSummary.total ? "green" : "blue"} />
               <MiniStat label="Proof Coverage" value={`${operationsSummary.proofCoveragePct}%`} tone={operationsSummary.proofCoveragePct >= 70 ? "green" : "amber"} />
             </div>
             <TrustOperationsTable gaps={sortedTrustMatrix} />
@@ -3609,7 +3613,7 @@ function TrustReadinessStrip({
   return (
     <div className="grid min-w-0 gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface-raised)] p-3 text-sm sm:grid-cols-5">
       <StatusLine label="Trade ticket" value="Live" ready />
-      <StatusLine label="Proof systems" value={`${summary.live} live / ${summary.partial} partial`} ready={summary.live > 0} />
+      <StatusLine label="Proof systems" value={`${summary.proven} proven / ${summary.partial} partial`} ready={summary.proven > 0} />
       <StatusLine label="Critical issues" value={`${summary.criticalUnresolved} open`} ready={summary.criticalUnresolved === 0} />
       <StatusLine
         label="Broker rail"
@@ -4112,16 +4116,17 @@ function IsingBasketPanel({ basket }: { basket: IsingBasketResult }) {
 function TrustOperationsTable({ gaps }: { gaps: TrustOperationGap[] }) {
   return (
     <div className="mt-4 overflow-hidden rounded-md border border-white/10">
-      <div className="hidden grid-cols-[1.1fr_5rem_6rem_1.25fr_1.45fr] gap-3 border-b border-white/10 bg-black/20 px-3 py-2 text-xs font-semibold text-slate-400 lg:grid">
+      <div className="hidden grid-cols-[1.05fr_5rem_5rem_6rem_1.2fr_1.35fr] gap-3 border-b border-white/10 bg-black/20 px-3 py-2 text-xs font-semibold text-slate-400 lg:grid">
         <div>Capability / Issue</div>
         <div>Priority</div>
         <div>Status</div>
+        <div>Proof State</div>
         <div>Proof Standard</div>
         <div>State / Fix</div>
       </div>
       <div className="divide-y divide-white/10">
         {gaps.map((gap) => (
-          <div key={gap.capability} className="grid gap-3 px-3 py-4 text-sm lg:grid-cols-[1.1fr_5rem_6rem_1.25fr_1.45fr]">
+          <div key={gap.capability} className="grid gap-3 px-3 py-4 text-sm lg:grid-cols-[1.05fr_5rem_5rem_6rem_1.2fr_1.35fr]">
             <div className="min-w-0">
               <div className="font-semibold text-white">{gap.capability}</div>
               <div className="mt-1 text-sm leading-6 text-slate-300">{gap.issue}</div>
@@ -4132,6 +4137,9 @@ function TrustOperationsTable({ gaps }: { gaps: TrustOperationGap[] }) {
             </div>
             <div>
               <StatusPill status={gap.status} />
+            </div>
+            <div>
+              <StatusPill status={gap.proofStatus} />
             </div>
             <div className="text-slate-300">
               <div>{gap.evidenceStandard}</div>
