@@ -46,7 +46,7 @@ import { generateBuyLeads, generateSignals, scoreQuote, type BuyLead, type Trade
 import { dayTradingBestPractices, dayTradingRules } from "@/lib/dayTradingPlaybook";
 import { calculatePositionSize } from "@/lib/positionSizing";
 import { marketEvents } from "@/lib/events";
-import { trustBuildOrder, trustOperationGaps, trustSummary, type TrustStatus } from "@/lib/trustOperations";
+import { criticalUnresolvedTrustGaps, sortedTrustGaps, trustBuildOrder, trustOperationGaps, trustSummary, type TrustOperationGap, type TrustPriority, type TrustStatus } from "@/lib/trustOperations";
 import { buildBuyTradeTicket, type TradeTicket } from "@/lib/tradeTicket";
 import { generateBuyNowSignals, type BlockedBuyNowSignal, type BuyNowSignal } from "@/lib/buyNowEngine";
 import { optimizeTradeBasketFromLeads, type IsingBasketResult } from "@/lib/isingOptimizer";
@@ -849,7 +849,7 @@ const sectionExplanations: Record<string, string> = {
   "Live Buy Leads": "Ranks symbols closest to a buy setup. These are candidates to watch, not automatic orders.",
   "Live Buy / Sell Leaderboard": "Compares the strongest buy leads against sell or exit watches using confidence, risk, and urgency.",
   "Always-On Trading OS": "Operational controls for monitoring, broker readiness, position sizing, and paper-trade analytics.",
-  "Trust Matrix": "The gap list. It tells you what must improve before the platform becomes more reliable.",
+  "Trust Matrix": "The proof matrix. It separates resolved trust capabilities from open issues and shows the evidence required before strategies can be trusted.",
   "Market Signal Monitor": "Rule-based market scan that flags buy-watch and sell-watch setups from fresh quote data.",
   "Day Trading Playbook": "The rules used to judge whether a setup is actionable or should be avoided.",
   "Data Feed Control": "Controls the quote provider and shows which feeds are active, public, unofficial, delayed, or licensed.",
@@ -922,6 +922,10 @@ const statExplanations: Record<string, string> = {
   Reports: "Reference reports currently summarized into the system rules.",
   Research: "Reference-report lessons categorized as research evidence.",
   Gates: "Reference-report lessons categorized as execution or risk gates.",
+  "Open Issues": "Trust capabilities that are not fully live yet.",
+  "Critical Open": "Critical proof, data, risk, or execution issues that still need work.",
+  Resolved: "Trust capabilities that are already live and should remain monitored.",
+  "Proof Coverage": "Weighted share of trust systems that have live or partial evidence.",
   "Max Day Loss": "Maximum daily dollar loss allowed by the current risk settings.",
   Notes: "Saved journal note count.",
   "Avg Conf": "Average confidence across saved journal entries.",
@@ -937,7 +941,7 @@ const statusExplanations: Record<string, string> = {
   Refresh: "When the dashboard last completed a data refresh.",
   "Trade ticket": "Whether the app can construct an auditable trade ticket.",
   "Proof systems": "How many trust systems have live or partial supporting evidence.",
-  "Critical gaps": "High-priority missing capabilities still being tracked.",
+  "Critical issues": "Critical trust issues that still need implementation or enough proof.",
   "Broker rail": "Current broker execution readiness.",
   "AITable mirror": "Whether external table mirroring is configured and reachable.",
   "Production core": "Whether the platform's required production capabilities are ready.",
@@ -1654,8 +1658,9 @@ export default function Home() {
   const topSell = sellLeaders[0];
   const staleStocks = signals.filter((signal) => !signal.dataFresh && signal.market === "Stock/ETF");
   const operationsSummary = trustSummary();
-  const criticalGaps = trustOperationGaps.filter((gap) => gap.priority === "Critical");
-  const proofCoveragePct = Math.round(((operationsSummary.live + operationsSummary.partial * 0.5) / operationsSummary.total) * 100);
+  const criticalGaps = criticalUnresolvedTrustGaps();
+  const sortedTrustMatrix = sortedTrustGaps(trustOperationGaps);
+  const proofCoveragePct = operationsSummary.proofCoveragePct;
   const sizing = selectedQuote
     ? calculatePositionSize({
         accountSize,
@@ -2334,10 +2339,16 @@ export default function Home() {
                 </p>
               </div>
               <span className="rounded-sm border border-amber-300/25 bg-amber-300/10 px-3 py-2 text-xs font-semibold text-amber-100">
-                {criticalGaps.length} critical systems tracked
+                {criticalGaps.length} critical issue{criticalGaps.length === 1 ? "" : "s"} open
               </span>
             </div>
-            <TrustOperationsTable gaps={trustOperationGaps} />
+            <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              <MiniStat label="Open Issues" value={`${operationsSummary.unresolved}`} tone={operationsSummary.unresolved ? "amber" : "green"} />
+              <MiniStat label="Critical Open" value={`${operationsSummary.criticalUnresolved}`} tone={operationsSummary.criticalUnresolved ? "red" : "green"} />
+              <MiniStat label="Resolved" value={`${operationsSummary.resolved}/${operationsSummary.total}`} tone="green" />
+              <MiniStat label="Proof Coverage" value={`${operationsSummary.proofCoveragePct}%`} tone={operationsSummary.proofCoveragePct >= 70 ? "green" : "amber"} />
+            </div>
+            <TrustOperationsTable gaps={sortedTrustMatrix} />
           </Panel>
 
           <Panel>
@@ -3599,7 +3610,7 @@ function TrustReadinessStrip({
     <div className="grid min-w-0 gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface-raised)] p-3 text-sm sm:grid-cols-5">
       <StatusLine label="Trade ticket" value="Live" ready />
       <StatusLine label="Proof systems" value={`${summary.live} live / ${summary.partial} partial`} ready={summary.live > 0} />
-      <StatusLine label="Critical gaps" value={`${summary.critical} tracked`} />
+      <StatusLine label="Critical issues" value={`${summary.criticalUnresolved} open`} ready={summary.criticalUnresolved === 0} />
       <StatusLine
         label="Broker rail"
         value={brokerStatus?.orderPlacementReady ? `${brokerStatus.mode.toUpperCase()} armed` : "Locked"}
@@ -4098,29 +4109,44 @@ function IsingBasketPanel({ basket }: { basket: IsingBasketResult }) {
   );
 }
 
-function TrustOperationsTable({ gaps }: { gaps: typeof trustOperationGaps }) {
+function TrustOperationsTable({ gaps }: { gaps: TrustOperationGap[] }) {
   return (
     <div className="mt-4 overflow-hidden rounded-md border border-white/10">
-      <div className="hidden grid-cols-[1.1fr_5rem_6rem_1.2fr_1.2fr] gap-3 border-b border-white/10 bg-black/20 px-3 py-2 text-xs font-semibold uppercase text-slate-500 lg:grid">
-        <div>Missing Piece</div>
+      <div className="hidden grid-cols-[1.1fr_5rem_6rem_1.25fr_1.45fr] gap-3 border-b border-white/10 bg-black/20 px-3 py-2 text-xs font-semibold text-slate-400 lg:grid">
+        <div>Capability / Issue</div>
         <div>Priority</div>
         <div>Status</div>
-        <div>Current State</div>
-        <div>Next Action</div>
+        <div>Proof Standard</div>
+        <div>State / Fix</div>
       </div>
       <div className="divide-y divide-white/10">
         {gaps.map((gap) => (
-          <div key={gap.missingPiece} className="grid gap-3 px-3 py-3 text-sm lg:grid-cols-[1.1fr_5rem_6rem_1.2fr_1.2fr]">
-            <div>
-              <div className="font-semibold text-white">{gap.missingPiece}</div>
-              <div className="mt-1 text-xs leading-5 text-slate-500">{gap.whyItMatters}</div>
+          <div key={gap.capability} className="grid gap-3 px-3 py-4 text-sm lg:grid-cols-[1.1fr_5rem_6rem_1.25fr_1.45fr]">
+            <div className="min-w-0">
+              <div className="font-semibold text-white">{gap.capability}</div>
+              <div className="mt-1 text-sm leading-6 text-slate-300">{gap.issue}</div>
+              <div className="mt-2 text-xs leading-5 text-slate-400">{gap.whyItMatters}</div>
             </div>
-            <div className="text-xs font-semibold text-slate-300">{gap.priority}</div>
+            <div>
+              <PriorityPill priority={gap.priority} />
+            </div>
             <div>
               <StatusPill status={gap.status} />
             </div>
-            <div className="text-slate-400">{gap.currentState}</div>
-            <div className="text-slate-300">{gap.nextAction}</div>
+            <div className="text-slate-300">
+              <div>{gap.evidenceStandard}</div>
+              <ul className="mt-2 grid gap-1 pl-4 text-xs leading-5 text-slate-400">
+                {gap.acceptanceCriteria.map((criterion) => (
+                  <li key={criterion} className="list-disc">{criterion}</li>
+                ))}
+              </ul>
+            </div>
+            <div className="text-slate-300">
+              <div>{gap.currentState}</div>
+              <div className="mt-2 rounded-sm border border-amber-300/20 bg-amber-300/10 px-2 py-1.5 text-xs leading-5 text-amber-100">
+                Next: {gap.nextAction}
+              </div>
+            </div>
           </div>
         ))}
       </div>
@@ -4174,6 +4200,16 @@ function StatusPill({ status }: { status: TrustStatus }) {
           ? "border-rose-300/25 bg-rose-300/10 text-rose-200"
           : "border-amber-300/25 bg-amber-300/10 text-amber-200";
   return <span className={`inline-flex rounded-sm border px-2 py-1 text-xs font-semibold ${classes}`}>{status}</span>;
+}
+
+function PriorityPill({ priority }: { priority: TrustPriority }) {
+  const classes =
+    priority === "Critical"
+      ? "border-rose-300/25 bg-rose-300/10 text-rose-100"
+      : priority === "High"
+        ? "border-amber-300/25 bg-amber-300/10 text-amber-100"
+        : "border-cyan-300/25 bg-cyan-300/10 text-cyan-100";
+  return <span className={`inline-flex rounded-sm border px-2 py-1 text-xs font-semibold ${classes}`}>{priority}</span>;
 }
 
 function LiveTickerTape({
