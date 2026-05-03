@@ -5,23 +5,23 @@ description: A dense, risk-first trading intelligence interface for stocks, comm
 colors:
   background: "#080A0D"
   surface: "#0D1117"
-  surfaceRaised: "#121820"
-  surfaceMuted: "#171F29"
-  border: "#27313F"
-  borderStrong: "#3B4657"
-  textPrimary: "#F5F7FA"
-  textSecondary: "#B6C0CC"
-  textMuted: "#7B8794"
-  buy: "#2DD4A3"
-  buySoft: "#11382F"
-  sell: "#FF5C7A"
-  sellSoft: "#3B1721"
-  wait: "#F5B841"
-  waitSoft: "#342711"
-  info: "#57B7FF"
-  infoSoft: "#102A3D"
+  surfaceRaised: "#121923"
+  surfaceMuted: "#1A2431"
+  border: "#5D6B7F"
+  borderStrong: "#8A98AD"
+  textPrimary: "#F8FAFC"
+  textSecondary: "#DBE4EF"
+  textMuted: "#C1CCDA"
+  buy: "#6EE7B7"
+  buySoft: "#062D25"
+  sell: "#FF9AAA"
+  sellSoft: "#34111A"
+  wait: "#FFD166"
+  waitSoft: "#302407"
+  info: "#8BD6FF"
+  infoSoft: "#07283A"
   proof: "#A7F3D0"
-  danger: "#EF4444"
+  danger: "#FF9AAA"
 typography:
   h1:
     fontFamily: Geist
@@ -37,19 +37,19 @@ typography:
     letterSpacing: 0
   body:
     fontFamily: Geist
-    fontSize: 0.875rem
+    fontSize: 1rem
     fontWeight: 400
     lineHeight: 1.55
     letterSpacing: 0
   label:
     fontFamily: Geist
-    fontSize: 0.75rem
+    fontSize: 0.875rem
     fontWeight: 650
     lineHeight: 1.25
     letterSpacing: 0
   mono:
     fontFamily: Geist Mono
-    fontSize: 0.8125rem
+    fontSize: 0.875rem
     fontWeight: 500
     lineHeight: 1.4
     letterSpacing: 0
@@ -114,6 +114,27 @@ Never use green to mean "successfully loaded" when the content is not trade-posi
 Use Geist Sans for interface text and Geist Mono for prices, timestamps, symbols, ratios, and IDs. Keep headings compact. Use tabular-looking numbers wherever scan speed matters.
 
 Hero-scale typography is not appropriate inside trading tools. The dashboard is a work surface, not a landing page.
+
+## Accessibility And Usability
+
+Every foreground/background pair in the core palette must meet WCAG AA for normal text at 4.5:1 or better; borders and non-text controls must meet at least 3:1 against adjacent surfaces. Muted copy is still copy, so it must remain readable instead of becoming decorative gray.
+
+Interactive targets must be at least 44px high, have visible focus outlines, and never rely on color alone. Disabled controls should remain legible and explain the blocked state through nearby copy, status text, or button labels.
+
+Do not reduce text contrast with opacity utilities. Do not use sub-12px labels. Letter spacing stays at 0 for interface text, including uppercase badges.
+
+Nielsen Norman heuristics are part of the design contract:
+
+- Visibility of system status: live feed age, broker readiness, stale data, and orchestration state stay visible.
+- Match with the real world: use trading language users already know, such as trigger, stop, target, reward/risk, and position size.
+- User control and freedom: provide clear refresh, import, export, clear chat, skip navigation, and manual execution gates.
+- Consistency and standards: reuse panels, stats, badges, color semantics, and action names.
+- Error prevention: keep locked broker state, stale data, and incomplete tickets visibly blocked before action.
+- Recognition rather than recall: keep help text, labels, reasons, and reference report lessons close to the controls they explain.
+- Flexibility and efficiency: support jump nav, quick chat questions, watchlist entry, polling controls, and export/import.
+- Aesthetic and minimalist design: dense information is allowed only when each element reduces uncertainty or exposes risk.
+- Help users recover from errors: errors must be plain-English, visible, and paired with retry or next-action context.
+- Help and documentation: source explanations, report lessons, and stat/tooltips must be maintained with each UI change.
 
 ## Layout & Spacing
 

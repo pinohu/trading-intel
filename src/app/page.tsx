@@ -2472,7 +2472,7 @@ export default function Home() {
                         <div className="text-base font-semibold text-white">{quote.symbol}</div>
                         <div className="truncate text-xs text-slate-400">{quote.name}</div>
                       </div>
-                      <span className={`rounded-sm px-2 py-1 text-[10px] font-bold uppercase tracking-wide ${cardAction.className}`}>
+                      <span className={`rounded-sm px-2 py-1 text-xs font-bold uppercase ${cardAction.className}`}>
                         {cardAction.label}
                       </span>
                     </div>
@@ -2943,7 +2943,7 @@ function AssistantChatPanel({
                 {message.role === "user" ? "You" : "Analyst"}
               </span>
               {message.role === "assistant" && message.model && (
-                <span className="rounded-sm bg-black/25 px-2 py-1 font-mono text-[10px] text-slate-400">{message.model}</span>
+                <span className="rounded-sm bg-black/25 px-2 py-1 font-mono text-xs text-slate-300">{message.model}</span>
               )}
             </div>
             <div className="whitespace-pre-wrap break-words text-sm leading-6 text-slate-200">{message.content}</div>
@@ -2964,7 +2964,7 @@ function AssistantChatPanel({
             type="button"
             disabled={loading}
             onClick={() => onAsk(question)}
-            className="rounded-md border border-white/10 bg-white/[0.03] px-3 py-2 text-left text-xs leading-5 text-slate-300 transition hover:border-cyan-300/50 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-md border border-white/10 bg-white/[0.03] px-3 py-2 text-left text-xs leading-5 text-slate-300 transition hover:border-cyan-300/50 hover:text-white disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-white"
           >
             {question}
           </button>
@@ -4044,7 +4044,7 @@ function IsingBasketPanel({ basket }: { basket: IsingBasketResult }) {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="font-mono text-xl font-semibold text-white">{item.symbol}</div>
-                  <div className="mt-1 text-xs uppercase tracking-wide text-emerald-100">{item.group}</div>
+                  <div className="mt-1 text-xs font-semibold text-emerald-100">{item.group}</div>
                 </div>
                 <span className="rounded-sm bg-emerald-300 px-2 py-1 text-xs font-bold text-slate-950">
                   Selected
@@ -4196,7 +4196,7 @@ function LiveTickerTape({
   return (
     <div className="sticky top-0 z-40 border-b border-white/10 bg-black/90 backdrop-blur">
       <div className="flex h-11 items-center gap-3 overflow-hidden">
-        <div className="flex h-full shrink-0 items-center gap-2 border-r border-white/10 bg-emerald-300 px-3 text-xs font-bold uppercase tracking-wide text-slate-950">
+        <div className="flex h-full shrink-0 items-center gap-2 border-r border-white/10 bg-emerald-300 px-3 text-xs font-bold uppercase text-slate-950">
           <span className="relative flex h-2.5 w-2.5">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-slate-950 opacity-60" />
             <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-slate-950" />
@@ -4222,7 +4222,7 @@ function LiveTickerTape({
                     key={`${quote.symbol}-${index}`}
                     className="flex items-center gap-2 whitespace-nowrap rounded-sm border border-white/10 bg-white/[0.04] px-3 py-1.5 text-sm"
                   >
-                    <span className={`rounded-sm px-2 py-1 text-[10px] font-bold uppercase tracking-wide ${action.className}`}>
+                    <span className={`rounded-sm px-2 py-1 text-xs font-bold uppercase ${action.className}`}>
                       {action.label}
                     </span>
                     <span className="font-semibold text-white">{quote.symbol}</span>
@@ -4231,7 +4231,7 @@ function LiveTickerTape({
                       {up ? "+" : ""}
                       {quote.changePct.toFixed(2)}%
                     </span>
-                    <span className="rounded-sm bg-black/30 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-slate-400">
+                    <span className="rounded-sm bg-black/30 px-1.5 py-0.5 text-xs font-semibold text-slate-400">
                       {signal?.dataFresh ? quote.quality : "STALE"}
                     </span>
                   </div>
@@ -4312,7 +4312,7 @@ function SymbolSparkline({
   const stroke = up ? "#34d399" : "#fb7185";
   return (
     <div className="mt-3 rounded-md border border-white/10 bg-black/25 p-2">
-      <div className="mb-1 flex items-center justify-between gap-2 text-[10px] uppercase tracking-normal text-slate-500">
+      <div className="mb-1 flex items-center justify-between gap-2 text-xs font-semibold text-slate-400">
         <span>Price action</span>
         <span className={`font-mono ${tone}`}>
           {typeof changePct === "number" ? formatSignedPct(changePct) : formatUsd(lastValue)}
@@ -4419,7 +4419,7 @@ function BuyLeadCard({ lead, rank }: { lead: BuyLead; rank: number }) {
               {rank}
             </span>
             <div className="font-mono text-xl font-semibold text-white">{lead.symbol}</div>
-            <span className={`rounded-sm px-2 py-1 text-[10px] font-bold uppercase tracking-wide ${active ? "bg-emerald-300 text-slate-950" : possible ? "bg-cyan-300 text-slate-950" : "bg-slate-500/20 text-slate-300"}`}>
+            <span className={`rounded-sm px-2 py-1 text-xs font-bold uppercase ${active ? "bg-emerald-300 text-slate-950" : possible ? "bg-cyan-300 text-slate-950" : "bg-slate-500/20 text-slate-300"}`}>
               {active ? "Buy Watch" : possible ? "Buy Lead" : "No Buy"}
             </span>
           </div>
@@ -4472,7 +4472,7 @@ function SignalCard({ signal }: { signal: TradeSignal }) {
             <Icon className="h-4 w-4" />
             <div className="font-semibold text-white">{signal.symbol}</div>
           </div>
-          <div className="mt-1 text-xs opacity-75">{signal.name}</div>
+          <div className="mt-1 text-xs text-slate-300">{signal.name}</div>
         </div>
         <span className="rounded-sm bg-black/20 px-2 py-1 text-xs font-semibold">{signal.action}</span>
       </div>
@@ -4670,7 +4670,7 @@ function AlgorithmCouncilPanel({ council }: { council: AlgorithmCouncilResponse 
                 </div>
                 <div className="mt-1 truncate text-xs text-slate-400">{score.name}{score.sector ? ` | ${score.sector}` : ""}</div>
               </div>
-              <span className="w-fit max-w-full rounded-sm bg-black/25 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-white sm:shrink-0">
+              <span className="w-fit max-w-full rounded-sm bg-black/25 px-2 py-1 text-xs font-bold uppercase text-white sm:shrink-0">
                 {score.recommendation}
               </span>
             </div>
@@ -4994,7 +4994,7 @@ function FusionAlphaPanel({
                 <div className="font-mono text-lg font-semibold text-white">{prediction.symbol}</div>
                 <div className="mt-1 text-xs text-slate-500">{prediction.expectedHold}</div>
               </div>
-              <span className={`rounded-sm px-2 py-1 text-[10px] font-bold uppercase ${fusionActionClass(prediction.action)}`}>
+              <span className={`rounded-sm px-2 py-1 text-xs font-bold uppercase ${fusionActionClass(prediction.action)}`}>
                 {prediction.action}
               </span>
             </div>
@@ -5083,7 +5083,7 @@ function ResearchStackRow({ component }: { component: ResearchStackApi["componen
         <div className="mt-2 text-amber-100">Fallback: {component.freeAlternative}</div>
       )}
       {component.env.length > 0 && (
-        <div className="mt-2 font-mono text-[10px] uppercase tracking-wide text-slate-500">
+        <div className="mt-2 font-mono text-xs font-semibold text-slate-400">
           {component.env.join(" | ")}
         </div>
       )}
@@ -5385,7 +5385,7 @@ function EngineCard({ engine, finding }: { engine: EngineCapability; finding?: F
             <span className="font-mono">{finding.score}/100 | w {finding.weight.toFixed(2)}</span>
           </div>
           <div className="mt-2 text-slate-100">{finding.finding}</div>
-          <div className="mt-2 font-mono text-[10px] uppercase tracking-wide opacity-80">
+          <div className="mt-2 font-mono text-xs uppercase text-slate-300">
             {finding.status} | {finding.stance}
           </div>
         </div>
@@ -5425,11 +5425,11 @@ function MiniStat({
   const help = statExplanations[label] ?? `${label}: ${value}`;
   return (
     <div className="min-h-[4.25rem] min-w-0 rounded-sm bg-black/20 p-2" title={help} aria-label={`${label}. ${value}. ${help}`}>
-      <div className="flex items-start gap-1.5 text-[10px] uppercase tracking-normal text-slate-500">
+      <div className="flex items-start gap-1.5 text-xs font-semibold text-slate-400">
         <span className="min-w-0 break-words">{label}</span>
         <HelpTip text={help} />
       </div>
-      <div className={`mt-1 break-words font-mono text-[13px] leading-5 tabular-nums ${color}`} title={`${value}. ${help}`}>
+      <div className={`mt-1 break-words font-mono text-sm leading-6 tabular-nums ${color}`} title={`${value}. ${help}`}>
         {value}
       </div>
     </div>

@@ -2,22 +2,23 @@
 
 :root {
   --background: #080a0d;
-  --foreground: #f5f7fa;
+  --foreground: #f8fafc;
   --surface: #0d1117;
-  --surface-raised: #121820;
-  --surface-muted: #171f29;
-  --border: #27313f;
-  --border-strong: #3b4657;
-  --text-secondary: #b6c0cc;
-  --text-muted: #7b8794;
-  --buy: #2dd4a3;
-  --buy-soft: #11382f;
-  --sell: #ff5c7a;
-  --sell-soft: #3b1721;
-  --wait: #f5b841;
-  --wait-soft: #342711;
-  --info: #57b7ff;
-  --info-soft: #102a3d;
+  --surface-raised: #121923;
+  --surface-muted: #1a2431;
+  --border: #5d6b7f;
+  --border-strong: #8a98ad;
+  --text-secondary: #dbe4ef;
+  --text-muted: #c1ccda;
+  --buy: #6ee7b7;
+  --buy-soft: #062d25;
+  --sell: #ff9aaa;
+  --sell-soft: #34111a;
+  --wait: #ffd166;
+  --wait-soft: #302407;
+  --info: #8bd6ff;
+  --info-soft: #07283a;
+  --focus-ring: #a5e4ff;
 }
 
 @theme inline {
@@ -36,7 +37,8 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
-  font-size: 14px;
+  font-size: 16px;
+  line-height: 1.5;
   text-rendering: optimizeLegibility;
 }
 
@@ -68,11 +70,35 @@ a:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  outline: 2px solid var(--info);
+  outline: 3px solid var(--focus-ring);
 }
 
 button:not(:disabled) {
   cursor: pointer;
+}
+
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled,
+[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+input,
+select,
+textarea {
+  color: var(--foreground);
+}
+
+::placeholder {
+  color: var(--text-muted);
+  opacity: 1;
+}
+
+a {
+  text-underline-offset: 0.18em;
 }
 
 ::selection {
@@ -111,6 +137,132 @@ button:not(:disabled) {
 
 .sparkline-path {
   vector-effect: non-scaling-stroke;
+}
+
+.text-slate-500,
+.text-slate-400 {
+  color: var(--text-muted) !important;
+}
+
+.text-slate-300,
+.text-slate-200,
+.text-slate-100 {
+  color: var(--text-secondary) !important;
+}
+
+.text-cyan-300,
+.text-cyan-200,
+.text-cyan-100 {
+  color: #9be7ff !important;
+}
+
+.text-emerald-300,
+.text-emerald-200,
+.text-emerald-100 {
+  color: #8ff0c7 !important;
+}
+
+.text-rose-300,
+.text-rose-200,
+.text-rose-100 {
+  color: #ffb3bf !important;
+}
+
+.text-amber-300,
+.text-amber-200,
+.text-amber-100 {
+  color: #ffdc7a !important;
+}
+
+.text-blue-300,
+.text-blue-200,
+.text-blue-100 {
+  color: #acd2ff !important;
+}
+
+.text-violet-300,
+.text-violet-200,
+.text-violet-100,
+.text-fuchsia-300,
+.text-fuchsia-200,
+.text-fuchsia-100 {
+  color: #e1c4ff !important;
+}
+
+.border-white\/5,
+.border-white\/10,
+.border-white\/15 {
+  border-color: rgba(226, 232, 240, 0.36) !important;
+}
+
+.border-white\/20,
+.border-white\/25,
+.border-white\/30 {
+  border-color: rgba(226, 232, 240, 0.48) !important;
+}
+
+.bg-white\/\[0\.03\],
+.bg-white\/\[0\.04\],
+.bg-white\/10 {
+  background-color: rgba(248, 250, 252, 0.08) !important;
+}
+
+.bg-black\/20,
+.bg-black\/25,
+.bg-black\/30 {
+  background-color: rgba(0, 0, 0, 0.38) !important;
+}
+
+.disabled\:bg-slate-700:disabled,
+.disabled\:bg-slate-300:disabled {
+  background-color: #334155 !important;
+}
+
+.disabled\:text-slate-700:disabled,
+.disabled\:text-slate-500:disabled,
+.disabled\:text-slate-400:disabled {
+  color: #e2e8f0 !important;
+}
+
+.disabled\:opacity-50:disabled,
+.disabled\:opacity-60:disabled {
+  opacity: 1 !important;
+}
+
+.text-\[10px\] {
+  font-size: 0.75rem !important;
+  line-height: 1.25rem !important;
+}
+
+.text-\[13px\],
+.text-xs {
+  font-size: 0.875rem !important;
+  line-height: 1.35rem !important;
+}
+
+.text-sm {
+  font-size: 1rem !important;
+  line-height: 1.5rem !important;
+}
+
+.tracking-tight,
+.tracking-normal,
+.tracking-wide,
+.tracking-wider,
+.tracking-widest {
+  letter-spacing: 0 !important;
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --background: #030405;
+    --surface: #080c12;
+    --surface-raised: #0c121a;
+    --border: #94a3b8;
+    --border-strong: #cbd5e1;
+    --text-secondary: #f1f5f9;
+    --text-muted: #e2e8f0;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
