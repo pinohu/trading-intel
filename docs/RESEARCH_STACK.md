@@ -2,22 +2,24 @@
 
 This platform uses a layered research architecture:
 
-1. Credentialed providers when keys exist.
-2. Public/free fallbacks when credentials are missing.
+1. Free/public providers by default.
+2. Credentialed providers only when the user selects or configures them.
 3. Native TypeScript research engines for bounded workflows that can safely run inside the app.
 4. External workers for heavyweight engines that do not belong inside Vercel serverless functions.
 5. Durable SQL storage for signals, notes, backtests, outcomes, and AutoResearch runs.
 
 ## Provider Lanes
 
-- Polygon.io: `POLYGON_API_KEY`, preferred stock snapshot provider when licensed.
+- Free-first market data: composite public stocks, Nasdaq/CNBC public quotes, Yahoo charts/futures aliases, Stooq delayed quotes, and Binance public crypto.
+- Alpaca: `ALPACA_*`, broker sync, paper/live rails, Basic IEX stocks data, options/crypto endpoints when entitled, and optional SIP when configured.
+- Polygon.io: `POLYGON_API_KEY`, optional paid/entitled stock snapshot provider.
 - Twelve Data: `TWELVE_DATA_API_KEY`, optional quote provider for equities, ETFs, forex, and crypto depending on plan.
-- Alpaca: `ALPACA_*`, broker sync, paper/live rails, stocks data, options/crypto endpoints when entitled.
-- Benzinga: `BENZINGA_API_KEY`, structured market news.
-- Finnhub: `FINNHUB_API_KEY`, company news.
-- NewsAPI: `NEWSAPI_API_KEY`, broad article discovery.
+- Free-first news: Yahoo Finance RSS plus SEC filing and event-risk context.
+- Benzinga: `BENZINGA_API_KEY`, optional structured market news.
+- Finnhub: `FINNHUB_API_KEY`, optional company news.
+- NewsAPI: `NEWSAPI_API_KEY`, optional broad article discovery.
 - SEC EDGAR: free official filings through `data.sec.gov`; set `SEC_USER_AGENT` to a real contact string.
-- Public fallbacks: Nasdaq/CNBC/Yahoo/Stooq/Binance keep the dashboard alive, but are not execution-grade licenses.
+- Analyst chat: `LOCAL_LLM_BASE_URL` and `LOCAL_LLM_MODEL` can point to a free/self-hosted OpenAI-compatible endpoint before paid OpenAI models.
 
 ## Native TradingAgents Debate
 
@@ -76,6 +78,14 @@ Use `WORKER_SHARED_SECRET` for worker-to-worker authorization if the external se
 
 ## Free Alternatives
 
-The platform uses SEC EDGAR, public quote fallbacks, Yahoo RSS, Binance public crypto, native Alpaca daily-bar backtests, and the bounded AutoResearch lab when paid services are not configured.
+The platform uses these free paths first:
+
+- Public composite stock quotes, Yahoo futures aliases, Binance public crypto, and Stooq delayed data before Polygon/Twelve Data.
+- Yahoo Finance RSS before Benzinga/Finnhub/NewsAPI.
+- SEC EDGAR submissions and CompanyFacts for filings and fundamentals.
+- Browser notifications before Twilio/Resend.
+- `LOCAL_LLM_BASE_URL` for a local/self-hosted analyst chat model before paid cloud LLMs.
+- Native TradingAgents, cost-aware backtests, and AutoResearch before external hosted workers.
+- Local/self-hosted or free-tier Postgres via `DATABASE_URL` before optional Supabase companion services.
 
 These are useful for research. They do not replace SIP, OPRA, CME/ICE, or paid news entitlements for execution-grade trading.

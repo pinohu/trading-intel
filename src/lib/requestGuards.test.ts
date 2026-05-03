@@ -15,6 +15,8 @@ describe("requestGuards", () => {
 
   it("rejects unknown provider names", () => {
     expect(parseProvider("nasdaq")).toBe("nasdaq");
+    expect(parseProvider("free")).toBe("free");
+    expect(parseProvider("paid")).toBe("paid");
     expect(parseProvider("polygon")).toBe("polygon");
     expect(parseProvider("twelvedata")).toBe("twelvedata");
     expect(parseProvider("file:///tmp/secret")).toBe("auto");

@@ -431,27 +431,64 @@ export async function fetchTwelveDataQuote(symbol: string): Promise<ProviderQuot
   };
 }
 
+type ProviderFn = (symbol: string) => Promise<ProviderQuote | null>;
+
+const freeFirstProviderFns: ProviderFn[] = [
+  fetchCommodityFutureQuote,
+  fetchCompositeStockQuote,
+  fetchBinanceQuote,
+  fetchNasdaqQuote,
+  fetchCnbcQuote,
+  fetchYahooQuote,
+  fetchStooqQuote,
+];
+
+const paidEnhancedProviderFns: ProviderFn[] = [
+  fetchPolygonQuote,
+  fetchAlpacaQuote,
+  fetchTwelveDataQuote,
+  ...freeFirstProviderFns,
+];
+
+function providerFns(preferredProvider: string): ProviderFn[] {
+  switch (preferredProvider) {
+    case "fallback":
+      return [];
+    case "paid":
+      return paidEnhancedProviderFns;
+    case "alpaca":
+      return [fetchAlpacaQuote, ...freeFirstProviderFns];
+    case "polygon":
+      return [fetchPolygonQuote, ...freeFirstProviderFns];
+    case "twelvedata":
+      return [fetchTwelveDataQuote, ...freeFirstProviderFns];
+    case "yahoo":
+      return [fetchYahooQuote, fetchBinanceQuote, fetchStooqQuote];
+    case "nasdaq":
+      return [fetchCommodityFutureQuote, fetchNasdaqQuote, fetchCnbcQuote, fetchYahooQuote, fetchStooqQuote, fetchBinanceQuote];
+    case "cnbc":
+      return [fetchCommodityFutureQuote, fetchCnbcQuote, fetchNasdaqQuote, fetchYahooQuote, fetchStooqQuote, fetchBinanceQuote];
+    case "binance":
+      return [fetchBinanceQuote, fetchYahooQuote, fetchStooqQuote];
+    case "stooq":
+      return [fetchStooqQuote, fetchYahooQuote];
+    case "free":
+    case "auto":
+    default:
+      return freeFirstProviderFns;
+  }
+}
+
+export function providerPlanNames(preferredProvider = "auto") {
+  return providerFns(preferredProvider).map((provider) => provider.name);
+}
+
 export async function fetchProviderQuote(symbol: string, index: number, preferredProvider = "auto"): Promise<ProviderQuote | null> {
   if (preferredProvider === "fallback" || process.env.DEMO_MARKET_DATA === "true") {
     return fallbackQuote(symbol, index);
   }
 
-  const providers =
-    preferredProvider === "alpaca"
-      ? [fetchAlpacaQuote, fetchCommodityFutureQuote, fetchCompositeStockQuote, fetchNasdaqQuote, fetchCnbcQuote, fetchYahooQuote, fetchStooqQuote, fetchBinanceQuote]
-      : preferredProvider === "polygon"
-        ? [fetchPolygonQuote, fetchAlpacaQuote, fetchCompositeStockQuote, fetchYahooQuote, fetchStooqQuote, fetchBinanceQuote]
-      : preferredProvider === "twelvedata"
-        ? [fetchTwelveDataQuote, fetchAlpacaQuote, fetchCommodityFutureQuote, fetchCompositeStockQuote, fetchYahooQuote, fetchStooqQuote, fetchBinanceQuote]
-      : preferredProvider === "yahoo"
-        ? [fetchYahooQuote, fetchNasdaqQuote, fetchCnbcQuote, fetchStooqQuote, fetchBinanceQuote]
-        : preferredProvider === "nasdaq"
-          ? [fetchCommodityFutureQuote, fetchNasdaqQuote, fetchCnbcQuote, fetchYahooQuote, fetchStooqQuote, fetchBinanceQuote]
-          : preferredProvider === "cnbc"
-            ? [fetchCommodityFutureQuote, fetchCnbcQuote, fetchNasdaqQuote, fetchYahooQuote, fetchStooqQuote, fetchBinanceQuote]
-        : preferredProvider === "binance"
-          ? [fetchBinanceQuote, fetchYahooQuote, fetchStooqQuote]
-          : [fetchPolygonQuote, fetchAlpacaQuote, fetchTwelveDataQuote, fetchCommodityFutureQuote, fetchCompositeStockQuote, fetchBinanceQuote, fetchNasdaqQuote, fetchCnbcQuote, fetchYahooQuote, fetchStooqQuote];
+  const providers = providerFns(preferredProvider);
 
   for (const provider of providers) {
     const cacheKey = `${provider.name}:${symbol}`;
@@ -467,14 +504,15 @@ export async function fetchProviderQuote(symbol: string, index: number, preferre
 }
 
 export const providerCatalog = [
-  { name: "Polygon.io", quality: "Execution Grade when licensed/entitled", configured: Boolean(process.env.POLYGON_API_KEY) },
-  { name: "Twelve Data", quality: "Partial Market / optional real-time by plan", configured: Boolean(process.env.TWELVE_DATA_API_KEY) },
-  { name: "Alpaca", quality: "Partial Market or Execution Grade with SIP", configured: Boolean(process.env.ALPACA_API_KEY_ID && process.env.ALPACA_API_SECRET_KEY) },
-  { name: "Yahoo commodity futures aliases", quality: "Unofficial futures research feed", configured: true },
-  { name: "Composite public stock quote", quality: "Nasdaq price enriched with CNBC/Yahoo day range", configured: true },
-  { name: "Nasdaq public quote", quality: "Public Real-Time when endpoint flags it", configured: true },
-  { name: "CNBC public quote", quality: "Public Real-Time timestamped public quote", configured: true },
-  { name: "Yahoo chart endpoint", quality: "Unofficial with pre/post enabled", configured: true },
-  { name: "Stooq", quality: "Delayed", configured: true },
-  { name: "Binance public crypto", quality: "Partial Market", configured: true },
+  { name: "Free-first auto", quality: "Default route: public stocks, public crypto, public futures aliases, delayed fallback", configured: true, cost: "free-default" },
+  { name: "Composite public stock quote", quality: "Nasdaq price enriched with CNBC/Yahoo day range", configured: true, cost: "free-public" },
+  { name: "Nasdaq public quote", quality: "Public Real-Time when endpoint flags it", configured: true, cost: "free-public" },
+  { name: "CNBC public quote", quality: "Public Real-Time timestamped public quote", configured: true, cost: "free-public" },
+  { name: "Yahoo commodity futures aliases", quality: "Unofficial futures research feed", configured: true, cost: "free-public" },
+  { name: "Yahoo chart endpoint", quality: "Unofficial with pre/post enabled", configured: true, cost: "free-public" },
+  { name: "Stooq", quality: "Delayed", configured: true, cost: "free-public" },
+  { name: "Binance public crypto", quality: "Partial Market", configured: true, cost: "free-public" },
+  { name: "Alpaca", quality: "Free Basic IEX / optional SIP if entitled", configured: Boolean(process.env.ALPACA_API_KEY_ID && process.env.ALPACA_API_SECRET_KEY), cost: "free-account-or-paid-upgrade" },
+  { name: "Polygon.io", quality: "Optional paid/entitled stock snapshot provider", configured: Boolean(process.env.POLYGON_API_KEY), cost: "optional-paid" },
+  { name: "Twelve Data", quality: "Optional paid/plan-dependent quote provider", configured: Boolean(process.env.TWELVE_DATA_API_KEY), cost: "optional-paid" },
 ];

@@ -171,6 +171,7 @@ type OpsStatus = {
     alpacaConfigured: boolean;
     alpacaDataQuality: string;
     licensedSip: boolean;
+    freeFirstDefault?: boolean;
     publicFallbacks: boolean;
   };
   alerts?: Record<string, boolean>;
@@ -308,9 +309,16 @@ type ResearchStackApi = {
     category: string;
     ready: boolean;
     mode: "credentialed" | "free-fallback" | "worker" | "native" | "missing";
+    costProfile: "free-default" | "free-public" | "free-self-hosted" | "free-account" | "optional-paid";
     detail: string;
     freeAlternative?: string;
     env: string[];
+  }>;
+  freeReplacements: Array<{
+    replaces: string;
+    freePath: string;
+    applied: boolean;
+    limitation: string;
   }>;
   workerCommands: Array<{ name: string; purpose: string; command: string; urlEnv: string }>;
   missingExternalEntitlements: string[];
@@ -449,6 +457,7 @@ type AssistantChatApiResponse = {
   advisory?: string;
   error?: string;
   configuredModels?: {
+    local: string;
     primary: string;
     fallback: string;
     fast: string;
@@ -616,7 +625,7 @@ const assistantWelcomeMessage: AssistantChatMessage = {
   role: "assistant",
   content: "Ready for questions from the current cockpit context.",
   createdAt: "session",
-  model: "gpt-5.2",
+  model: "local-free-or-gpt-5.2",
   source: "configured",
 };
 
@@ -844,7 +853,7 @@ const sectionExplanations: Record<string, string> = {
   "AI Agent Trading": "Shows supervised agent proposals. Paper actions are allowed only when policy and broker readiness pass.",
   "Algorithm Council": "Scores fundamentals, quality, valuation, profitability, and momentum so signals are not based on price alone.",
   "Institutional Gates": "Checks whether proof, controls, workers, and compliance boundaries are strong enough to trust the platform operationally.",
-  "Research Stack": "Shows which paid providers, public fallbacks, and research workers are actually available right now.",
+  "Research Stack": "Shows which free paths, optional paid providers, and research workers are actually available right now.",
   "Ising Basket Optimizer": "Chooses a limited basket of buy leads while respecting budget, risk, and overlap constraints.",
   "Live Buy Leads": "Ranks symbols closest to a buy setup. These are candidates to watch, not automatic orders.",
   "Live Buy / Sell Leaderboard": "Compares the strongest buy leads against sell or exit watches using confidence, risk, and urgency.",
@@ -951,7 +960,7 @@ const statusExplanations: Record<string, string> = {
   Capabilities: "Configured operational capabilities that are active right now.",
   "Broker risk": "Number of current risk flags from broker/account data.",
   "Signal proof": "Outcome evidence currently available for generated signals.",
-  "Data license": "Whether market data is paid/licensed, public, or fallback-only.",
+  "Data license": "Whether market data is free-first research data, paid/licensed, public, or fallback-only.",
   "Control Plane": "Latest research-to-execution orchestration run and whether paper/live gates are blocked, pending review, or ready.",
 };
 
@@ -1071,7 +1080,7 @@ export default function Home() {
   const [assistantDraft, setAssistantDraft] = useState("");
   const [assistantLoading, setAssistantLoading] = useState(false);
   const [assistantError, setAssistantError] = useState("");
-  const [assistantModelLabel, setAssistantModelLabel] = useState("gpt-5.2");
+  const [assistantModelLabel, setAssistantModelLabel] = useState("local-free-or-gpt-5.2");
 
   useEffect(() => {
     window.localStorage.setItem("ti_watchlist", JSON.stringify(watchlist));
@@ -1937,12 +1946,12 @@ export default function Home() {
         role: "assistant",
         content: payload.answer ?? "No answer returned.",
         createdAt: new Date().toISOString(),
-        model: payload.model ?? payload.configuredModels?.primary ?? "gpt-5.2",
+        model: payload.model ?? payload.configuredModels?.local ?? payload.configuredModels?.primary ?? "local-free-or-gpt-5.2",
         source: payload.source,
         advisory: payload.advisory,
       };
       setAssistantMessages([...nextMessages, assistantMessage].slice(-20));
-      setAssistantModelLabel(assistantMessage.model ?? "gpt-5.2");
+      setAssistantModelLabel(assistantMessage.model ?? "local-free-or-gpt-5.2");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Analyst chat request failed.";
       setAssistantError(message);
@@ -2198,7 +2207,7 @@ export default function Home() {
               <div>
                 <SectionTitle icon={ServerCog} title="Research Stack" />
                 <p className="mt-1 text-sm leading-6 text-slate-400">
-                  Paid providers turn on when credentials exist; public fallbacks and external worker hooks stay visible so missing licenses are not confused with live proof.
+                  Free alternatives run first; paid providers turn on only when selected or credentialed, and missing licenses stay separate from research proof.
                 </p>
               </div>
               <div className="rounded-md border border-white/10 bg-black/20 px-3 py-2 text-xs text-slate-400">
@@ -2422,8 +2431,11 @@ export default function Home() {
                 onChange={(event) => setProvider(event.target.value)}
                 className="h-10 rounded-md border border-white/10 bg-black/30 px-3 text-sm text-white outline-none focus:ring-2 focus:ring-cyan-400"
               >
-                <option value="auto">Auto best available</option>
+                <option value="auto">Auto free-first public</option>
+                <option value="paid">Paid/entitled first</option>
                 <option value="alpaca">Alpaca if keys exist</option>
+                <option value="polygon">Polygon if key exists</option>
+                <option value="twelvedata">Twelve Data if key exists</option>
                 <option value="nasdaq">Nasdaq public quote</option>
                 <option value="cnbc">CNBC public quote</option>
                 <option value="yahoo">Yahoo unofficial</option>
@@ -2431,9 +2443,9 @@ export default function Home() {
               </select>
             </div>
             <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <QualityBadge label="Alpaca" value="Partial or SIP" ready={provider === "alpaca"} />
-              <QualityBadge label="Nasdaq" value="Public real-time flag" ready={provider === "nasdaq" || provider === "auto"} />
-              <QualityBadge label="CNBC" value="Public timestamped" ready={provider === "cnbc" || provider === "auto"} />
+              <QualityBadge label="Free-first" value="Default no paid keys" ready={provider === "auto" || provider === "free"} />
+              <QualityBadge label="Alpaca" value="IEX/free or SIP" ready={provider === "alpaca" || provider === "paid"} />
+              <QualityBadge label="Nasdaq/CNBC" value="Public timestamped" ready={provider === "nasdaq" || provider === "cnbc" || provider === "auto"} />
               <QualityBadge label="Yahoo" value="Unofficial pre/post" ready={provider === "yahoo" || provider === "auto"} />
               <QualityBadge label="Stooq" value="Delayed fallback" ready />
             </div>
@@ -3180,7 +3192,7 @@ function InvestmentGradeTruthPanel({
       source: "Ops status",
       grade: licensedData ? "admitted" : "rejected",
       reason: licensedData
-        ? "Ops reports SIP/paid market-data entitlement."
+        ? "Ops reports SIP or equivalent licensed market-data entitlement."
         : "Public, IEX-only, delayed, unofficial, or fallback feeds are research-only.",
     },
     {
@@ -3660,7 +3672,7 @@ function ProductionOpsStrip({
       />
       <StatusLine
         label="Data license"
-        value={ops?.liveData?.licensedSip ? "SIP/paid" : ops?.liveData?.alpacaConfigured ? "IEX/public" : "Public only"}
+        value={ops?.liveData?.licensedSip ? "SIP/paid" : ops?.liveData?.freeFirstDefault ? "Free-first" : ops?.liveData?.alpacaConfigured ? "IEX/public" : "Public only"}
         ready={Boolean(ops?.liveData?.licensedSip)}
       />
     </div>
@@ -5069,15 +5081,33 @@ function ResearchStackPanel({ stack, autoResearch }: { stack: ResearchStackApi |
   const providerRows = stack.components.filter((component) => ["market-data", "news", "filings", "database"].includes(component.category));
   const workerRows = stack.components.filter((component) => ["fundamentals", "backtesting", "ai-research", "crypto"].includes(component.category));
   const recentRuns = autoResearch?.recentRuns ?? [];
+  const appliedFreeReplacements = stack.freeReplacements.filter((item) => item.applied).length;
 
   return (
     <div className="mt-4 space-y-3">
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-6">
         <MiniStat label="Stack Grade" value={stack.grade} tone={stack.grade === "production-path" ? "green" : stack.grade === "research-ready" ? "blue" : "amber"} />
         <MiniStat label="Configured" value={`${stack.configured}/${stack.total}`} tone={stack.configured >= 8 ? "green" : "amber"} />
         <MiniStat label="Critical" value={`${stack.criticalConfigured}/${stack.criticalTotal}`} tone={stack.criticalConfigured === stack.criticalTotal ? "green" : "red"} />
         <MiniStat label="Workers" value={`${workerRows.filter((item) => item.ready).length}/${workerRows.length}`} tone={missingWorkers.length <= 3 ? "green" : "amber"} />
         <MiniStat label="AutoResearch" value={recentRuns.length ? `${recentRuns.length} run(s)` : `${autoResearch?.candidates?.length ?? 0} candidates`} tone={recentRuns.length ? "green" : "blue"} />
+        <MiniStat label="Free Paths" value={`${appliedFreeReplacements}/${stack.freeReplacements.length}`} tone={appliedFreeReplacements === stack.freeReplacements.length ? "green" : "amber"} />
+      </div>
+
+      <div className="rounded-md border border-cyan-300/20 bg-cyan-300/10 p-3">
+        <div className="font-semibold text-white">Free Replacements Applied</div>
+        <div className="mt-3 grid gap-2 md:grid-cols-2">
+          {stack.freeReplacements.map((item) => (
+            <div key={item.replaces} className="rounded-sm bg-black/20 p-2 text-xs leading-5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="font-semibold text-cyan-100">{item.replaces}</span>
+                <span className={item.applied ? "text-emerald-200" : "text-amber-200"}>{item.applied ? "Applied" : "Pending"}</span>
+              </div>
+              <div className="mt-1 text-slate-300">{item.freePath}</div>
+              <div className="mt-1 text-slate-500">{item.limitation}</div>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="grid gap-3 lg:grid-cols-2">
@@ -5123,9 +5153,10 @@ function ResearchStackRow({ component }: { component: ResearchStackApi["componen
           {component.ready ? component.mode : "missing"}
         </span>
       </div>
-      {!component.ready && component.freeAlternative && (
-        <div className="mt-2 text-amber-100">Fallback: {component.freeAlternative}</div>
+      {component.freeAlternative && (
+        <div className="mt-2 text-cyan-100">Free path: {component.freeAlternative}</div>
       )}
+      <div className="mt-2 text-slate-500">Cost path: {component.costProfile.replaceAll("-", " ")}</div>
       {component.env.length > 0 && (
         <div className="mt-2 font-mono text-xs font-semibold text-slate-400">
           {component.env.join(" | ")}

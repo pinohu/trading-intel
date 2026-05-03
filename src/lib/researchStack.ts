@@ -7,10 +7,18 @@ export type ResearchStackComponent = {
   category: "market-data" | "news" | "filings" | "fundamentals" | "backtesting" | "ai-research" | "crypto" | "database";
   ready: boolean;
   mode: "credentialed" | "free-fallback" | "worker" | "native" | "missing";
+  costProfile: "free-default" | "free-public" | "free-self-hosted" | "free-account" | "optional-paid";
   env: string[];
   detail: string;
   freeAlternative?: string;
   docs: string;
+};
+
+export type FreeReplacement = {
+  replaces: string;
+  freePath: string;
+  applied: boolean;
+  limitation: string;
 };
 
 export type ResearchStackReadiness = {
@@ -21,6 +29,7 @@ export type ResearchStackReadiness = {
   criticalConfigured: number;
   criticalTotal: number;
   components: ResearchStackComponent[];
+  freeReplacements: FreeReplacement[];
   workerCommands: Array<{
     name: string;
     purpose: string;
@@ -46,9 +55,10 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
       category: "market-data",
       ready: hasEnv("ALPACA_API_KEY_ID") && hasEnv("ALPACA_API_SECRET_KEY"),
       mode: hasEnv("ALPACA_API_KEY_ID") && hasEnv("ALPACA_API_SECRET_KEY") ? "credentialed" : "missing",
+      costProfile: "free-account",
       env: ["ALPACA_API_KEY_ID", "ALPACA_API_SECRET_KEY", "ALPACA_DATA_QUALITY"],
       detail: "Stocks bars/snapshots, account read-only sync, paper/live broker routes, options and crypto endpoints when entitled.",
-      freeAlternative: "Public quote fallbacks remain active, but they are not execution-grade.",
+      freeAlternative: "Default no-key market data now uses the public composite quote stack; Alpaca Basic IEX is a free-account upgrade, while SIP remains optional.",
       docs: "https://docs.alpaca.markets/",
     },
     {
@@ -57,9 +67,10 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
       category: "market-data",
       ready: hasEnv("POLYGON_API_KEY"),
       mode: hasEnv("POLYGON_API_KEY") ? "credentialed" : "missing",
+      costProfile: "optional-paid",
       env: ["POLYGON_API_KEY"],
       detail: "Preferred stock snapshot adapter when the key and market-data entitlements exist.",
-      freeAlternative: "Alpaca IEX, Nasdaq/CNBC public quote, Yahoo chart, Stooq delayed.",
+      freeAlternative: "Composite public stock quote, Nasdaq/CNBC public quote, Yahoo chart, and Stooq delayed are the default free path.",
       docs: "https://polygon.io/docs/rest/stocks/snapshots",
     },
     {
@@ -68,9 +79,10 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
       category: "market-data",
       ready: hasEnv("TWELVE_DATA_API_KEY"),
       mode: hasEnv("TWELVE_DATA_API_KEY") ? "credentialed" : "missing",
+      costProfile: "optional-paid",
       env: ["TWELVE_DATA_API_KEY"],
       detail: "Optional quote adapter for equities, ETFs, forex, and crypto depending on plan.",
-      freeAlternative: "Alpaca/Yahoo/Binance/Stooq adapters.",
+      freeAlternative: "Composite public stocks, Binance public crypto, Yahoo charts/futures aliases, and Stooq delayed quotes.",
       docs: "https://twelvedata.com/docs",
     },
     {
@@ -79,8 +91,9 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
       category: "market-data",
       ready: true,
       mode: "free-fallback",
+      costProfile: "free-default",
       env: [],
-      detail: "Nasdaq/CNBC/Yahoo/Stooq/Binance fallbacks keep the dashboard alive when paid providers are absent or rate-limited.",
+      detail: "Nasdaq/CNBC/Yahoo/Stooq/Binance keep the dashboard alive as the default free-first research feed.",
       docs: "https://stooq.com/",
     },
     {
@@ -89,9 +102,10 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
       category: "news",
       ready: hasEnv("BENZINGA_API_KEY"),
       mode: hasEnv("BENZINGA_API_KEY") ? "credentialed" : "missing",
+      costProfile: "optional-paid",
       env: ["BENZINGA_API_KEY"],
       detail: "Structured market news, catalysts, and ticker-tagged headlines when licensed.",
-      freeAlternative: "Yahoo Finance RSS and SEC EDGAR filings.",
+      freeAlternative: "Yahoo Finance RSS, SEC EDGAR filings, and the built-in event-risk calendar now run first by default.",
       docs: "https://docs.benzinga.com/",
     },
     {
@@ -100,9 +114,10 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
       category: "news",
       ready: hasEnv("FINNHUB_API_KEY"),
       mode: hasEnv("FINNHUB_API_KEY") ? "credentialed" : "missing",
+      costProfile: "optional-paid",
       env: ["FINNHUB_API_KEY"],
       detail: "Company news endpoint for ticker-specific catalyst context.",
-      freeAlternative: "Yahoo Finance RSS and SEC EDGAR filings.",
+      freeAlternative: "Yahoo Finance RSS, SEC EDGAR filings, and catalyst rules now cover the free path.",
       docs: "https://finnhub.io/docs/api",
     },
     {
@@ -111,9 +126,10 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
       category: "news",
       ready: hasEnv("NEWSAPI_API_KEY"),
       mode: hasEnv("NEWSAPI_API_KEY") ? "credentialed" : "missing",
+      costProfile: "optional-paid",
       env: ["NEWSAPI_API_KEY"],
       detail: "Broad article search for additional source triangulation.",
-      freeAlternative: "Yahoo Finance RSS.",
+      freeAlternative: "Yahoo Finance RSS plus official SEC filings and scheduled event-risk rules.",
       docs: "https://newsapi.org/docs/endpoints/everything",
     },
     {
@@ -122,6 +138,7 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
       category: "filings",
       ready: true,
       mode: "free-fallback",
+      costProfile: "free-public",
       env: ["SEC_USER_AGENT"],
       detail: "Free official filings through data.sec.gov submissions and company facts APIs.",
       docs: "https://data.sec.gov/",
@@ -132,9 +149,10 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
       category: "fundamentals",
       ready: workerReady("OPENBB_WORKER_URL"),
       mode: workerReady("OPENBB_WORKER_URL") ? "worker" : "missing",
+      costProfile: "free-self-hosted",
       env: ["OPENBB_WORKER_URL"],
       detail: "External Python worker for deeper fundamentals, macro series, options context, and provider-key orchestration.",
-      freeAlternative: "Native SEC company facts and Alpaca/Yahoo quotes.",
+      freeAlternative: "Native SEC company facts, factor screens, public quote context, and self-hosted OpenBB when compute is available.",
       docs: "https://docs.openbb.co/",
     },
     {
@@ -143,9 +161,22 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
       category: "ai-research",
       ready: true,
       mode: "native",
+      costProfile: "free-default",
       env: [],
       detail: "In-code analyst, bull/bear researcher, trader, risk, and portfolio-manager debate using current quotes, SEC/factor evidence, rule signals, and native backtests.",
       docs: "https://github.com/TauricResearch/TradingAgents",
+    },
+    {
+      key: "local-llm",
+      label: "Local OpenAI-compatible analyst LLM",
+      category: "ai-research",
+      ready: hasEnv("LOCAL_LLM_BASE_URL"),
+      mode: hasEnv("LOCAL_LLM_BASE_URL") ? "free-fallback" : "missing",
+      costProfile: "free-self-hosted",
+      env: ["LOCAL_LLM_BASE_URL", "LOCAL_LLM_MODEL", "LOCAL_LLM_API_KEY"],
+      detail: "Analyst chat tries a self-hosted OpenAI-compatible endpoint before paid cloud LLMs when LOCAL_LLM_BASE_URL is configured.",
+      freeAlternative: "Ollama/LM Studio/vLLM-style local endpoints; deterministic cockpit fallback remains available without any LLM key.",
+      docs: "https://docs.ollama.com/openai",
     },
     {
       key: "lean",
@@ -153,9 +184,10 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
       category: "backtesting",
       ready: workerReady("LEAN_WORKER_URL"),
       mode: workerReady("LEAN_WORKER_URL") ? "worker" : "missing",
+      costProfile: "free-self-hosted",
       env: ["LEAN_WORKER_URL"],
       detail: "External event-driven backtest/paper/live engine path outside Vercel limits.",
-      freeAlternative: "Native Alpaca daily-bar backtest.",
+      freeAlternative: "Native cost-aware daily-bar backtest and bounded AutoResearch lab.",
       docs: "https://www.quantconnect.com/docs/v2/lean-cli",
     },
     {
@@ -164,9 +196,10 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
       category: "backtesting",
       ready: workerReady("BACKTRADER_WORKER_URL"),
       mode: workerReady("BACKTRADER_WORKER_URL") ? "worker" : "missing",
+      costProfile: "free-self-hosted",
       env: ["BACKTRADER_WORKER_URL"],
       detail: "Classic Python event-driven simulation lane for cross-checking simple/native results.",
-      freeAlternative: "Native Alpaca daily-bar backtest.",
+      freeAlternative: "Native cost-aware daily-bar backtest.",
       docs: "https://www.backtrader.com/",
     },
     {
@@ -175,6 +208,7 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
       category: "backtesting",
       ready: workerReady("VECTORBT_WORKER_URL"),
       mode: workerReady("VECTORBT_WORKER_URL") ? "worker" : "missing",
+      costProfile: "free-self-hosted",
       env: ["VECTORBT_WORKER_URL"],
       detail: "Fast vectorized parameter sweeps and robustness grids outside serverless limits.",
       freeAlternative: "AutoResearch lab can sweep a small native candidate set.",
@@ -186,9 +220,10 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
       category: "backtesting",
       ready: workerReady("NAUTILUS_WORKER_URL"),
       mode: workerReady("NAUTILUS_WORKER_URL") ? "worker" : "missing",
+      costProfile: "free-self-hosted",
       env: ["NAUTILUS_WORKER_URL"],
       detail: "Production-grade multi-asset research/simulation/execution architecture, gated away from live orders.",
-      freeAlternative: "LEAN and Backtrader worker lanes.",
+      freeAlternative: "Native paper-only research gates first; self-hosted LEAN/Backtrader/vectorbt when compute is available.",
       docs: "https://nautilustrader.io/docs/latest/",
     },
     {
@@ -197,6 +232,7 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
       category: "ai-research",
       ready: workerReady("FINGPT_WORKER_URL"),
       mode: workerReady("FINGPT_WORKER_URL") ? "worker" : "missing",
+      costProfile: "free-self-hosted",
       env: ["FINGPT_WORKER_URL"],
       detail: "Research-only sentiment, filings summarization, contradiction checks, and catalyst explanations.",
       freeAlternative: "Structured rules plus public news headlines.",
@@ -208,6 +244,7 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
       category: "ai-research",
       ready: workerReady("FINRL_WORKER_URL"),
       mode: workerReady("FINRL_WORKER_URL") ? "worker" : "missing",
+      costProfile: "free-self-hosted",
       env: ["FINRL_WORKER_URL"],
       detail: "Research-only reinforcement-learning experiments with overfit warnings and no live execution.",
       freeAlternative: "Native rule-based strategy validation.",
@@ -219,6 +256,7 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
       category: "crypto",
       ready: workerReady("JESSE_WORKER_URL"),
       mode: workerReady("JESSE_WORKER_URL") ? "worker" : "missing",
+      costProfile: "free-self-hosted",
       env: ["JESSE_WORKER_URL"],
       detail: "Separate crypto strategy and paper-trading lane so crypto assumptions do not leak into stock/futures research.",
       freeAlternative: "Binance public crypto quote adapter and Alpaca crypto endpoints.",
@@ -230,9 +268,10 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
       category: "database",
       ready: databaseConfigured(),
       mode: databaseConfigured() ? "credentialed" : "missing",
+      costProfile: "free-self-hosted",
       env: ["DATABASE_URL"],
       detail: "Durable signals, notes, paper trades, outcome tracking, validation reports, and AutoResearch runs.",
-      freeAlternative: "AITable mirror for selected operational records.",
+      freeAlternative: "Local/self-hosted Postgres or a free-tier Postgres DATABASE_URL; AITable remains only an operations mirror.",
       docs: "https://neon.tech/docs",
     },
     {
@@ -241,9 +280,10 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
       category: "database",
       ready: hasEnv("SUPABASE_URL") && hasEnv("SUPABASE_SERVICE_ROLE_KEY"),
       mode: hasEnv("SUPABASE_URL") && hasEnv("SUPABASE_SERVICE_ROLE_KEY") ? "credentialed" : "missing",
+      costProfile: "optional-paid",
       env: ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"],
       detail: "Optional companion database/storage/auth layer. The app's primary SQL target remains DATABASE_URL.",
-      freeAlternative: "Neon Postgres via DATABASE_URL.",
+      freeAlternative: "Self-hosted/local Postgres or free-tier Postgres through DATABASE_URL.",
       docs: "https://supabase.com/docs",
     },
   ];
@@ -259,6 +299,50 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
       : criticalConfigured >= 3
         ? "research-ready"
         : "partial";
+  const freeReplacements: FreeReplacement[] = [
+    {
+      replaces: "Polygon.io / Twelve Data paid quote priority",
+      freePath: "Default quote routing now tries composite public stocks, Binance public crypto, Yahoo public futures aliases, and Stooq delayed data before paid providers.",
+      applied: true,
+      limitation: "Research-only unless a licensed/entitled feed confirms the same trade-critical quote.",
+    },
+    {
+      replaces: "Paid structured-news first path",
+      freePath: "News auto mode now tries Yahoo Finance RSS first, while SEC EDGAR filings and scheduled event-risk rules feed the catalyst engine.",
+      applied: true,
+      limitation: "Free headlines are less structured and may miss paywalled or proprietary catalyst tags.",
+    },
+    {
+      replaces: "Paid LLM-only analyst chat",
+      freePath: "Analyst chat now tries LOCAL_LLM_BASE_URL with an OpenAI-compatible local/self-hosted model before paid OpenAI models, then deterministic cockpit fallback.",
+      applied: true,
+      limitation: "Local models depend on your hardware and cannot inspect sources outside the supplied dashboard context.",
+    },
+    {
+      replaces: "Twilio/Resend-only alert posture",
+      freePath: "Browser notifications and in-dashboard monitor alerts are the free default; webhook/SMS/email remain optional off-device channels.",
+      applied: true,
+      limitation: "Browser notifications require permission and work best while the app or installed PWA is active.",
+    },
+    {
+      replaces: "CME/ICE commodity data as the only commodity context",
+      freePath: "Commodity research uses public futures aliases, ETF proxies, and EIA/USDA event-risk references until licensed futures data is added.",
+      applied: true,
+      limitation: "No free path replaces licensed futures ticks, contract calendars, spread books, or execution-grade roll logic.",
+    },
+    {
+      replaces: "OPRA-only options insight",
+      freePath: "Options routes expose Alpaca indicative/contract-only context when permitted and label missing OPRA as partial.",
+      applied: true,
+      limitation: "There is no free OPRA-equivalent feed; do not infer unusual flow or IV history from incomplete snapshots.",
+    },
+    {
+      replaces: "Paid hosted worker/database assumptions",
+      freePath: "Native TradingAgents, AutoResearch, cost-aware backtests, local/self-hosted workers, and local/free-tier Postgres run without paid SaaS upgrades.",
+      applied: true,
+      limitation: "Durability and compute capacity depend on the machine or free-tier limits you choose.",
+    },
+  ];
 
   return {
     ok: true,
@@ -268,6 +352,7 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
     criticalConfigured,
     criticalTotal,
     components,
+    freeReplacements,
     workerCommands: [
       {
         name: "OpenBB worker",
@@ -301,11 +386,11 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
       },
     ],
     missingExternalEntitlements: [
-      "Consolidated SIP/paid stock data if you need execution-grade U.S. equity coverage.",
-      "OPRA/options data entitlement for production options flow and volatility signals.",
-      "CME/ICE/commodity futures market-data licenses for production futures signals.",
-      "Paid structured-news terms if Benzinga/Finnhub/NewsAPI use exceeds free tiers.",
-      "Separate external worker hosting for LEAN, OpenBB, Backtrader, vectorbt, NautilusTrader, FinGPT, FinRL, and Jesse.",
+      "Execution-grade SIP or equivalent stock data remains optional for real-money equity execution; free/public quote paths are already applied for research.",
+      "OPRA options entitlement has no true free replacement; current options output stays indicative or contract-only when OPRA is absent.",
+      "CME/ICE/commodity futures licenses have no true free replacement for execution-grade futures; public aliases and ETF proxies stay research-only.",
+      "Paid structured-news providers are optional; Yahoo RSS, SEC EDGAR, and event-risk rules are the free default.",
+      "External research workers can be self-hosted for free, but always need some machine or hosting runtime.",
     ],
   };
 }

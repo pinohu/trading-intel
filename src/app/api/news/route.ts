@@ -142,7 +142,9 @@ export async function GET(request: Request) {
         ? [fetchFinnhubNews]
         : provider === "newsapi"
           ? [fetchNewsApiItems]
-          : [fetchBenzingaNews, fetchFinnhubNews, fetchNewsApiItems, fetchYahooRss];
+          : provider === "paid"
+            ? [fetchBenzingaNews, fetchFinnhubNews, fetchNewsApiItems, fetchYahooRss]
+            : [fetchYahooRss, fetchBenzingaNews, fetchFinnhubNews, fetchNewsApiItems];
 
   const settled = await Promise.allSettled(providerFns.map((fn) => fn(symbols)));
   const items = dedupeNews(settled.flatMap((result) => (result.status === "fulfilled" ? result.value : []))).slice(0, 40);
@@ -151,6 +153,7 @@ export async function GET(request: Request) {
     degraded: items.length === 0 || items.every((item) => item.provider === "yahoo-rss"),
     provider,
     providers: {
+      freeFirstDefault: provider === "auto" || provider === "free",
       benzinga: Boolean(process.env.BENZINGA_API_KEY),
       finnhub: Boolean(process.env.FINNHUB_API_KEY),
       newsapi: Boolean(process.env.NEWSAPI_API_KEY),

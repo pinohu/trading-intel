@@ -22,6 +22,7 @@ export async function GET() {
   const workers = buildWorkerReadiness();
   const compliance = buildComplianceReadiness();
   const alerts = {
+    browser: true,
     webhook: Boolean(process.env.ALERT_WEBHOOK_URL),
     sms: Boolean(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_FROM_NUMBER && process.env.ALERT_TO_PHONE),
     email: Boolean(process.env.RESEND_API_KEY && process.env.ALERT_TO_EMAIL),
@@ -31,6 +32,7 @@ export async function GET() {
     alpacaConfigured: Boolean(process.env.ALPACA_API_KEY_ID && process.env.ALPACA_API_SECRET_KEY) || Boolean(process.env.ALPACA_PAPER_API_KEY_ID && process.env.ALPACA_PAPER_API_SECRET_KEY),
     alpacaDataQuality: process.env.ALPACA_DATA_QUALITY ?? "iex",
     licensedSip: process.env.ALPACA_DATA_QUALITY === "sip" || Boolean(process.env.POLYGON_API_KEY),
+    freeFirstDefault: true,
     publicFallbacks: true,
   };
   const capabilities = [
@@ -41,7 +43,8 @@ export async function GET() {
     { key: "outcomes", label: "Signal outcome tracker", ready: database.schemaReady, required: true },
     { key: "backtests", label: "Backtest evidence storage", ready: database.schemaReady, required: true },
     { key: "risk", label: "Portfolio risk snapshots", ready: database.schemaReady && broker.paper.credentialsConfigured, required: true },
-    { key: "alerts", label: "Off-device alerts", ready: alerts.webhook || alerts.sms || alerts.email, required: false },
+    { key: "browserAlerts", label: "Free browser alerts", ready: alerts.browser, required: false },
+    { key: "alerts", label: "Optional off-device alerts", ready: alerts.webhook || alerts.sms || alerts.email, required: false },
     { key: "auth", label: "Private access gate", ready: productionSecretsConfigured(), required: true },
     { key: "licensedData", label: "Licensed real-time market data", ready: liveData.licensedSip, required: false },
     { key: "controlPlane", label: "Kill switch and OMS controls", ready: !controls.killSwitch, required: true },
@@ -60,6 +63,12 @@ export async function GET() {
     broker,
     alerts,
     liveData,
+    freeAlternativesApplied: [
+      "Market data auto mode is free-first before paid providers.",
+      "News auto mode is Yahoo RSS first, with SEC filings and event rules in catalysts.",
+      "Analyst chat can use LOCAL_LLM_BASE_URL before paid cloud LLMs.",
+      "Browser notifications are available without Twilio or Resend.",
+    ],
     controls,
     proof,
     workers,
@@ -68,7 +77,7 @@ export async function GET() {
     remainingLimits: [
       liveData.licensedSip ? "" : "Stocks are using Alpaca IEX/public feeds unless SIP/Polygon-style licensed data is added.",
       broker.live.orderPlacementReady ? "" : "Live execution remains locked until live Alpaca keys, live flag, acknowledgement, and audit DB are ready.",
-      alerts.webhook || alerts.sms || alerts.email ? "" : "Off-device alerts need webhook, Twilio, or Resend credentials.",
+      alerts.webhook || alerts.sms || alerts.email ? "" : "Free browser alerts are active; off-device SMS/email still need webhook, Twilio, or Resend only if you want those optional channels.",
       "Commodity futures still require a licensed futures broker/feed. The app can execute commodity ETFs through Alpaca, not CME futures contracts.",
     ].filter(Boolean),
   });

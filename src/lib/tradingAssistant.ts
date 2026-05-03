@@ -27,6 +27,7 @@ export type TradingAssistantDashboardContext = {
 };
 
 export const tradingAssistantModels = {
+  local: "gpt-oss:20b",
   primary: "gpt-5.2",
   fallback: "gpt-5.1",
   fast: "gpt-5-mini",

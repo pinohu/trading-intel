@@ -29,14 +29,16 @@ This is a mobile-first trading research and intelligence cockpit. It is built fo
 - Broker reconciliation endpoint at `/api/broker/reconcile` that stores REST order/activity reconciliation events and documents the Alpaca `trade_updates` streaming rail
 - Catalyst engine at `/api/catalysts` combining SEC recent filings, market headlines, macro events, and commodity event calendars
 - Direct SEC filings endpoint at `/api/sec/filings`, backed by the official `data.sec.gov` submissions API
-- Polygon.io and Twelve Data quote adapters that activate when `POLYGON_API_KEY` or `TWELVE_DATA_API_KEY` is configured
-- Structured news adapters for Benzinga, Finnhub, and NewsAPI with Yahoo Finance RSS fallback
-- Research Stack dashboard and `/api/research-stack/readiness` showing credentialed providers, free fallbacks, native research engines, external workers, and database readiness
+- Free-first market-data routing: public composite stock quotes, Binance crypto, Yahoo futures aliases, and Stooq delayed fallback run before optional paid providers
+- Polygon.io and Twelve Data quote adapters that activate only when `POLYGON_API_KEY` or `TWELVE_DATA_API_KEY` is configured or selected
+- Free-first news routing through Yahoo Finance RSS, with optional Benzinga, Finnhub, and NewsAPI structured-news adapters
+- Research Stack dashboard and `/api/research-stack/readiness` showing applied free replacements, credentialed providers, native research engines, external workers, and database readiness
 - `/api/provider-stack/readiness` for market/news/database provider status without exposing secrets
 - `/api/research-notes` for database-backed notes across devices
 - AutoResearch Lab at `/api/autoresearch/lab`, with bounded candidate experiments, champion scoring, run history, and a research-only guardrail
 - External worker bridge at `/api/research-workers/run` and `/api/research-workers/readiness` for OpenBB, LEAN, Backtrader, vectorbt, NautilusTrader, FinGPT, FinRL, and Jesse workers outside Vercel
 - Native TradingAgents integration at `/api/tradingagents/analyze` for in-code market/fundamental/bull/bear/trader/risk/portfolio-manager debate persisted to research notes when Postgres is configured
+- Analyst chat can use `LOCAL_LLM_BASE_URL` with a free/self-hosted OpenAI-compatible model before paid OpenAI models, then deterministic cockpit fallback
 - Supervised agent-trading rail at `/api/agent-trader/policy`, `/api/agent-trader/proposals`, and `/api/agent-trader/execute`; agents can draft orders and optionally paper-trade, while live-money autonomy is blocked
 - Options volatility context at `/api/options/volatility` using Alpaca contracts/snapshots where available, with OPRA/indicative/contract-only quality labels
 - Walk-forward holdout metadata in new backtest runs, plus persisted model-validation reports
@@ -48,7 +50,7 @@ This is a mobile-first trading research and intelligence cockpit. It is built fo
 - `DESIGN.md` source of truth using Google's agent-readable design format, validated with `@google/design.md`
 - Command-center redesign focused on signals, proof, risk, trade tickets, and readiness instead of decorative dashboard cards
 - Composite public quote feed using Nasdaq price/status, CNBC/Yahoo day range enrichment, Yahoo commodity futures aliases, Binance/Yahoo crypto, and Stooq fallback
-- News feed through Benzinga, Finnhub, NewsAPI, and Yahoo Finance RSS fallback
+- News feed through Yahoo Finance RSS first, then Benzinga, Finnhub, or NewsAPI when explicitly configured
 - Add/remove watchlist symbols in the browser
 - Ranking score based on trend, close location, range, and liquidity
 - Interactive price map chart
@@ -81,7 +83,7 @@ This is a mobile-first trading research and intelligence cockpit. It is built fo
 - `/api/playbook` endpoint exposing the strategy rulebook
 - Top-of-dashboard buy-now board, live buy leads, and buy/sell leaderboard ranked by action, quality, confidence, and reward/risk
 - Vercel cron monitor at `/api/monitor`, scheduled every 5 minutes
-- Alert adapters for webhook, SMS through Twilio, and email through Resend
+- Free browser notification path for active alerts, plus optional webhook, SMS through Twilio, and email through Resend
 - `/api/readiness` endpoint for real-use infrastructure checks
 - `/api/position-size` endpoint and dashboard position sizing calculator
 - `/api/events` endpoint and event-risk calendar for stocks and commodity proxies
@@ -89,7 +91,7 @@ This is a mobile-first trading research and intelligence cockpit. It is built fo
 - Trust Matrix covering licensed data, durable outcome proof, paper trading, backtesting, database, broker sync, alerts, news/catalysts, model performance, security, and PWA readiness with every issue status live plus separate proof states, evidence standards, and acceptance criteria
 - Plain-English `Right Now` board at the top of the dashboard
 - `/api/now` endpoint that returns current buy-now candidates, top buy-watch, top buy lead, and sell/avoid-watch in simple language
-- Provider adapter layer: Alpaca-ready, composite public stocks, Nasdaq, CNBC, Yahoo commodity futures aliases, Yahoo unofficial, Stooq delayed, Binance public crypto
+- Provider adapter layer: free-first auto, Alpaca-ready, optional paid-first, composite public stocks, Nasdaq, CNBC, Yahoo commodity futures aliases, Yahoo unofficial, Stooq delayed, Binance public crypto
 - Public quote adapters for Nasdaq and CNBC, with composite enrichment to avoid false weak signals when a provider has price but limited day-range fields
 - `/api/providers` endpoint with data-quality labels
 - `/api/research-workers/run` endpoint for dispatching heavy research jobs to configured external workers
@@ -142,7 +144,7 @@ Always-on monitoring uses `vercel.json` cron. Alerts are only sent when `SEND_MO
 
 Broker execution setup is documented in [Broker Execution](docs/BROKER_EXECUTION.md). Paper mode should be tested before live mode. Live mode requires Alpaca live credentials, explicit live env gates, a per-order acknowledgement phrase, and database audit storage.
 
-Free/no-license feeds are useful for research and monitoring, but they are not equivalent to consolidated exchange feeds. The app labels each quote by quality so signal precision is not overstated.
+Free/no-license feeds are now the default for research and monitoring, but they are not equivalent to consolidated exchange feeds. The app labels each quote by quality so signal precision is not overstated.
 
 ## Production Docs
 
@@ -160,11 +162,13 @@ Free/no-license feeds are useful for research and monitoring, but they are not e
 
 ## Data Notes
 
-Public no-key data is useful for prototyping, but professional trading research should use paid, licensed feeds for reliability and terms compliance. Implemented optional integrations:
+The app now prefers free alternatives before paid services. Paid/licensed feeds are still available as optional upgrades when execution-grade evidence is required. Implemented free-first paths and optional integrations:
 
-- Polygon.io or Twelve Data for market data when API keys are provided
-- Benzinga, Finnhub, or NewsAPI for structured news when API keys are provided
+- Public composite quote routing, Binance crypto, Yahoo futures aliases, and Stooq delayed data by default; Polygon.io or Twelve Data only when API keys are provided or paid-first mode is selected
+- Yahoo Finance RSS by default; Benzinga, Finnhub, or NewsAPI only when API keys are provided or paid news mode is selected
 - SEC EDGAR APIs for filings with no paid key required
+- `LOCAL_LLM_BASE_URL` for a free/self-hosted OpenAI-compatible analyst chat model; `OPENAI_API_KEY` remains optional for paid cloud models
+- Browser notifications as the free alert path; webhook, Twilio, and Resend are optional off-device channels
 - OpenBB external worker hook for deeper fundamentals and macro workflows
 - TradingAgents native debate desk for market, fundamentals, bull/bear researcher, trader, risk, and portfolio-manager review
 - LEAN, Backtrader, vectorbt, and Nautilus external worker hooks for real historical backtests outside Vercel serverless limits

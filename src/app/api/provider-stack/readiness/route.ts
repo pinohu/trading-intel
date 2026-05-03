@@ -13,6 +13,7 @@ export function GET() {
     structuredNews: stack.components.filter((component) => component.category === "news"),
     filings: stack.components.filter((component) => component.category === "filings"),
     database: stack.components.filter((component) => component.category === "database"),
-    note: "Provider readiness reports whether credentials or public fallbacks are available; it does not upgrade public data into licensed execution-grade data.",
+    freeReplacements: stack.freeReplacements,
+    note: "Provider readiness is free-first by default; public data remains research-only unless a licensed execution-grade provider confirms it.",
   });
 }

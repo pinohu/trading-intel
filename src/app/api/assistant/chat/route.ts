@@ -27,6 +27,19 @@ type OpenAiResponsePayload = {
   };
 };
 
+type CompatibleChatPayload = {
+  id?: string;
+  choices?: Array<{
+    message?: {
+      content?: string;
+    };
+  }>;
+  usage?: Record<string, unknown>;
+  error?: {
+    message?: string;
+  };
+};
+
 export async function POST(request: Request) {
   if (!hasValidUserSession(request)) {
     return NextResponse.json({ ok: false, error: "A user session is required to use analyst chat." }, { status: 401 });
@@ -53,9 +66,44 @@ export async function POST(request: Request) {
   }
 
   const apiKey = cleanSecret(process.env.OPENAI_API_KEY);
+  const localBaseUrl = cleanSecret(process.env.LOCAL_LLM_BASE_URL);
+  const localModel = cleanSecret(process.env.LOCAL_LLM_MODEL) || tradingAssistantModels.local;
   const primaryModel = cleanSecret(process.env.TRADING_ASSISTANT_MODEL) || tradingAssistantModels.primary;
   const fallbackModel = cleanSecret(process.env.TRADING_ASSISTANT_FALLBACK_MODEL) || tradingAssistantModels.fallback;
   const prompt = buildTradingAssistantPrompt({ messages, context });
+
+  const configuredModels = {
+    local: localBaseUrl ? localModel : "not-configured",
+    primary: primaryModel,
+    fallback: fallbackModel,
+    fast: tradingAssistantModels.fast,
+  };
+
+  if (localBaseUrl) {
+    const local = await requestCompatibleChatAnswer({
+      baseUrl: localBaseUrl,
+      apiKey: cleanSecret(process.env.LOCAL_LLM_API_KEY),
+      model: localModel,
+      prompt,
+      timeoutMs: 10000,
+    }).catch((error) => ({
+      ok: false as const,
+      error: error instanceof Error ? error.message : "Local LLM request failed.",
+    }));
+
+    if (local.ok) {
+      return NextResponse.json({
+        ok: true,
+        source: "local-openai-compatible",
+        model: localModel,
+        answer: local.answer,
+        responseId: local.responseId,
+        usage: local.usage,
+        advisory: "Answered through the configured free/self-hosted OpenAI-compatible LLM endpoint.",
+        configuredModels,
+      });
+    }
+  }
 
   if (!apiKey) {
     return NextResponse.json({
@@ -63,12 +111,10 @@ export async function POST(request: Request) {
       source: "local-fallback",
       model: "local-context",
       answer: localTradingAssistantAnswer({ question: latest.content, context }),
-      advisory: "OPENAI_API_KEY is not configured; answer generated from deterministic cockpit context only.",
-      configuredModels: {
-        primary: primaryModel,
-        fallback: fallbackModel,
-        fast: tradingAssistantModels.fast,
-      },
+      advisory: localBaseUrl
+        ? "The configured local LLM was unavailable and OPENAI_API_KEY is not configured; answer generated from deterministic cockpit context only."
+        : "No paid LLM key or free local LLM endpoint is configured; answer generated from deterministic cockpit context only.",
+      configuredModels,
     });
   }
 
@@ -85,11 +131,7 @@ export async function POST(request: Request) {
       answer: first.answer,
       responseId: first.responseId,
       usage: first.usage,
-      configuredModels: {
-        primary: primaryModel,
-        fallback: fallbackModel,
-        fast: tradingAssistantModels.fast,
-      },
+      configuredModels,
     });
   }
 
@@ -107,11 +149,7 @@ export async function POST(request: Request) {
         responseId: fallback.responseId,
         usage: fallback.usage,
         advisory: `Primary model ${primaryModel} was unavailable; answered with ${fallbackModel}.`,
-        configuredModels: {
-          primary: primaryModel,
-          fallback: fallbackModel,
-          fast: tradingAssistantModels.fast,
-        },
+        configuredModels,
       });
     }
   }
@@ -122,12 +160,71 @@ export async function POST(request: Request) {
     model: "local-context",
     answer: localTradingAssistantAnswer({ question: latest.content, context }),
     advisory: `The configured LLM path was unavailable; answered from deterministic cockpit context. ${first.error}`,
-    configuredModels: {
-      primary: primaryModel,
-      fallback: fallbackModel,
-      fast: tradingAssistantModels.fast,
-    },
+    configuredModels,
   });
+}
+
+async function requestCompatibleChatAnswer({
+  baseUrl,
+  apiKey,
+  model,
+  prompt,
+  timeoutMs = 10000,
+}: {
+  baseUrl: string;
+  apiKey?: string;
+  model: string;
+  prompt: string;
+  timeoutMs?: number;
+}): Promise<{ ok: true; answer: string; responseId?: string; usage?: Record<string, unknown> }> {
+  const endpoint = `${baseUrl.replace(/\/+$/, "")}/chat/completions`;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  let response: Response;
+  try {
+    response = await fetch(endpoint, {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        ...(apiKey ? { authorization: `Bearer ${apiKey}` } : {}),
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: "system", content: tradingAssistantInstructions },
+          { role: "user", content: prompt },
+        ],
+        temperature: 0.2,
+        max_tokens: 1200,
+        stream: false,
+      }),
+    });
+  } catch (error) {
+    if (controller.signal.aborted) {
+      throw new Error(`Local LLM model ${model} timed out after ${Math.round(timeoutMs / 1000)} seconds.`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+
+  const payload = await response.json().catch(() => null) as CompatibleChatPayload | null;
+  if (!response.ok) {
+    throw new Error(payload?.error?.message ?? `Local LLM returned HTTP ${response.status}.`);
+  }
+
+  const answer = payload?.choices?.[0]?.message?.content?.trim();
+  if (!answer) {
+    throw new Error("Local LLM returned an empty analyst answer.");
+  }
+
+  return {
+    ok: true,
+    answer,
+    responseId: payload?.id,
+    usage: payload?.usage,
+  };
 }
 
 async function requestOpenAiAnswer({

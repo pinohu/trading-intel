@@ -16,6 +16,7 @@ export function GET() {
     liveTradingEnabled: liveBroker.executionEnabled && liveBroker.liveTradingEnabled && liveBroker.liveAckConfigured && liveBroker.credentialsConfigured,
     authConfigured: Boolean(process.env.TRADING_ACCESS_CODE && process.env.TRADING_ACCESS_TOKEN),
     providers: {
+      marketDataDefault: "free-first-public",
       delayedQuotes: "stooq",
       news: "yahoo-finance-rss",
       polygon: Boolean(process.env.POLYGON_API_KEY),
@@ -23,6 +24,7 @@ export function GET() {
       benzinga: Boolean(process.env.BENZINGA_API_KEY),
       finnhub: Boolean(process.env.FINNHUB_API_KEY),
       openai: Boolean(process.env.OPENAI_API_KEY),
+      localLlm: Boolean(process.env.LOCAL_LLM_BASE_URL),
       database: databaseConfigured(),
       aitableMirror: aitable.mirrorReady,
       aitableApi: aitable.apiKeyConfigured,
@@ -45,7 +47,7 @@ export function GET() {
       "Live broker execution requires Alpaca live credentials, explicit env gates, per-order acknowledgement, and database audit storage.",
       "AITable is enabled as an operations mirror/fallback, not as a replacement for the SQL audit database required for live execution.",
       "Research notes are local-browser until a database is configured.",
-      "Use paid/licensed feeds before relying on intraday decisions.",
+      "Free-first research feeds are the default; use paid/licensed feeds only when execution-grade intraday decisions are required.",
     ],
   });
 }

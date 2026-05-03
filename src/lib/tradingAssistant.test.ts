@@ -75,6 +75,7 @@ describe("trading assistant", () => {
   });
 
   it("documents the configured model ladder", () => {
+    expect(tradingAssistantModels.local).toBe("gpt-oss:20b");
     expect(tradingAssistantModels.primary).toBe("gpt-5.2");
     expect(tradingAssistantModels.fallback).toBe("gpt-5.1");
     expect(tradingAssistantModels.fast).toBe("gpt-5-mini");

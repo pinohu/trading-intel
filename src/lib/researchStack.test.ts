@@ -10,10 +10,21 @@ describe("research stack readiness", () => {
     expect(keys).toContain("polygon");
     expect(keys).toContain("twelvedata");
     expect(keys).toContain("sec-edgar");
+    expect(keys).toContain("local-llm");
     expect(keys).toContain("openbb");
     expect(keys).toContain("tradingagents");
     expect(keys).toContain("lean");
     expect(keys).toContain("jesse");
     expect(keys).toContain("postgres");
+  });
+
+  it("documents applied free replacements for paid or hosted lanes", () => {
+    const readiness = buildResearchStackReadiness();
+    const optionalPaid = readiness.components.filter((component) => component.costProfile === "optional-paid");
+
+    expect(readiness.freeReplacements.length).toBeGreaterThanOrEqual(6);
+    expect(readiness.freeReplacements.every((replacement) => replacement.applied)).toBe(true);
+    expect(readiness.freeReplacements.some((replacement) => replacement.replaces.includes("Paid LLM"))).toBe(true);
+    expect(optionalPaid.every((component) => component.freeAlternative && component.freeAlternative.length > 0)).toBe(true);
   });
 });

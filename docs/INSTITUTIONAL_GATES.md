@@ -42,10 +42,10 @@ After deployment, the production smoke check showed:
 
 Some things cannot be manufactured in code:
 
-- SIP/paid consolidated stock data entitlement
-- OPRA options entitlement
-- CME/futures market data and futures broker execution
-- A persistent worker host if second-level monitoring and WebSocket `trade_updates` must run continuously
+- SIP/paid consolidated stock data entitlement for execution-grade promotion; free-first public feeds are already applied for research
+- OPRA options entitlement; contract-only/indicative context remains partial without it
+- CME/futures market data and futures broker execution; public aliases and ETF proxies remain research-only
+- A persistent worker host if second-level monitoring and WebSocket `trade_updates` must run continuously; workers can be self-hosted when you have free/local compute
 - Legal/compliance review before paid or personalized trading advice
 
 ## Worker Commands

@@ -29,6 +29,12 @@ Live broker orders remain locked unless all of these are true:
 
 ## Current Data Policy
 
-Alpaca market data uses `feed=iex` unless `ALPACA_DATA_QUALITY=sip` is intentionally configured. IEX is useful for research and paper trading, while SIP or another licensed feed is still the right path for execution-grade U.S. equity coverage.
+The dashboard's default `auto` data mode is free-first: public composite stock quotes, Binance public crypto, Yahoo public futures aliases, and Stooq delayed fallback run before optional paid providers. Alpaca market data uses `feed=iex` unless `ALPACA_DATA_QUALITY=sip` is intentionally configured. IEX and public feeds are useful for research and paper trading, while SIP or another licensed feed is still the right path for execution-grade U.S. equity coverage.
 
 Commodity futures remain research-only aliases unless a licensed futures broker and feed are added. Alpaca can route commodity ETF proxies, not CME/NYMEX/COMEX futures contracts.
+
+## Current Alert And LLM Policy
+
+Browser notifications are the free alert baseline. Webhook, Twilio, and Resend are optional off-device channels.
+
+Analyst chat tries `LOCAL_LLM_BASE_URL` with `LOCAL_LLM_MODEL` before paid OpenAI cloud models. If neither path is available, it answers from deterministic dashboard context only.
