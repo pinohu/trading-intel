@@ -128,27 +128,12 @@ export function orderDraftFromTicket(ticket: TradeTicket): BrokerOrderPayload {
 
 function ticketFromBuyNow(signal: BuyNowSignal): TradeTicket {
   return {
-    symbol: signal.symbol,
-    name: signal.name,
-    side: "Buy",
+    ...signal.ticket,
     status: "Ready to Watch",
-    entry: signal.entry,
-    stop: signal.stop,
-    target: signal.target,
-    units: signal.units,
-    notional: Number((signal.units * signal.entry).toFixed(2)),
-    maxLoss: signal.maxLoss,
-    rewardRisk: signal.rewardRisk,
-    riskPct: signal.ticket.riskPct,
-    holdingPeriod: signal.holdingPeriod,
-    expectedHold: signal.expectedHold,
-    maxHold: signal.maxHold,
-    reviewCadence: signal.reviewCadence,
-    exitRule: signal.ticket.exitRule,
     tradeable: true,
-    reason: signal.reasons.join(" "),
-    mustConfirm: signal.reasons,
-    doNotTradeIf: signal.warnings,
+    reason: signal.reasons.join(" ") || signal.ticket.reason,
+    mustConfirm: Array.from(new Set([...signal.ticket.mustConfirm, ...signal.reasons])),
+    doNotTradeIf: Array.from(new Set([...signal.ticket.doNotTradeIf, ...signal.warnings])),
   };
 }
 

@@ -30,6 +30,9 @@ describe("buyNowEngine", () => {
     expect(result.buyNow).toHaveLength(1);
     expect(result.buyNow[0].symbol).toBe("NVDA");
     expect(result.buyNow[0].ticket.tradeable).toBe(true);
+    expect(result.buyNow[0].entrySignalNeeded).toContain("Fresh NVDA quote");
+    expect(result.buyNow[0].riskRewardRatio).toBeGreaterThanOrEqual(1.5);
+    expect(result.buyNow[0].suggestedPositionSize).toContain("units");
     expect(result.buyNow[0].maxLoss).toBeLessThanOrEqual(100);
   });
 

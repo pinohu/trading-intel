@@ -60,7 +60,7 @@ This is a mobile-first trading research and intelligence cockpit. It is built fo
 - Quant Lab with first-pass strategy simulation inspired by lightweight and vectorized backtesting workflows
 - Research Pipeline that promotes ideas from data collection to simple tests, parameter sweeps, event-driven simulation, NLP challenge checks, and paper/live gates
 - `/api/engines` endpoint exposing the integrated engine catalog and guardrails
-- Private access gate controlled by `TRADING_ACCESS_CODE` and `TRADING_ACCESS_TOKEN`
+- Private access gate controlled by `ACCESS_CODE` or `TRADING_ACCESS_CODE`, plus `TRADING_ACCESS_TOKEN`
 - `/api/health` endpoint showing provider readiness without exposing secrets
 - Export/import backups for watchlist and paper-trade journal
 - Market Signal Monitor that polls every 30 seconds, 1 minute, 2 minutes, or 5 minutes while the app is open
@@ -122,7 +122,9 @@ vercel --prod --yes
 Required for private production use:
 
 ```bash
-vercel env add TRADING_ACCESS_CODE production
+vercel env add ACCESS_CODE production
+# Or use the legacy-compatible name:
+# vercel env add TRADING_ACCESS_CODE production
 vercel env add TRADING_ACCESS_TOKEN production
 vercel --prod --yes
 ```

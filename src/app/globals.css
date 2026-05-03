@@ -27,11 +27,17 @@
   --font-mono: "Geist Mono", "Geist Mono Fallback", ui-monospace, monospace;
 }
 
+html {
+  color-scheme: dark;
+  scroll-behavior: smooth;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
   font-size: 14px;
+  text-rendering: optimizeLegibility;
 }
 
 button,
@@ -41,8 +47,40 @@ textarea {
   font: inherit;
 }
 
+button,
+a,
+input,
+select,
+textarea {
+  outline-offset: 3px;
+}
+
+button,
+a[href],
+input:not([type="hidden"]),
+select,
+textarea {
+  min-height: 44px;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--info);
+}
+
+button:not(:disabled) {
+  cursor: pointer;
+}
+
 ::selection {
   background: rgba(87, 183, 255, 0.28);
+}
+
+* {
+  scrollbar-color: rgba(123, 135, 148, 0.55) rgba(8, 10, 13, 0.4);
 }
 
 @keyframes ticker-scroll {
@@ -60,4 +98,32 @@ textarea {
 
 .ticker-track:hover {
   animation-play-state: paused;
+}
+
+.panel-shell,
+.panel-shell * {
+  min-width: 0;
+}
+
+.panel-shell {
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 14px 38px rgba(0, 0, 0, 0.24);
+}
+
+.sparkline-path {
+  vector-effect: non-scaling-stroke;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.001ms !important;
+  }
 }

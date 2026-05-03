@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { recordAuditEvent } from "@/lib/audit";
-import { authCookieName, cleanSecret, clientIp, rateLimit } from "@/lib/security";
+import { authCookieName, cleanSecret, clientIp, configuredAccessCode, rateLimit } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  const configuredCode = cleanSecret(process.env.TRADING_ACCESS_CODE);
+  const configuredCode = configuredAccessCode();
   const sessionToken = cleanSecret(process.env.TRADING_ACCESS_TOKEN);
   const actor = clientIp(request);
 

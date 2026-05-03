@@ -83,7 +83,7 @@ Symptoms:
 
 Response:
 
-1. Confirm `TRADING_ACCESS_CODE` and `TRADING_ACCESS_TOKEN` are set in Vercel production.
+1. Confirm `ACCESS_CODE` or `TRADING_ACCESS_CODE`, plus `TRADING_ACCESS_TOKEN`, are set in Vercel production.
 2. Rotate both secrets if leakage is suspected.
 3. Redeploy after secret changes.
 4. Never reintroduce hardcoded fallback access codes.

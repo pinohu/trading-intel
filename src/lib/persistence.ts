@@ -242,13 +242,18 @@ export async function insertTradeTicket(ticket: TradeTicket, signalSnapshotId: s
   const sql = getSql();
   const rows = await sql`
     insert into trade_tickets (
-      signal_snapshot_id, symbol, side, status, entry, stop, target, units, notional,
-      max_loss, reward_risk, risk_pct, tradeable, reason, must_confirm, do_not_trade_if
+      signal_snapshot_id, symbol, side, status, trigger, entry_signal_needed, entry, stop, target, units, notional,
+      potential_units, potential_notional, max_loss, reward_risk, risk_reward_ratio, risk_pct,
+      risk_budget_dollars, daily_loss_cap_dollars, unit_risk, position_size, suggested_position_size,
+      tradeable, reason, must_confirm, do_not_trade_if
     )
     values (
-      ${signalSnapshotId}, ${ticket.symbol}, ${ticket.side}, ${ticket.status}, ${ticket.entry},
-      ${ticket.stop}, ${ticket.target}, ${ticket.units}, ${ticket.notional}, ${ticket.maxLoss},
-      ${ticket.rewardRisk}, ${ticket.riskPct}, ${ticket.tradeable}, ${ticket.reason},
+      ${signalSnapshotId}, ${ticket.symbol}, ${ticket.side}, ${ticket.status}, ${ticket.trigger},
+      ${ticket.entrySignalNeeded}, ${ticket.entry}, ${ticket.stop}, ${ticket.target}, ${ticket.units},
+      ${ticket.notional}, ${ticket.potentialUnits}, ${ticket.potentialNotional}, ${ticket.maxLoss},
+      ${ticket.rewardRisk}, ${ticket.riskRewardRatio}, ${ticket.riskPct}, ${ticket.riskBudgetDollars},
+      ${ticket.dailyLossCapDollars}, ${ticket.unitRisk}, ${ticket.positionSize}, ${ticket.suggestedPositionSize},
+      ${ticket.tradeable}, ${ticket.reason},
       ${JSON.stringify(ticket.mustConfirm)}::jsonb, ${JSON.stringify(ticket.doNotTradeIf)}::jsonb
     )
     returning id

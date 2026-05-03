@@ -90,14 +90,24 @@ function validTradeTicket(value: unknown): value is TradeTicket {
     /^[A-Z0-9.=^-]{1,14}$/.test(item.symbol) &&
     (item.side === "Buy" || item.side === "Sell / Avoid") &&
     typeof item.status === "string" &&
+    finiteNumber(item.trigger) &&
     finiteNumber(item.entry) &&
+    typeof item.entrySignalNeeded === "string" &&
     finiteNumber(item.stop) &&
     finiteNumber(item.target) &&
     Number.isInteger(item.units) &&
     finiteNumber(item.notional) &&
+    Number.isInteger(item.potentialUnits) &&
+    finiteNumber(item.potentialNotional) &&
     finiteNumber(item.maxLoss) &&
     finiteNumber(item.rewardRisk) &&
+    finiteNumber(item.riskRewardRatio) &&
     finiteNumber(item.riskPct) &&
+    finiteNumber(item.riskBudgetDollars) &&
+    finiteNumber(item.dailyLossCapDollars) &&
+    finiteNumber(item.unitRisk) &&
+    typeof item.positionSize === "string" &&
+    typeof item.suggestedPositionSize === "string" &&
     typeof item.tradeable === "boolean" &&
     typeof item.reason === "string" &&
     Array.isArray(item.mustConfirm) &&
