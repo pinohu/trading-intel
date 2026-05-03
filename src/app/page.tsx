@@ -733,6 +733,12 @@ function buyNowBrief(signal: BuyNowSignal) {
     positionSize: signal.positionSize,
     suggestedPositionSize: signal.suggestedPositionSize,
     entrySignalNeeded: signal.entrySignalNeeded,
+    strategyMindset: {
+      stance: signal.strategyMindset.stance,
+      score: signal.strategyMindset.score,
+      summary: signal.strategyMindset.summary,
+      topVotes: signal.strategyMindset.votes.slice(0, 3).map((vote) => `${vote.name}: ${vote.stance}`),
+    },
     reasons: signal.reasons.slice(0, 4),
     warnings: signal.warnings.slice(0, 4),
   };
@@ -750,6 +756,12 @@ function blockedBuyNowBrief(signal: BlockedBuyNowSignal) {
     entrySignalNeeded: signal.entrySignalNeeded,
     positionSize: signal.positionSize,
     suggestedPositionSize: signal.suggestedPositionSize,
+    strategyMindset: {
+      stance: signal.strategyMindset.stance,
+      score: signal.strategyMindset.score,
+      summary: signal.strategyMindset.summary,
+      topVotes: signal.strategyMindset.votes.slice(0, 3).map((vote) => `${vote.name}: ${vote.stance}`),
+    },
     blockers: signal.blockers.slice(0, 5),
     reasons: signal.reasons.slice(0, 4),
   };
@@ -769,6 +781,12 @@ function buyLeadBrief(lead: BuyLead) {
     expectedHold: lead.holdingPeriod.expectedHold,
     maxHold: lead.holdingPeriod.maxHold,
     reason: lead.reason,
+    strategyMindset: {
+      stance: lead.strategyMindset.stance,
+      score: lead.strategyMindset.score,
+      summary: lead.strategyMindset.summary,
+      topVotes: lead.strategyMindset.votes.slice(0, 3).map((vote) => `${vote.name}: ${vote.stance}`),
+    },
     warnings: lead.warnings.slice(0, 4),
     dataFresh: lead.dataFresh,
   };
@@ -900,6 +918,7 @@ const statExplanations: Record<string, string> = {
   "Suggested Size": "Plain-English size recommendation derived from the current risk budget and stop distance.",
   "Entry Signal Needed": "The exact condition required before the setup can be treated as an entry candidate.",
   "Entry Signal": "The exact condition required before the setup can be treated as an entry candidate.",
+  "Strategy Minds": "Consensus score from strategy archetypes inspired by notable traders and investors. It is evidence, not a standalone order.",
   Reports: "Reference reports currently summarized into the system rules.",
   Research: "Reference-report lessons categorized as research evidence.",
   Gates: "Reference-report lessons categorized as execution or risk gates.",
@@ -3689,6 +3708,7 @@ function FastActionQueue({
               <MiniStat label="R/R" value={`${primaryBuyNow.riskRewardRatio}R`} tone={primaryBuyNow.riskRewardRatio >= 1.5 ? "green" : "red"} />
               <MiniStat label="Potential Size" value={`${primaryBuyNow.potentialUnits} / ${formatUsd(primaryBuyNow.potentialNotional)}`} tone="blue" />
               <MiniStat label="Position Size" value={primaryBuyNow.positionSize} tone="plain" />
+              <MiniStat label="Strategy Minds" value={mindsetLabel(primaryBuyNow.strategyMindset)} tone={mindsetTone(primaryBuyNow.strategyMindset.stance)} />
               <MiniStat label="Entry Signal" value={primaryBuyNow.entrySignalNeeded} tone="green" />
               <MiniStat label="Hold" value={primaryBuyNow.expectedHold} tone="amber" />
             </div>
@@ -3717,6 +3737,7 @@ function FastActionQueue({
                   <MiniStat label="Target" value={formatUsd(buyLead.target)} tone="blue" />
                   <MiniStat label="R/R" value={`${buyLead.rewardRisk}R`} tone={buyLead.rewardRisk >= 1.5 ? "green" : "red"} />
                   <MiniStat label="Score" value={`${buyLead.confidence}`} tone={buyLead.confidence >= 60 ? "green" : "blue"} />
+                  <MiniStat label="Strategy Minds" value={mindsetLabel(buyLead.strategyMindset)} tone={mindsetTone(buyLead.strategyMindset.stance)} />
                   <MiniStat label="Hold" value={buyLead.holdingPeriod.expectedHold} tone="amber" />
                 </div>
               </>
@@ -4246,6 +4267,17 @@ function tickerAction(signal: TradeSignal, lead?: BuyLead, buyNow?: BuyNowSignal
   return { label: "HOLD", className: "bg-slate-500/20 text-slate-300" };
 }
 
+function mindsetLabel(mindset: { score: number; stance: string; alignment: number }) {
+  return `${mindset.score}/100 ${mindset.stance.replace("-", " ")} (${mindset.alignment}%)`;
+}
+
+function mindsetTone(stance: string): "green" | "red" | "amber" | "blue" | "plain" {
+  if (stance === "buy-watch") return "green";
+  if (stance === "sell-watch" || stance === "risk-off") return "red";
+  if (stance === "hold") return "amber";
+  return "plain";
+}
+
 function SymbolSparkline({
   symbol,
   price,
@@ -4405,6 +4437,7 @@ function BuyLeadCard({ lead, rank }: { lead: BuyLead; rank: number }) {
           <MiniStat label="Stop" value={formatUsd(lead.stop)} tone="amber" />
           <MiniStat label="Target" value={formatUsd(lead.target)} tone="blue" />
           <MiniStat label="Score" value={`${lead.confidence}`} tone={lead.confidence >= 60 ? "green" : "plain"} />
+          <MiniStat label="Strategy Minds" value={mindsetLabel(lead.strategyMindset)} tone={mindsetTone(lead.strategyMindset.stance)} />
           <MiniStat label="Horizon" value={lead.holdingPeriod.label} tone="amber" />
           <MiniStat label="Hold" value={hold} tone="blue" />
         </div>
@@ -4449,6 +4482,7 @@ function SignalCard({ signal }: { signal: TradeSignal }) {
         <MiniStat label="Quality" value={`${signal.quality} / ${signal.confidence}`} tone="blue" />
         <MiniStat label="Invalidation" value={formatUsd(signal.invalidation)} tone="amber" />
         <MiniStat label="R/R" value={`${signal.rewardRisk}R`} tone={signal.rewardRisk >= 1.5 ? "green" : "red"} />
+        <MiniStat label="Strategy Minds" value={mindsetLabel(signal.strategyMindset)} tone={mindsetTone(signal.strategyMindset.stance)} />
         <MiniStat label="Horizon" value={signal.holdingPeriod.label} tone="amber" />
         <MiniStat label="Hold" value={signal.holdingPeriod.expectedHold} tone="blue" />
       </div>
@@ -4457,6 +4491,9 @@ function SignalCard({ signal }: { signal: TradeSignal }) {
         <span className="rounded-sm bg-black/20 px-2 py-1 text-xs text-slate-200">{signal.setup}</span>
       </div>
       <p className="mt-3 text-sm leading-6 text-slate-300">{signal.reason}</p>
+      <div className="mt-3 rounded-sm bg-black/20 p-2 text-xs leading-5 text-slate-300">
+        Strategy minds: {signal.strategyMindset.summary}
+      </div>
       {signal.confirmations.length > 0 && (
         <div className="mt-3 text-xs leading-5 text-emerald-200">
           Confirmed: {signal.confirmations.join(", ")}

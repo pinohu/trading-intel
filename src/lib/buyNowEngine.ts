@@ -1,5 +1,6 @@
 import { buildBuyTradeTicket, type TradeTicket } from "@/lib/tradeTicket";
 import { generateBuyLeads, type BuyLead, type SignalQuote } from "@/lib/signalEngine";
+import type { TradingMindConsensus } from "@/lib/tradingMinds";
 
 export type BuyNowSignal = {
   symbol: string;
@@ -31,6 +32,7 @@ export type BuyNowSignal = {
   marketStatus?: string;
   reasons: string[];
   warnings: string[];
+  strategyMindset: TradingMindConsensus;
   ticket: TradeTicket;
   generatedAt: string;
 };
@@ -55,6 +57,7 @@ export type BlockedBuyNowSignal = {
   dataQuality: SignalQuote["quality"];
   blockers: string[];
   reasons: string[];
+  strategyMindset: TradingMindConsensus;
 };
 
 export type BuyNowResult = {
@@ -139,6 +142,7 @@ export function generateBuyNowSignals({
           `The planned loss is capped near ${money(ticket.maxLoss)} before any trade is considered.`,
         ],
         warnings: lead.warnings,
+        strategyMindset: lead.strategyMindset,
         ticket,
         generatedAt,
       });
@@ -165,6 +169,7 @@ export function generateBuyNowSignals({
       dataQuality: quote.quality,
       blockers,
       reasons: lead.simpleWhy.slice(0, 2),
+      strategyMindset: lead.strategyMindset,
     });
   });
 

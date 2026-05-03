@@ -103,7 +103,8 @@ describe("fusionAlpha", () => {
 
     expect(predictions[0].symbol).toBe("NVDA");
     expect(predictions[0].engineFindings).toHaveLength(engineCapabilities.length);
-    expect(predictions[0].algorithmFindings).toHaveLength(6);
+    expect(predictions[0].algorithmFindings).toHaveLength(7);
+    expect(predictions[0].algorithmFindings.some((finding) => finding.key === "legendary-strategy-minds")).toBe(true);
     expect(predictions[0].score).toBeGreaterThan(65);
     expect(predictions[0].operatorAction).toContain("Paper candidate");
     expect(predictions[0].forecast.projectedPnl).toBeGreaterThan(0);

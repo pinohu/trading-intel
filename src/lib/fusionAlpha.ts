@@ -504,6 +504,7 @@ function buildAlgorithmFindings(score: AlgorithmCouncilScore | undefined, signal
     algorithmFinding("piotroski", "Piotroski F-score", averageFactor(score, ["Quality", "Profitability"])),
     algorithmFinding("beneish-sloan", "Beneish/Sloan accounting risk", averageFactor(score, ["Accounting Risk"])),
     algorithmFinding("value-momentum-everywhere", "Value + momentum everywhere", average([averageFactor(score, ["Value"]), averageFactor(score, ["Momentum / Tape"], signalScore(signal))])),
+    algorithmFinding("legendary-strategy-minds", "Legendary strategy minds", signal?.strategyMindset.score ?? 50),
     algorithmFinding("risk-first-portfolio", "Risk-first portfolio construction", average([averageFactor(score, ["Data Quality / Risk Gate"], signal?.dataFresh ? 75 : 25), signal?.rewardRisk ? clamp(signal.rewardRisk * 30, 20, 90) : 50])),
   ];
 }
