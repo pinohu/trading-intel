@@ -4,7 +4,7 @@ Live production URL:
 
 https://trading-intel-platform.vercel.app
 
-This is a mobile-first trading research and intelligence cockpit. It is built for research, watchlists, paper-trade planning, broker-gated execution, and risk discipline. It does not place autonomous live trades.
+This is a mobile-first trading research and intelligence cockpit. It is built for research, watchlists, paper-trade planning, broker-gated execution, and risk discipline. Live-money agent orders are available only when explicitly armed by an operator and acknowledged per order.
 
 ## Current Capabilities
 
@@ -24,7 +24,7 @@ This is a mobile-first trading research and intelligence cockpit. It is built fo
 - Durable `fundamental_snapshots` and `factor_snapshots` tables with SEC filing-period provenance for model-review history and future outcome tracking
 - Institutional Gates dashboard covering proof validation, control state, worker readiness, and compliance boundary
 - `/api/institutional/readiness`, `/api/proof/validation`, `/api/control-plane`, `/api/worker/readiness`, and `/api/compliance/readiness` for production operating checks
-- Execution control plane with kill switch, paper/live permission flags, max open orders, max per-symbol orders, and daily/single-order notional caps
+- Execution control plane with kill switch, paper/live permission flags, a separate live-agent arm, max open orders, max per-symbol orders, and daily/single-order notional caps
 - Broker order placement now passes through pre-trade control checks before Alpaca submission
 - Broker reconciliation endpoint at `/api/broker/reconcile` that stores REST order/activity reconciliation events and documents the Alpaca `trade_updates` streaming rail
 - Catalyst engine at `/api/catalysts` combining SEC recent filings, market headlines, macro events, and commodity event calendars
@@ -39,7 +39,7 @@ This is a mobile-first trading research and intelligence cockpit. It is built fo
 - External worker bridge at `/api/research-workers/run` and `/api/research-workers/readiness` for OpenBB, LEAN, Backtrader, vectorbt, NautilusTrader, FinGPT, FinRL, and Jesse workers outside Vercel
 - Native TradingAgents integration at `/api/tradingagents/analyze` for in-code market/fundamental/bull/bear/trader/risk/portfolio-manager debate persisted to research notes when Postgres is configured
 - Analyst chat can use `LOCAL_LLM_BASE_URL` with a free/self-hosted OpenAI-compatible model before paid OpenAI models, then deterministic cockpit fallback
-- Supervised agent-trading rail at `/api/agent-trader/policy`, `/api/agent-trader/proposals`, and `/api/agent-trader/execute`; agents can draft orders and optionally paper-trade, while live-money autonomy is blocked
+- Supervised agent-trading rail at `/api/agent-trader/policy`, `/api/agent-trader/proposals`, and `/api/agent-trader/execute`; agents can draft orders, paper-trade, and submit live-money orders only when live-agent gates and per-order acknowledgement pass
 - Options volatility context at `/api/options/volatility` using Alpaca contracts/snapshots where available, with OPRA/indicative/contract-only quality labels
 - Walk-forward holdout metadata in new backtest runs, plus persisted model-validation reports
 - Persistent worker scripts for market scanning, proof/outcome evaluation, and Alpaca trade-update reconciliation in `scripts/`

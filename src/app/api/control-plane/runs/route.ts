@@ -47,7 +47,7 @@ export async function GET(request: Request) {
     source: "control-plane-v1",
     latest: runs[0] ?? null,
     runs,
-    advisory: "Control-plane runs coordinate research, thesis, backtest, risk review, paper execution, and manual live gating.",
+    advisory: "Control-plane runs coordinate research, thesis, backtest, risk review, paper execution, and operator-armed live-agent gating.",
   });
 }
 
@@ -137,7 +137,7 @@ export async function POST(request: Request) {
         fusionError: fusion.error,
         proposalError: agent.error,
       },
-      advisory: "Paper execution may be automated only after risk approval. Live execution remains manual and cannot be triggered by this run.",
+      advisory: "Paper execution may be automated only after risk approval. Live-agent execution can be operator-triggered only when live-agent gates and acknowledgement pass.",
     },
     { status: fusionResponse.ok ? 201 : fusionResponse.status },
   );

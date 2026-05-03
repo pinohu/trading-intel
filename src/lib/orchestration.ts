@@ -49,7 +49,7 @@ export type OrchestrationRun = {
   stages: OrchestrationStage[];
   decision: OrchestrationDecision;
   governance: {
-    liveAutonomyAllowed: false;
+    liveAutonomyAllowed: boolean;
     liveRequiresManualApproval: true;
     noLiveWithoutRiskApproval: true;
     referenceReportsApplied: string[];
@@ -93,7 +93,7 @@ export function buildOrchestrationRun({
   const backtest = prediction ? backtestResults.find((item) => item.symbol === prediction.symbol) : null;
   const risk = evaluateRiskStage({ prediction, proposal, paperPreTrade, validatedPaperOrder });
   const paper = evaluatePaperDecision({ riskApproved: risk.approved, proposal, policy, paperPreTrade });
-  const live = evaluateLiveDecision({ riskApproved: risk.approved });
+  const live = evaluateLiveDecision({ riskApproved: risk.approved, liveAutonomyAllowed: Boolean(policy?.liveAutonomyAllowed) });
 
   const stages = [
     researchStage(predictions, provider),
@@ -125,7 +125,7 @@ export function buildOrchestrationRun({
       nextAction: nextAction({ prediction, riskApproved: risk.approved, paper, live }),
     },
     governance: {
-      liveAutonomyAllowed: false,
+      liveAutonomyAllowed: Boolean(policy?.liveAutonomyAllowed),
       liveRequiresManualApproval: true,
       noLiveWithoutRiskApproval: true,
       referenceReportsApplied: referenceReportLessons.map((lesson) => lesson.title),
@@ -163,7 +163,7 @@ export function evaluateLiveDecision({
     status: "ready",
     riskApproved: true,
     manualApprovalRequired: true,
-    reason: "Risk approved. Manual approval remains required before live execution.",
+    reason: "Risk approved. Live-agent rail is armed, but an operator acknowledgement remains required before real-money submission.",
   };
 }
 
@@ -363,7 +363,9 @@ function liveStage(live: OrchestrationExecutionGate): OrchestrationStage {
     owner: "Broker rail",
     status: gateToStageStatus(live),
     summary: live.reason,
-    evidence: ["Live autonomy is disabled in V1.", "Manual acknowledgement and broker controls remain mandatory."],
+    evidence: live.status === "ready"
+      ? ["Live-agent trading is armed for operator-triggered requests.", "Manual acknowledgement and broker controls remain mandatory."]
+      : ["Live-agent trading is locked until explicitly armed.", "Manual acknowledgement and broker controls remain mandatory."],
   };
 }
 
@@ -403,8 +405,13 @@ function nextAction({
   if (!prediction) return "Run research again with a fresh watchlist.";
   if (prediction.direction !== "buy") return `${prediction.symbol}: no buy action. Review sell/avoid evidence only.`;
   if (!riskApproved) return `${prediction.symbol}: fix risk blockers before paper or live execution.`;
-  if (paper.status === "ready") return `${prediction.symbol}: paper execution can run; live remains manual only.`;
-  if (live.status === "approval-required") return `${prediction.symbol}: risk approved, but route through manual live controls only.`;
+  if (live.status === "ready") {
+    return paper.status === "ready"
+      ? `${prediction.symbol}: paper execution can run; live agent can submit only after operator acknowledgement.`
+      : `${prediction.symbol}: live agent can submit only after operator acknowledgement; paper gate is ${paper.status}.`;
+  }
+  if (paper.status === "ready") return `${prediction.symbol}: paper execution can run; live agent remains locked until armed.`;
+  if (live.status === "approval-required") return `${prediction.symbol}: risk approved, but live-agent controls are not fully armed.`;
   return `${prediction.symbol}: review broker/paper automation gates.`;
 }
 

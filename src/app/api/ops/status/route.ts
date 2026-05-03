@@ -40,6 +40,7 @@ export async function GET() {
     { key: "aitable", label: "AITable operations mirror", ready: aitable.mirrorReady, required: false },
     { key: "paperTrading", label: "Paper broker execution", ready: broker.paper.orderPlacementReady, required: true },
     { key: "liveTrading", label: "Live broker execution", ready: broker.live.orderPlacementReady, required: false },
+    { key: "liveAgentTrading", label: "Live agent trading arm", ready: broker.live.orderPlacementReady && controls.allowLiveAgentOrders, required: false },
     { key: "outcomes", label: "Signal outcome tracker", ready: database.schemaReady, required: true },
     { key: "backtests", label: "Backtest evidence storage", ready: database.schemaReady, required: true },
     { key: "risk", label: "Portfolio risk snapshots", ready: database.schemaReady && broker.paper.credentialsConfigured, required: true },
@@ -77,6 +78,7 @@ export async function GET() {
     remainingLimits: [
       liveData.licensedSip ? "" : "Stocks are using Alpaca IEX/public feeds unless SIP/Polygon-style licensed data is added.",
       broker.live.orderPlacementReady ? "" : "Live execution remains locked until live Alpaca keys, live flag, acknowledgement, and audit DB are ready.",
+      controls.allowLiveAgentOrders ? "" : "Live agent execution remains locked until CONTROL_ALLOW_LIVE_AGENT_ORDERS=true or control-plane allowLiveAgentOrders is armed.",
       alerts.webhook || alerts.sms || alerts.email ? "" : "Free browser alerts are active; off-device SMS/email still need webhook, Twilio, or Resend only if you want those optional channels.",
       "Commodity futures still require a licensed futures broker/feed. The app can execute commodity ETFs through Alpaca, not CME futures contracts.",
     ].filter(Boolean),

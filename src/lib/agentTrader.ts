@@ -1,5 +1,6 @@
 import { brokerConfig, type BrokerMode, type BrokerOrderPayload } from "@/lib/broker";
 import type { BuyNowSignal } from "@/lib/buyNowEngine";
+import type { TradingControlState } from "@/lib/executionControl";
 import { cleanSecret } from "@/lib/security";
 import type { TradeTicket } from "@/lib/tradeTicket";
 
@@ -7,11 +8,14 @@ export type AgentTradingPolicy = {
   enabled: boolean;
   paperAutomationEnabled: boolean;
   paperAutomationReady: boolean;
-  liveAutonomyAllowed: false;
+  liveAutomationEnabled: boolean;
+  liveAutomationReady: boolean;
+  liveAutonomyAllowed: boolean;
   liveRequiresManualApproval: true;
   minConfidence: number;
   maxProposals: number;
   maxPaperOrdersPerRun: number;
+  maxLiveOrdersPerRun: number;
   missing: string[];
   restrictions: string[];
 };
@@ -21,7 +25,7 @@ export type AgentTradeProposal = {
   symbol: string;
   mode: BrokerMode;
   action: "prepare-buy";
-  status: "paper-ready" | "approval-required" | "blocked";
+  status: "paper-ready" | "live-ready" | "approval-required" | "blocked";
   confidence: number;
   orderDraft: BrokerOrderPayload;
   ticket: TradeTicket;
@@ -30,38 +34,72 @@ export type AgentTradeProposal = {
   createdAt: string;
 };
 
-export function buildAgentTradingPolicy(mode: BrokerMode = "paper"): AgentTradingPolicy {
+export function buildAgentTradingPolicy(
+  mode: BrokerMode = "paper",
+  options: {
+    controls?: Pick<TradingControlState, "killSwitch" | "allowLiveOrders" | "allowLiveAgentOrders"> | null;
+    liveOrderPlacementReady?: boolean;
+  } = {},
+): AgentTradingPolicy {
   const config = brokerConfig(mode);
   const enabled = cleanSecret(process.env.AGENT_TRADING_ENABLED) !== "false";
   const paperAutomationEnabled = cleanSecret(process.env.AGENT_PAPER_TRADING_ENABLED) !== "false";
+  const liveAutomationEnabled = cleanSecret(process.env.AGENT_LIVE_TRADING_ENABLED) === "true";
   const minConfidence = parseEnvNumber("AGENT_MIN_CONFIDENCE", 75, 1, 100);
   const maxProposals = Math.round(parseEnvNumber("AGENT_MAX_PROPOSALS", 5, 1, 20));
   const maxPaperOrdersPerRun = Math.round(parseEnvNumber("AGENT_MAX_PAPER_ORDERS_PER_RUN", 1, 1, 5));
+  const maxLiveOrdersPerRun = Math.round(parseEnvNumber("AGENT_MAX_LIVE_ORDERS_PER_RUN", 1, 1, 3));
   const paperConfig = brokerConfig("paper");
+  const liveConfig = brokerConfig("live");
+  const liveOrderPlacementReady = options.liveOrderPlacementReady ?? (
+    liveConfig.executionEnabled &&
+    liveConfig.credentialsConfigured &&
+    liveConfig.liveTradingEnabled &&
+    liveConfig.liveAckConfigured
+  );
+  const controlsAllowLiveOrders = options.controls?.allowLiveOrders ?? cleanEnvFlag(process.env.CONTROL_ALLOW_LIVE_ORDERS) ?? true;
+  const controlsAllowLiveAgentOrders = options.controls?.allowLiveAgentOrders ?? cleanEnvFlag(process.env.CONTROL_ALLOW_LIVE_AGENT_ORDERS) ?? false;
+  const killSwitchActive = options.controls?.killSwitch ?? cleanSecret(process.env.TRADING_KILL_SWITCH) === "true";
   const paperAutomationReady = enabled && paperAutomationEnabled && paperConfig.executionEnabled && paperConfig.credentialsConfigured;
+  const liveAutomationReady =
+    enabled &&
+    liveAutomationEnabled &&
+    liveOrderPlacementReady &&
+    controlsAllowLiveOrders &&
+    controlsAllowLiveAgentOrders &&
+    !killSwitchActive;
 
   return {
     enabled,
     paperAutomationEnabled,
     paperAutomationReady,
-    liveAutonomyAllowed: false,
+    liveAutomationEnabled,
+    liveAutomationReady,
+    liveAutonomyAllowed: liveAutomationReady,
     liveRequiresManualApproval: true,
     minConfidence,
     maxProposals,
     maxPaperOrdersPerRun,
+    maxLiveOrdersPerRun,
     missing: [
       !enabled ? "AGENT_TRADING_ENABLED is set to false" : "",
       !paperAutomationEnabled ? "AGENT_PAPER_TRADING_ENABLED is set to false" : "",
       !paperConfig.executionEnabled ? "BROKER_EXECUTION_ENABLED=true" : "",
       !paperConfig.credentialsConfigured ? "Alpaca paper credentials" : "",
+      !liveAutomationEnabled ? "AGENT_LIVE_TRADING_ENABLED=true to arm live agent orders" : "",
+      !liveOrderPlacementReady ? "Live broker rail ready: live keys, acknowledgement, audit DB, and BROKER_EXECUTION_ENABLED=true" : "",
+      !controlsAllowLiveOrders ? "CONTROL_ALLOW_LIVE_ORDERS=true" : "",
+      !controlsAllowLiveAgentOrders ? "CONTROL_ALLOW_LIVE_AGENT_ORDERS=true or control-plane allowLiveAgentOrders=true" : "",
+      killSwitchActive ? "TRADING_KILL_SWITCH=false" : "",
     ].filter(Boolean),
     restrictions: [
-      "Agents cannot autonomously place live-money orders.",
+      "Live-money agent orders require a logged-in operator request, matching live acknowledgement, audit storage, and pre-trade controls.",
       "Agents may auto-submit paper orders when Alpaca paper execution is ready.",
-      "Live orders require a logged-in human, the live acknowledgement phrase, and the existing broker order route.",
+      "Cron/bearer automation cannot place live-money agent orders.",
       "Only limit or bracket-limit stock orders are drafted.",
       `Minimum agent confidence is ${minConfidence}.`,
       `At most ${maxPaperOrdersPerRun} paper order(s) per agent run.`,
+      `At most ${maxLiveOrdersPerRun} live order(s) per operator-triggered agent run.`,
       `Current broker mode checked for this policy: ${config.mode}.`,
     ],
   };
@@ -73,12 +111,14 @@ export function buildAgentTradeProposals({
   mode,
   minConfidence,
   maxProposals,
+  liveAutonomyAllowed = false,
 }: {
   buyNow: BuyNowSignal[];
   tickets: TradeTicket[];
   mode: BrokerMode;
   minConfidence: number;
   maxProposals: number;
+  liveAutonomyAllowed?: boolean;
 }): AgentTradeProposal[] {
   const ticketBySymbol = new Map(tickets.map((ticket) => [ticket.symbol, ticket]));
   const createdAt = new Date().toISOString();
@@ -90,14 +130,22 @@ export function buildAgentTradeProposals({
       const orderDraft = orderDraftFromTicket(ticket);
       const blockers = [
         !ticket.tradeable ? "Trade ticket is not marked tradeable." : "",
-        mode === "live" ? "Live-money agent autonomy is blocked. Human approval is required." : "",
+        mode === "live" && !liveAutonomyAllowed ? "Live-money agent trading is not armed. Operator acknowledgement and live-agent controls are required." : "",
       ].filter(Boolean);
+      const status =
+        blockers.length > 0
+          ? ticket.tradeable && mode === "live"
+            ? "approval-required"
+            : "blocked"
+          : mode === "live"
+            ? "live-ready"
+            : "paper-ready";
       return {
         id: `agent-${signal.symbol}-${Math.round(signal.entry * 100)}-${signal.confidence}`,
         symbol: signal.symbol,
         mode,
         action: "prepare-buy",
-        status: blockers.length ? (mode === "live" ? "approval-required" : "blocked") : "paper-ready",
+        status,
         confidence: signal.confidence,
         orderDraft,
         ticket,
@@ -141,4 +189,11 @@ function parseEnvNumber(key: string, fallback: number, min: number, max: number)
   const parsed = Number(process.env[key]);
   if (!Number.isFinite(parsed)) return fallback;
   return Math.max(min, Math.min(max, parsed));
+}
+
+function cleanEnvFlag(value: string | undefined) {
+  const clean = cleanSecret(value)?.toLowerCase();
+  if (clean === "true") return true;
+  if (clean === "false") return false;
+  return null;
 }

@@ -60,13 +60,16 @@ const policy: AgentTradingPolicy = {
   enabled: true,
   paperAutomationEnabled: true,
   paperAutomationReady: true,
+  liveAutomationEnabled: false,
+  liveAutomationReady: false,
   liveAutonomyAllowed: false,
   liveRequiresManualApproval: true,
   minConfidence: 75,
   maxProposals: 5,
   maxPaperOrdersPerRun: 1,
+  maxLiveOrdersPerRun: 1,
   missing: [],
-  restrictions: ["Agents cannot autonomously place live-money orders."],
+  restrictions: ["Live-money agent orders require a logged-in operator request."],
 };
 
 const preTrade: PreTradeControlResult = {
@@ -151,12 +154,20 @@ describe("orchestration", () => {
     expect(gate.reason).toContain("risk reviewer has not approved");
   });
 
-  it("keeps live execution manual even after risk approval", () => {
+  it("keeps live execution gated when live-agent trading is not armed", () => {
     const gate = evaluateLiveDecision({ riskApproved: true });
 
     expect(gate.status).toBe("approval-required");
     expect(gate.riskApproved).toBe(true);
     expect(gate.reason).toContain("manual broker rail");
+  });
+
+  it("marks live execution ready when risk and live-agent gates are armed", () => {
+    const gate = evaluateLiveDecision({ riskApproved: true, liveAutonomyAllowed: true });
+
+    expect(gate.status).toBe("ready");
+    expect(gate.manualApprovalRequired).toBe(true);
+    expect(gate.reason).toContain("operator acknowledgement");
   });
 
   it("creates a ready-for-paper run while leaving live gated", () => {

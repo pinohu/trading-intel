@@ -282,6 +282,7 @@ type InstitutionalReadinessApi = {
     killSwitch: boolean;
     allowPaperOrders: boolean;
     allowLiveOrders: boolean;
+    allowLiveAgentOrders: boolean;
     maxOpenOrders: number;
     maxOpenOrdersPerSymbol: number;
     maxDailySubmittedNotional: number;
@@ -397,11 +398,14 @@ type AgentTraderApi = {
     enabled: boolean;
     paperAutomationEnabled: boolean;
     paperAutomationReady: boolean;
-    liveAutonomyAllowed: false;
+    liveAutomationEnabled: boolean;
+    liveAutomationReady: boolean;
+    liveAutonomyAllowed: boolean;
     liveRequiresManualApproval: true;
     minConfidence: number;
     maxProposals: number;
     maxPaperOrdersPerRun: number;
+    maxLiveOrdersPerRun: number;
     missing: string[];
     restrictions: string[];
   };
@@ -409,7 +413,7 @@ type AgentTraderApi = {
     id: string;
     symbol: string;
     mode: BrokerMode;
-    status: "paper-ready" | "approval-required" | "blocked";
+    status: "paper-ready" | "live-ready" | "approval-required" | "blocked";
     confidence: number;
     orderDraft: {
       symbol: string;
@@ -1377,6 +1381,62 @@ export default function Home() {
     }
   }
 
+  async function runLiveAgent(symbol?: string) {
+    const acknowledgement = window.prompt(
+      "This submits a real-money live broker order if all agent, broker, audit, and pre-trade gates pass. Enter the live execution acknowledgement phrase to continue.",
+    );
+    if (!acknowledgement) {
+      setAgentMessage("Live agent submission canceled before acknowledgement.");
+      return;
+    }
+
+    const confirmed = window.confirm("Submit this live-money agent order now?");
+    if (!confirmed) {
+      setAgentMessage("Live agent submission canceled before order request.");
+      return;
+    }
+
+    setAgentExecuting(true);
+    setAgentMessage("Submitting live-money agent order through armed controls.");
+    try {
+      const response = await fetch(`/api/agent-trader/execute?mode=live`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          symbol,
+          symbols: watchlist.join(","),
+          provider,
+          accountSize,
+          riskPct: draft.risk,
+          maxDailyLossPct,
+          liveAcknowledgement: acknowledgement,
+          confirmLiveAgentTrading: true,
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok || !payload.ok) {
+        setAgentMessage(payload.error ?? "Live agent execution did not run.");
+        if (payload.policy || payload.proposal) {
+          setAgentTrader((current) => ({
+            ok: false,
+            mode: "live",
+            policy: payload.policy ?? current?.policy,
+            proposals: payload.proposal ? [payload.proposal] : current?.proposals,
+            blocked: payload.blocked ?? current?.blocked,
+            error: payload.error,
+          }));
+        }
+        return;
+      }
+      setAgentMessage(`LIVE agent submitted ${payload.proposal?.symbol ?? "the selected"} bracket limit order. Broker id: ${payload.brokerOrder?.id ?? "pending"}`);
+      void refresh();
+    } catch {
+      setAgentMessage("Live agent execution request failed.");
+    } finally {
+      setAgentExecuting(false);
+    }
+  }
+
   async function placeBrokerOrder(ticket: TradeTicket | null, modeOverride?: BrokerMode) {
     if (!ticket) return;
     const requestedMode = modeOverride ?? brokerMode;
@@ -2157,11 +2217,11 @@ export default function Home() {
               <div>
                 <SectionTitle icon={Bot} title="AI Agent Trading" />
                 <p className="mt-1 text-sm leading-6 text-slate-400">
-                  Agents can submit paper orders when Alpaca paper execution is ready. Manual live orders go through the Broker Execution Rail.
+                  Agents can submit paper orders when Alpaca paper execution is ready. Live-money agent orders require explicit arming and per-order acknowledgement.
                 </p>
               </div>
               <div className="rounded-md border border-white/10 bg-black/20 px-3 py-2 text-xs text-slate-400">
-                {agentTrader?.policy?.liveAutonomyAllowed ? "Live agent autonomy on" : "Manual live orders only"}
+                {agentTrader?.policy?.liveAutonomyAllowed ? "Live agent armed" : "Live agent locked"}
               </div>
             </div>
             <AgentTradingPanel
@@ -2169,6 +2229,7 @@ export default function Home() {
               message={agentMessage}
               executing={agentExecuting}
               onRunPaperAgent={(symbol) => void runPaperAgent(symbol)}
+              onRunLiveAgent={(symbol) => void runLiveAgent(symbol)}
             />
           </Panel>
 
@@ -4811,6 +4872,7 @@ function InstitutionalReadinessPanel({ readiness }: { readiness: InstitutionalRe
           <div className="mt-3 grid gap-2">
             <StatusLine label="Paper orders" value={readiness.controls?.allowPaperOrders ? "Allowed" : "Blocked"} ready={Boolean(readiness.controls?.allowPaperOrders)} />
             <StatusLine label="Live orders" value={readiness.controls?.allowLiveOrders ? "Allowed" : "Blocked"} ready={Boolean(readiness.controls?.allowLiveOrders)} />
+            <StatusLine label="Live agent" value={readiness.controls?.allowLiveAgentOrders ? "Armed" : "Locked"} ready={Boolean(readiness.controls?.allowLiveAgentOrders)} />
             <StatusLine label="Max open" value={`${readiness.controls?.maxOpenOrders ?? "N/A"}`} ready />
             <StatusLine label="Daily notional" value={`${readiness.controls?.maxDailySubmittedNotional ?? "N/A"}`} ready />
           </div>
@@ -4833,11 +4895,13 @@ function AgentTradingPanel({
   message,
   executing,
   onRunPaperAgent,
+  onRunLiveAgent,
 }: {
   agent: AgentTraderApi | null;
   message: string;
   executing: boolean;
   onRunPaperAgent: (symbol?: string) => void;
+  onRunLiveAgent: (symbol?: string) => void;
 }) {
   if (!agent) {
     return (
@@ -4850,18 +4914,19 @@ function AgentTradingPanel({
   const policy = agent.policy;
   const proposals = agent.proposals ?? [];
   const top = proposals[0];
+  const liveReady = Boolean(policy?.liveAutonomyAllowed && top?.status === "live-ready");
   return (
     <div className="mt-4 space-y-3">
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
         <MiniStat label="Agent Trading" value={policy?.enabled ? "Enabled" : "Locked"} tone={policy?.enabled ? "green" : "amber"} />
         <MiniStat label="Paper Agent" value={policy?.paperAutomationReady ? "Ready" : "Locked"} tone={policy?.paperAutomationReady ? "green" : "amber"} />
-        <MiniStat label="Live Orders" value="Manual rail" tone="amber" />
+        <MiniStat label="Live Agent" value={policy?.liveAutonomyAllowed ? "Armed" : policy?.liveAutomationEnabled ? "Gated" : "Off"} tone={policy?.liveAutonomyAllowed ? "green" : "amber"} />
         <MiniStat label="Min Trust" value={`${policy?.minConfidence ?? 75}`} tone="blue" />
         <MiniStat label="Proposals" value={`${proposals.length}`} tone={proposals.length ? "green" : "plain"} />
       </div>
 
       <div className="rounded-md border border-amber-300/20 bg-amber-300/10 p-3 text-sm leading-6 text-amber-100">
-        {message} Agents may help prepare orders; live-money submission uses the manual broker rail.
+        {message} Real-money agent submission requires live-agent arming, a logged-in operator, the live acknowledgement phrase, audit storage, and pre-trade controls.
       </div>
 
       {policy?.missing && policy.missing.length > 0 && (
@@ -4880,7 +4945,7 @@ function AgentTradingPanel({
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-mono text-2xl font-semibold text-white">{top.symbol}</span>
-                <span className={`rounded-sm px-2 py-1 text-xs font-bold uppercase ${top.status === "paper-ready" ? "bg-emerald-300 text-slate-950" : "bg-amber-300/20 text-amber-100"}`}>
+                <span className={`rounded-sm px-2 py-1 text-xs font-bold uppercase ${top.status === "paper-ready" || top.status === "live-ready" ? "bg-emerald-300 text-slate-950" : "bg-amber-300/20 text-amber-100"}`}>
                   {top.status}
                 </span>
               </div>
@@ -4888,14 +4953,24 @@ function AgentTradingPanel({
                 Agent draft: buy {top.orderDraft.qty} at {formatUsd(top.orderDraft.limitPrice)} with stop {formatUsd(top.orderDraft.stopLossStopPrice ?? top.ticket.stop)} and target {formatUsd(top.orderDraft.takeProfitLimitPrice ?? top.ticket.target)}.
               </p>
             </div>
-            <button
-              onClick={() => onRunPaperAgent(top.symbol)}
-              disabled={executing || !policy?.paperAutomationReady || top.status !== "paper-ready"}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-emerald-300 px-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-200 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
-            >
-              <Bot className={`h-4 w-4 ${executing ? "animate-spin" : ""}`} />
-              Paper Trade With Agent
-            </button>
+            <div className="flex flex-col gap-2 sm:w-64">
+              <button
+                onClick={() => onRunPaperAgent(top.symbol)}
+                disabled={executing || !policy?.paperAutomationReady || top.status !== "paper-ready"}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-emerald-300 px-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-200 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
+              >
+                <Bot className={`h-4 w-4 ${executing ? "animate-spin" : ""}`} />
+                Paper Trade With Agent
+              </button>
+              <button
+                onClick={() => onRunLiveAgent(top.symbol)}
+                disabled={executing || !liveReady}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-rose-300/40 bg-rose-300 px-3 text-sm font-semibold text-slate-950 transition hover:bg-rose-200 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-slate-700 disabled:text-slate-400"
+              >
+                <ShieldCheck className={`h-4 w-4 ${executing ? "animate-pulse" : ""}`} />
+                Submit Live With Agent
+              </button>
+            </div>
           </div>
           <div className="mt-3 grid gap-2 sm:grid-cols-3 lg:grid-cols-6">
             <MiniStat label="Confidence" value={`${top.confidence}`} tone={top.confidence >= 80 ? "green" : "blue"} />

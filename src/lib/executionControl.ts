@@ -6,6 +6,7 @@ export type TradingControlState = {
   killSwitch: boolean;
   allowPaperOrders: boolean;
   allowLiveOrders: boolean;
+  allowLiveAgentOrders: boolean;
   maxOpenOrders: number;
   maxOpenOrdersPerSymbol: number;
   maxDailySubmittedNotional: number;
@@ -28,12 +29,13 @@ export const defaultTradingControlState: TradingControlState = {
   killSwitch: false,
   allowPaperOrders: true,
   allowLiveOrders: true,
+  allowLiveAgentOrders: false,
   maxOpenOrders: 10,
   maxOpenOrdersPerSymbol: 2,
   maxDailySubmittedNotional: 10_000,
   maxSingleOrderNotional: 5_000,
   allowedAssetClasses: ["stock", "crypto"],
-  notes: "Default controls allow authenticated manual live orders when broker credentials, acknowledgement, audit storage, and pre-trade limits pass.",
+  notes: "Default controls allow authenticated manual live orders when broker credentials, acknowledgement, audit storage, and pre-trade limits pass. Live agent orders stay off until explicitly armed.",
 };
 
 export async function getTradingControlState(): Promise<TradingControlState> {
@@ -102,10 +104,12 @@ export async function evaluatePreTradeControls({
 
 function envBackedControlState(state: TradingControlState) {
   const allowLiveOrders = cleanEnvFlag(process.env.CONTROL_ALLOW_LIVE_ORDERS);
+  const allowLiveAgentOrders = cleanEnvFlag(process.env.CONTROL_ALLOW_LIVE_AGENT_ORDERS);
   return sanitizeControlState({
     ...state,
     killSwitch: process.env.TRADING_KILL_SWITCH === "true" || state.killSwitch,
     allowLiveOrders: allowLiveOrders ?? state.allowLiveOrders,
+    allowLiveAgentOrders: allowLiveAgentOrders ?? state.allowLiveAgentOrders,
   });
 }
 
@@ -121,6 +125,7 @@ function sanitizeControlState(state: TradingControlState): TradingControlState {
     killSwitch: Boolean(state.killSwitch),
     allowPaperOrders: state.allowPaperOrders !== false,
     allowLiveOrders: Boolean(state.allowLiveOrders),
+    allowLiveAgentOrders: Boolean(state.allowLiveAgentOrders),
     maxOpenOrders: boundedNumber(state.maxOpenOrders, 1, 100, defaultTradingControlState.maxOpenOrders),
     maxOpenOrdersPerSymbol: boundedNumber(state.maxOpenOrdersPerSymbol, 1, 20, defaultTradingControlState.maxOpenOrdersPerSymbol),
     maxDailySubmittedNotional: boundedNumber(state.maxDailySubmittedNotional, 100, 10_000_000, defaultTradingControlState.maxDailySubmittedNotional),

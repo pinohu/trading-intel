@@ -80,7 +80,7 @@ describe("agent trader", () => {
     expect(order.stopLossStopPrice).toBe(97);
   });
 
-  it("requires manual approval for live-mode proposals", () => {
+  it("requires explicit arming for live-mode proposals", () => {
     const [proposal] = buildAgentTradeProposals({
       buyNow: [buyNow],
       tickets: [ticket],
@@ -90,7 +90,21 @@ describe("agent trader", () => {
     });
 
     expect(proposal.status).toBe("approval-required");
-    expect(proposal.blockers.join(" ")).toContain("Human approval");
+    expect(proposal.blockers.join(" ")).toContain("not armed");
+  });
+
+  it("marks live proposals ready when live-agent trading is armed", () => {
+    const [proposal] = buildAgentTradeProposals({
+      buyNow: [buyNow],
+      tickets: [ticket],
+      mode: "live",
+      minConfidence: 75,
+      maxProposals: 5,
+      liveAutonomyAllowed: true,
+    });
+
+    expect(proposal.status).toBe("live-ready");
+    expect(proposal.blockers).toHaveLength(0);
   });
 
   it("filters below-confidence candidates", () => {
@@ -110,5 +124,6 @@ describe("agent trader", () => {
     expect(policy.enabled).toBe(true);
     expect(policy.paperAutomationEnabled).toBe(true);
     expect(policy.liveAutonomyAllowed).toBe(false);
+    expect(policy.liveAutomationEnabled).toBe(false);
   });
 });

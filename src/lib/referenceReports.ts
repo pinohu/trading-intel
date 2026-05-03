@@ -14,7 +14,7 @@ export const referenceReportLessons: ReferenceReportLesson[] = [
     key: "architecture",
     title: "Architecture",
     source: "docs/ARCHITECTURE.md",
-    lesson: "The dashboard is a research and guarded broker-operations cockpit, not an autonomous live-trading system.",
+    lesson: "The dashboard is a research and guarded broker-operations cockpit; real-money agent trading must be explicitly armed, acknowledged, and audited.",
     systemRule: "Every promoted idea must keep data, ticket, proof, broker, and audit boundaries visible.",
     category: "operations",
   },
@@ -23,7 +23,7 @@ export const referenceReportLessons: ReferenceReportLesson[] = [
     title: "Production Trading Operations",
     source: "docs/PRODUCTION_TRADING_OPS.md",
     lesson: "Live orders require broker credentials, live acknowledgement, audit storage, pre-trade controls, and kill-switch clearance.",
-    systemRule: "Live mode stays manual and gated even when paper execution is ready.",
+    systemRule: "Live mode stays gated even when paper execution is ready; agent live orders require live-agent arming plus per-order acknowledgement.",
     category: "execution",
   },
   {
@@ -38,8 +38,8 @@ export const referenceReportLessons: ReferenceReportLesson[] = [
     key: "agent-trading",
     title: "Agent Trading",
     source: "docs/AGENT_TRADING.md",
-    lesson: "Agents may draft or paper-submit orders, but live-money autonomy remains blocked.",
-    systemRule: "Agent output is an input to the visible ticket and manual live broker rail, not a hidden executor.",
+    lesson: "Agents may draft, paper-submit, or submit live-money orders only when the operator arms live-agent controls and acknowledges the exact live order request.",
+    systemRule: "Agent output must stay visible at ticket level and can execute live only through the logged-in, audited, acknowledged broker rail.",
     category: "execution",
   },
   {
@@ -159,7 +159,7 @@ export function executionReferenceChecklist() {
   return [
     `Reward/risk must be at least ${minimumReferenceRewardRisk}R before buy-now promotion.`,
     "Entry trigger, stop, target, unit size, notional size, max loss, and entry signal must be visible.",
-    "Live execution requires manual broker approval, acknowledgement, audit storage, and pre-trade controls.",
+    "Live execution requires live-agent arming when agent-submitted, acknowledgement, audit storage, and pre-trade controls.",
     "Public or stale market data blocks live-quality promotion.",
     "Agent, optimizer, and forecast evidence cannot bypass the ticket or risk reviewer.",
   ];
