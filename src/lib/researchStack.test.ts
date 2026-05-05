@@ -28,6 +28,7 @@ describe("research stack readiness", () => {
     expect(keys).toContain("lean");
     expect(keys).toContain("stocksharp");
     expect(keys).toContain("rqalpha");
+    expect(keys).toContain("freqtrade");
     expect(keys).toContain("jesse");
     expect(keys).toContain("postgres");
   });

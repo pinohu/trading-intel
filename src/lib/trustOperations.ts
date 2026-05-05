@@ -86,8 +86,8 @@ export const trustOperationGaps: TrustOperationGap[] = [
     status: "Live",
     proofStatus: "Live",
     evidenceStandard: "Backtests must disclose trade count, return, max drawdown, profit factor, slippage, fees, and out-of-sample validation.",
-    currentState: "The Quant Lab can run Alpaca historical-bars backtests with slippage, fees, drawdown, validation metadata, SQL storage, and systematic taxonomy pressure for when to escalate to factor, vectorized, event-driven, or live-control proof.",
-    nextAction: "Promote robust strategies into deeper Alphalens/vectorbt/RQAlpha/LEAN/StockSharp worker tests when the systematic map shows a proof lane is missing.",
+    currentState: "The Quant Lab can run Alpaca historical-bars backtests with slippage, fees, drawdown, validation metadata, SQL storage, and systematic taxonomy pressure for when to escalate to factor, vectorized, event-driven, crypto-specific, or live-control proof.",
+    nextAction: "Promote robust strategies into deeper Alphalens/vectorbt/RQAlpha/LEAN/StockSharp/Freqtrade worker tests when the systematic map shows a proof lane is missing.",
     acceptanceCriteria: [
       "Historical runs store assumptions and validation metadata.",
       "Weak sample sizes and high drawdown remain visible blockers.",

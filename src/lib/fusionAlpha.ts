@@ -678,6 +678,40 @@ function buildEngineFinding({
     });
   }
 
+  if (key === "freqtrade") {
+    if (!isCryptoSymbol(quote.symbol)) {
+      return finding({
+        ...base,
+        status: "not-applicable",
+        score: 50,
+        weight: 0.01,
+        finding: "Freqtrade crypto strategy lane is intentionally separated from stock/ETF predictions.",
+        evidence: ["Non-crypto symbol."],
+      });
+    }
+    const value = average([
+      qualityScore(quote),
+      backtestScore(backtest),
+      vectorRobustnessScore(backtest),
+      signal?.dataFresh ? 72 : 24,
+      activeBuy ? 68 : signal?.action === "Buy Watch" ? 58 : 44,
+    ]);
+    return finding({
+      ...base,
+      status,
+      score: value,
+      finding: component?.ready
+        ? "Freqtrade worker can pressure-test crypto setups with dry-run, backtest, strategy, and hyperopt-style evidence."
+        : "Freqtrade lane is proxy-only until a self-hosted crypto worker returns dry-run/backtest evidence.",
+      evidence: [
+        `Crypto symbol: ${quote.symbol}`,
+        backtestStatus(backtest),
+        validationEvidence(backtest),
+        activeBuy ? "Paper ticket candidate exists." : "No paper ticket candidate.",
+      ],
+    });
+  }
+
   if (key === "vibe-trading") {
     const value = swarmStrategyScore({ quote, signal, score, backtest, agent, algorithmFindings });
     return finding({
@@ -851,6 +885,7 @@ function engineKey(engine: EngineCapability) {
   if (engine.repo.endsWith("/FinRL")) return "finrl";
   if (engine.repo.includes("FinRL-Trading")) return "finrl-trading";
   if (engine.repo.includes("FinGPT")) return "fingpt";
+  if (engine.repo.includes("freqtrade")) return "freqtrade";
   if (engine.repo.includes("jesse")) return "jesse";
   if (engine.repo.includes("Vibe-Trading")) return "vibe-trading";
   if (engine.repo.includes("AI-Trader")) return "ai-trader";
@@ -888,6 +923,7 @@ function engineWeight(key: string) {
     finrl: 0.075,
     "finrl-trading": 0.06,
     fingpt: 0.07,
+    freqtrade: 0.055,
     jesse: 0.035,
     "vibe-trading": 0.075,
     "ai-trader": 0.06,

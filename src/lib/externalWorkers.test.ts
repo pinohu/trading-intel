@@ -132,6 +132,17 @@ describe("external worker catalog", () => {
     expect(validExternalWorkerJob({ jobType: "rl-research", symbols: ["SPY"], strategy: "agent-comparison" })).toBe(true);
   });
 
+  it("registers Freqtrade as a bounded crypto worker", () => {
+    const worker = externalWorkerCatalog.find((item) => item.key === "freqtrade");
+
+    expect(worker?.urlEnv).toBe("FREQTRADE_WORKER_URL");
+    expect(worker?.allowedJobs).toContain("crypto-paper");
+    expect(worker?.allowedJobs).toContain("backtest");
+    expect(worker?.allowedJobs).toContain("parameter-sweep");
+    expect(validWorkerKey("freqtrade")).toBe(true);
+    expect(validExternalWorkerJob({ jobType: "crypto-paper", symbols: ["BTC/USDT"], strategy: "freqtrade-dry-run" })).toBe(true);
+  });
+
   it("accepts bounded worker jobs and rejects empty symbol jobs", () => {
     expect(validExternalWorkerJob({ jobType: "backtest", symbols: ["SPY", "NVDA"], strategy: "daily-momentum-breakout" })).toBe(true);
     expect(validExternalWorkerJob({ jobType: "backtest", symbols: [] })).toBe(false);

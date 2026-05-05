@@ -72,6 +72,7 @@ Set these when you host workers outside Vercel:
 - `NAUTILUS_WORKER_URL`
 - `FINGPT_WORKER_URL`
 - `FINRL_WORKER_URL`
+- `FREQTRADE_WORKER_URL`
 - `JESSE_WORKER_URL`
 
 The bridge endpoint is:
@@ -261,6 +262,20 @@ Accepted job families:
 - `crypto-paper`
 
 The reference repo is archived and Apache-2.0 licensed. Treat worker output as research pressure only until current-data reproduction, holdout/walk-forward proof, cost assumptions, freshness labels, and risk gates agree.
+
+## Freqtrade Worker
+
+Freqtrade is integrated as an optional self-hosted crypto strategy worker. Configure `FREQTRADE_WORKER_URL` to expose dry-run/paper trading, backtesting, and hyperopt-style parameter-sweep jobs through the existing worker bridge.
+
+Accepted job families:
+
+- `crypto-paper`
+- `backtest`
+- `parameter-sweep`
+
+Use it for crypto pair strategy proof, exchange-aware fee/slippage assumptions, dry-run order summaries, backtest reports, and parameter-search diagnostics. Worker output must identify dry-run vs live mode, exchange, pair list, timeframe, strategy, config version, fees, slippage/spread assumptions, drawdown, and whether live exchange order placement is disabled for the bridge.
+
+Freqtrade is GPL-3.0 licensed, so this app treats it as a separately hosted worker/reference lane and does not vendor its source. Worker output is crypto research/paper evidence only and cannot route orders through `/api/research-workers/run`.
 
 ## Free Alternatives
 

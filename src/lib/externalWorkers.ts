@@ -21,6 +21,7 @@ export type ExternalWorkerKey =
   | "nautilus"
   | "fingpt"
   | "finrl"
+  | "freqtrade"
   | "jesse";
 
 export type ExternalWorkerJob = {
@@ -190,6 +191,13 @@ export const externalWorkerCatalog: Array<{
     urlEnv: "FINRL_WORKER_URL",
     purpose: "Research-only reinforcement-learning experiments.",
     allowedJobs: ["rl-research"],
+  },
+  {
+    key: "freqtrade",
+    label: "Freqtrade",
+    urlEnv: "FREQTRADE_WORKER_URL",
+    purpose: "GPL-3.0 self-hosted crypto strategy worker for dry-run/paper trading, backtests, hyperopt-style parameter sweeps, strategy reports, and exchange-aware risk evidence.",
+    allowedJobs: ["crypto-paper", "backtest", "parameter-sweep"],
   },
   {
     key: "jesse",

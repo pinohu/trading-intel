@@ -219,6 +219,14 @@ export const referenceReportLessons: ReferenceReportLesson[] = [
     category: "research",
   },
   {
+    key: "freqtrade",
+    title: "Freqtrade Reference",
+    source: "https://github.com/freqtrade/freqtrade",
+    lesson: "Freqtrade-style crypto systems need dry-run separation, exchange-aware pair/config controls, strategy backtests, optimization reports, and explicit live-trading boundaries.",
+    systemRule: "Freqtrade output can strengthen crypto-only research after dry-run/backtest proof, fees, slippage, exchange limits, and paper outcomes are visible; GPL source stays external and worker output cannot place broker or exchange orders through this app.",
+    category: "research",
+  },
+  {
     key: "vibe-trading",
     title: "Vibe-Trading Reference",
     source: "external-repos/Vibe-Trading/README.md",

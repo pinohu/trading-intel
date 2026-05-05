@@ -261,6 +261,16 @@ export const engineCapabilities: EngineCapability[] = [
     priority: "Later",
   },
   {
+    repo: "freqtrade/freqtrade",
+    productName: "Freqtrade Crypto Strategy Lab",
+    lane: "Crypto strategy automation",
+    bestUse: "Self-hosted crypto dry-run/paper trading, backtesting, strategy optimization, exchange-aware reports, and strategy-risk review.",
+    featureUnlocked: "Crypto-only strategy proof lane that can challenge setups with dry-run/backtest/hyperopt evidence while live exchange orders stay outside the app's worker bridge.",
+    integrationMode: "External engine",
+    safety: "Paper trading",
+    priority: "Next",
+  },
+  {
     repo: "HKUDS/Vibe-Trading",
     productName: "Vibe Strategy Swarm",
     lane: "Cross-market strategy synthesis",
@@ -356,5 +366,5 @@ export const engineWorkflow = [
   "Use Vibe-Trading and AutoHedge patterns to orchestrate specialist teams instead of trusting one model.",
   "Use OpenAlice and QuantDinger patterns to demand versioned orders, guard checks, alerts, and operations continuity.",
   "Use TensorTrade, AI-Trader, and Polymarket-agent patterns as RL, collective-signal, and event-probability pressure tests.",
-  "Keep LLM Trading Lab, StockSight, StreetMerchant, LSTM Time Series, StockPredictionAI, Stock Prediction Models, Alpha Vantage, Alphalens, StockSharp, RQAlpha, FinRL, FinRL-Trading, TensorTrade, Nautilus, Jesse, OpenAlice, and all autonomous-agent lanes behind paper/live gates until broker keys, acknowledgement, audit storage, and risk controls exist.",
+  "Keep LLM Trading Lab, StockSight, StreetMerchant, LSTM Time Series, StockPredictionAI, Stock Prediction Models, Alpha Vantage, Alphalens, StockSharp, RQAlpha, FinRL, FinRL-Trading, TensorTrade, Nautilus, Freqtrade, Jesse, OpenAlice, and all autonomous-agent lanes behind paper/live gates until broker keys, acknowledgement, audit storage, and risk controls exist.",
 ];

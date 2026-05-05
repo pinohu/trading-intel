@@ -430,6 +430,18 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
       docs: "https://jesse.trade/",
     },
     {
+      key: "freqtrade",
+      label: "Freqtrade crypto strategy worker",
+      category: "crypto",
+      ready: workerReady("FREQTRADE_WORKER_URL"),
+      mode: workerReady("FREQTRADE_WORKER_URL") ? "worker" : "missing",
+      costProfile: "free-self-hosted",
+      env: ["FREQTRADE_WORKER_URL"],
+      detail: "External GPL-3.0 crypto worker for dry-run/paper trading, exchange-aware strategy backtests, hyperopt-style parameter sweeps, strategy reports, and crypto-specific risk evidence.",
+      freeAlternative: "Binance public crypto quotes, Alpaca crypto endpoints, native signal gates, and the Jesse crypto lane remain available; self-host Freqtrade only for deeper crypto strategy proof.",
+      docs: "https://github.com/freqtrade/freqtrade",
+    },
+    {
       key: "postgres",
       label: "Neon/Supabase Postgres",
       category: "database",
@@ -622,6 +634,12 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
         purpose: "Research-only NLP and reinforcement-learning experiments.",
         command: "python workers/ai_research_worker.py",
         urlEnv: "FINGPT_WORKER_URL",
+      },
+      {
+        name: "Freqtrade worker",
+        purpose: "Self-hosted crypto dry-run/paper trading, backtests, strategy reports, and hyperopt-style parameter sweeps.",
+        command: "freqtrade backtesting --strategy TradingIntelStrategy",
+        urlEnv: "FREQTRADE_WORKER_URL",
       },
       {
         name: "Jesse worker",
