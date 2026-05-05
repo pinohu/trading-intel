@@ -59,11 +59,11 @@ export function buildWorkerReadiness(): WorkerReadiness {
     {
       key: "external-data-workers",
       label: "External data workers",
-      ready: Boolean(process.env.OPENBB_WORKER_URL || process.env.OPENSTOCK_WORKER_URL || process.env.AKSHARE_WORKER_URL),
+      ready: Boolean(process.env.OPENBB_WORKER_URL || process.env.ALPHA_VANTAGE_WORKER_URL || process.env.OPENSTOCK_WORKER_URL || process.env.AKSHARE_WORKER_URL),
       detail:
-        process.env.OPENBB_WORKER_URL || process.env.OPENSTOCK_WORKER_URL || process.env.AKSHARE_WORKER_URL
+        process.env.OPENBB_WORKER_URL || process.env.ALPHA_VANTAGE_WORKER_URL || process.env.OPENSTOCK_WORKER_URL || process.env.AKSHARE_WORKER_URL
           ? "At least one external research data worker URL is configured."
-          : "Set OPENBB_WORKER_URL, OPENSTOCK_WORKER_URL, or AKSHARE_WORKER_URL for deeper market-data and fundamentals research outside Vercel.",
+          : "Set OPENBB_WORKER_URL, ALPHA_VANTAGE_WORKER_URL, OPENSTOCK_WORKER_URL, or AKSHARE_WORKER_URL for deeper market-data and fundamentals research outside Vercel.",
     },
     {
       key: "portfolio-analytics-worker",
@@ -147,6 +147,12 @@ export function buildWorkerReadiness(): WorkerReadiness {
         purpose: "Bridge self-hosted OpenStock-style search, watchlists, company insights, market/news context, and alert UX patterns for research.",
         cadence: "on demand / scheduled research jobs",
         command: "node workers/openstock-worker.mjs",
+      },
+      {
+        name: "alpha-vantage-worker",
+        purpose: "Fetch free-account Alpha Vantage time series, technical indicators, fundamentals, FX, crypto, and provider warnings for research.",
+        cadence: "on demand / scheduled research jobs",
+        command: "python workers/alpha_vantage_worker.py",
       },
       {
         name: "streetmerchant-alert-worker",

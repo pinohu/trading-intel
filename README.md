@@ -36,7 +36,7 @@ This is a mobile-first trading research and intelligence cockpit. It is built fo
 - `/api/provider-stack/readiness` for market/news/database provider status without exposing secrets
 - `/api/research-notes` for database-backed notes across devices
 - AutoResearch Lab at `/api/autoresearch/lab`, with bounded candidate experiments, champion scoring, run history, and a research-only guardrail
-- External worker bridge at `/api/research-workers/run` and `/api/research-workers/readiness` for OpenBB, OpenStock, StreetMerchant alert ops, Ghostfolio, AKShare, LSTM Time Series, LLM Trading Lab, LEAN, StockSharp, RQAlpha, StockPredictionAI, Stock Prediction Models, Backtrader, vectorbt, NautilusTrader, FinGPT, FinRL, and Jesse workers outside Vercel
+- External worker bridge at `/api/research-workers/run` and `/api/research-workers/readiness` for OpenBB, Alpha Vantage, OpenStock, StreetMerchant alert ops, Ghostfolio, AKShare, LSTM Time Series, LLM Trading Lab, LEAN, StockSharp, RQAlpha, StockPredictionAI, Stock Prediction Models, Backtrader, vectorbt, NautilusTrader, FinGPT, FinRL, and Jesse workers outside Vercel
 - Native TradingAgents integration at `/api/tradingagents/analyze` for in-code market/fundamental/bull/bear/trader/risk/portfolio-manager debate persisted to research notes when Postgres is configured
 - Analyst chat can use `LOCAL_LLM_BASE_URL` with a free/self-hosted OpenAI-compatible model before paid OpenAI models, then deterministic cockpit fallback
 - Supervised agent-trading rail at `/api/agent-trader/policy`, `/api/agent-trader/proposals`, and `/api/agent-trader/execute`; agents can draft orders, paper-trade, and submit live-money orders only when live-agent gates and per-order acknowledgement pass
@@ -58,7 +58,7 @@ This is a mobile-first trading research and intelligence cockpit. It is built fo
 - Agent desk showing how Codex, OpenClaw, Hermes, and KiloCode should split research work
 - Risk constitution to prevent impulsive execution
 - Demo-only fallback quotes when `DEMO_MARKET_DATA=true`; production live routes return unavailable instead of inventing prices
-- Engine Fusion Map covering OpenBB, OpenStock, StreetMerchant alert ops, Ghostfolio, AKShare, TradingAgents, LSTM Time Series, LLM Trading Lab, StockPredictionAI, Stock Prediction Models, LEAN, StockSharp, RQAlpha, backtesting.py, vectorbt, Backtrader, Nautilus Trader, FinRL, FinRL-Trading, FinGPT, and Jesse
+- Engine Fusion Map covering OpenBB, Alpha Vantage, OpenStock, StreetMerchant alert ops, Ghostfolio, AKShare, TradingAgents, LSTM Time Series, LLM Trading Lab, StockPredictionAI, Stock Prediction Models, LEAN, StockSharp, RQAlpha, backtesting.py, vectorbt, Backtrader, Nautilus Trader, FinRL, FinRL-Trading, FinGPT, and Jesse
 - Quant Lab with first-pass strategy simulation inspired by lightweight and vectorized backtesting workflows
 - Research Pipeline that promotes ideas from data collection to simple tests, parameter sweeps, event-driven simulation, NLP challenge checks, and paper/live gates
 - `/api/engines` endpoint exposing the integrated engine catalog and guardrails
@@ -157,6 +157,7 @@ Free/no-license feeds are now the default for research and monitoring, but they 
 - [Algorithm Council](docs/ALGORITHM_COUNCIL.md)
 - [Institutional Gates](docs/INSTITUTIONAL_GATES.md)
 - [Research Stack](docs/RESEARCH_STACK.md)
+- [Alpha Vantage Worker](docs/ALPHA_VANTAGE_WORKER.md)
 - [OpenStock Worker](docs/OPENSTOCK_WORKER.md)
 - [StreetMerchant Worker](docs/STREETMERCHANT_WORKER.md)
 - [Ghostfolio Worker](docs/GHOSTFOLIO_WORKER.md)
@@ -181,7 +182,7 @@ The app now prefers free alternatives before paid services. Paid/licensed feeds 
 - Browser notifications as the free alert path; webhook, Twilio, and Resend are optional off-device channels
 - OpenBB external worker hook for deeper fundamentals and macro workflows
 - TradingAgents native debate desk for market, fundamentals, bull/bear researcher, trader, risk, and portfolio-manager review
-- OpenStock, StreetMerchant, Ghostfolio, AKShare, LSTM Time Series, LLM Trading Lab, StockPredictionAI, Stock Prediction Models, LEAN, StockSharp, RQAlpha, Backtrader, vectorbt, and Nautilus external worker hooks for companion market workflows, alert-loop operations, portfolio analytics, broader research data, agent research, forecast research, and real historical backtests outside Vercel serverless limits
+- Alpha Vantage, OpenStock, StreetMerchant, Ghostfolio, AKShare, LSTM Time Series, LLM Trading Lab, StockPredictionAI, Stock Prediction Models, LEAN, StockSharp, RQAlpha, Backtrader, vectorbt, and Nautilus external worker hooks for free-account market data, companion market workflows, alert-loop operations, portfolio analytics, broader research data, agent research, forecast research, and real historical backtests outside Vercel serverless limits
 - FinGPT/FinRL worker hooks for research-only NLP and reinforcement-learning experiments
 - Jesse worker hook for a separate crypto paper-trading lane
 - Postgres via `DATABASE_URL` for saved notes across devices; Supabase can be used when its Postgres connection string is supplied

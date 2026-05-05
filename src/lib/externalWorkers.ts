@@ -2,6 +2,7 @@ import { cleanSecret } from "@/lib/security";
 
 export type ExternalWorkerKey =
   | "openbb"
+  | "alphavantage"
   | "openstock"
   | "streetmerchant"
   | "ghostfolio"
@@ -53,6 +54,13 @@ export const externalWorkerCatalog: Array<{
     urlEnv: "OPENBB_WORKER_URL",
     purpose: "Fundamentals, macro, options, and provider-key research.",
     allowedJobs: ["fundamentals"],
+  },
+  {
+    key: "alphavantage",
+    label: "Alpha Vantage",
+    urlEnv: "ALPHA_VANTAGE_WORKER_URL",
+    purpose: "MIT-licensed Python Alpha Vantage wrapper lane for free-account time series, technical indicators, fundamentals, FX, crypto, and rate-limit-labeled data enrichment.",
+    allowedJobs: ["market-data", "fundamentals", "forecast"],
   },
   {
     key: "openstock",

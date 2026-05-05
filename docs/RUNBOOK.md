@@ -27,6 +27,12 @@ Then authenticate and check:
 - `/api/research-workers/readiness`
 - `/api/tradingagents/analyze` with an authenticated session; no worker URL is required
 
+Optional Alpha Vantage worker check:
+
+- Set `ALPHA_VANTAGE_WORKER_URL` to the self-hosted Python worker endpoint and `ALPHAVANTAGE_API_KEY` in the worker environment.
+- Dispatch a research-only job through `/api/research-workers/run` with `worker: "alphavantage"` and `jobType: "market-data"`.
+- Confirm the worker returns source function, timestamp, provider warning/rate-limit status, adjusted/delayed labels, and no broker-order side effects.
+
 Optional OpenStock companion check:
 
 - Set `OPENSTOCK_WORKER_URL` to the self-hosted companion worker endpoint.

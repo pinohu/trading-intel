@@ -46,6 +46,7 @@ It does not place broker orders. Manual paper/live orders still go through the v
 Set these when you host workers outside Vercel:
 
 - `OPENBB_WORKER_URL`
+- `ALPHA_VANTAGE_WORKER_URL`
 - `OPENSTOCK_WORKER_URL`
 - `STREETMERCHANT_WORKER_URL`
 - `GHOSTFOLIO_WORKER_URL`
@@ -85,6 +86,20 @@ with a payload:
 ```
 
 Use `WORKER_SHARED_SECRET` for worker-to-worker authorization if the external service supports it.
+
+## Alpha Vantage Worker
+
+Alpha Vantage is integrated as an optional free-account Python data worker through `RomelTorres/alpha_vantage`. Configure `ALPHA_VANTAGE_WORKER_URL` for the worker endpoint and set `ALPHAVANTAGE_API_KEY` in that worker environment.
+
+Accepted job families:
+
+- `market-data`
+- `fundamentals`
+- `forecast`
+
+Use it for daily/intraday time series, technical indicators, fundamentals, FX, crypto, and economic data enrichment. Worker output must include source function, symbol, timestamp, provider warnings, rate-limit status, and whether the result is delayed, adjusted, or incomplete.
+
+Alpha Vantage data is useful for free-account research, but it is not automatically execution-grade. Buy-now and live routes still require fresh, trusted trade-critical quotes and the app's normal broker gates.
 
 ## OpenStock Companion Worker
 

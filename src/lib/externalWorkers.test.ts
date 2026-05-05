@@ -2,6 +2,17 @@ import { describe, expect, it } from "vitest";
 import { externalWorkerCatalog, validExternalWorkerJob, validWorkerKey } from "@/lib/externalWorkers";
 
 describe("external worker catalog", () => {
+  it("registers Alpha Vantage as a bounded free-account data worker", () => {
+    const worker = externalWorkerCatalog.find((item) => item.key === "alphavantage");
+
+    expect(worker?.urlEnv).toBe("ALPHA_VANTAGE_WORKER_URL");
+    expect(worker?.allowedJobs).toContain("market-data");
+    expect(worker?.allowedJobs).toContain("fundamentals");
+    expect(worker?.allowedJobs).toContain("forecast");
+    expect(validWorkerKey("alphavantage")).toBe(true);
+    expect(validExternalWorkerJob({ jobType: "market-data", symbols: ["IBM"], strategy: "daily-adjusted-with-rate-labels" })).toBe(true);
+  });
+
   it("registers OpenStock as a bounded companion market worker", () => {
     const openstock = externalWorkerCatalog.find((worker) => worker.key === "openstock");
 

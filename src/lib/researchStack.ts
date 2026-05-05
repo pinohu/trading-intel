@@ -156,6 +156,18 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
       docs: "https://docs.openbb.co/",
     },
     {
+      key: "alphavantage",
+      label: "Alpha Vantage data worker",
+      category: "market-data",
+      ready: workerReady("ALPHA_VANTAGE_WORKER_URL"),
+      mode: workerReady("ALPHA_VANTAGE_WORKER_URL") ? "worker" : "missing",
+      costProfile: "free-account",
+      env: ["ALPHA_VANTAGE_WORKER_URL", "ALPHAVANTAGE_API_KEY"],
+      detail: "External MIT-licensed Python worker using RomelTorres/alpha_vantage for free-account daily/intraday time series, technical indicators, fundamentals, FX, crypto, and rate-limit-labeled enrichment.",
+      freeAlternative: "Native public quote stack remains the default; self-host Alpha Vantage when a free-account API key adds labeled historical series, indicators, or fundamentals.",
+      docs: "https://github.com/RomelTorres/alpha_vantage",
+    },
+    {
       key: "openstock",
       label: "OpenStock companion worker",
       category: "market-data",
@@ -479,6 +491,12 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
         purpose: "Fundamentals, macro, options, and provider-key research.",
         command: "python workers/openbb_worker.py",
         urlEnv: "OPENBB_WORKER_URL",
+      },
+      {
+        name: "Alpha Vantage worker",
+        purpose: "Free-account Alpha Vantage time series, technical indicators, fundamentals, FX, crypto, and rate-limit-aware enrichment.",
+        command: "python workers/alpha_vantage_worker.py",
+        urlEnv: "ALPHA_VANTAGE_WORKER_URL",
       },
       {
         name: "OpenStock companion",

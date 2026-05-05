@@ -59,6 +59,14 @@ export const referenceReportLessons: ReferenceReportLesson[] = [
     category: "research",
   },
   {
+    key: "alpha-vantage",
+    title: "Alpha Vantage Reference",
+    source: "https://github.com/RomelTorres/alpha_vantage",
+    lesson: "Alpha Vantage can broaden free-account research with time series, indicators, fundamentals, FX, crypto, and economic data, but rate limits and provider warnings must be surfaced.",
+    systemRule: "Alpha Vantage output is research data only until source freshness, rate-limit status, data quality, and execution-grade confirmation pass; worker output cannot place or authorize broker orders.",
+    category: "data",
+  },
+  {
     key: "openstock",
     title: "OpenStock Reference",
     source: "https://github.com/Open-Dev-Society/OpenStock",

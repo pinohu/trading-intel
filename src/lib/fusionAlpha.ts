@@ -251,6 +251,25 @@ function buildEngineFinding({
     });
   }
 
+  if (key === "alphavantage") {
+    const coverage = score?.dataCoveragePct ?? qualityScore(quote);
+    const value = average([qualityScore(quote), coverage, signal?.dataFresh ? 72 : 28, score?.ensembleScore ?? 50]);
+    return finding({
+      ...base,
+      status,
+      score: value,
+      finding: component?.ready
+        ? "Alpha Vantage worker can enrich free-account time series, fundamentals, technical indicators, FX, crypto, and provider warning context."
+        : "Alpha Vantage lane is proxy-only until a self-hosted worker supplies rate-limit-labeled provider evidence.",
+      evidence: [
+        `Quote source: ${quote.source}`,
+        `Quote quality: ${quote.quality}`,
+        `Data coverage: ${Math.round(coverage)}/100`,
+        signal?.dataFresh ? "Fresh signal features available." : "Fresh signal features missing.",
+      ],
+    });
+  }
+
   if (key === "openstock") {
     const coverage = score?.dataCoveragePct ?? qualityScore(quote);
     const value = average([qualityScore(quote), coverage, signal?.dataFresh ? 68 : 32, agent ? agentScore(agent) : 50]);
@@ -741,6 +760,7 @@ function finding(input: Omit<FusionEngineFinding, "stance" | "impact">): FusionE
 
 function engineKey(engine: EngineCapability) {
   if (engine.repo.includes("OpenBB")) return "openbb";
+  if (engine.repo.includes("alpha_vantage")) return "alphavantage";
   if (engine.repo.includes("OpenStock")) return "openstock";
   if (engine.repo.includes("streetmerchant")) return "streetmerchant";
   if (engine.repo.includes("ghostfolio")) return "ghostfolio";
@@ -775,6 +795,7 @@ function engineKey(engine: EngineCapability) {
 function engineWeight(key: string) {
   const weights: Record<string, number> = {
     openbb: 0.075,
+    alphavantage: 0.06,
     openstock: 0.055,
     streetmerchant: 0.045,
     ghostfolio: 0.07,
