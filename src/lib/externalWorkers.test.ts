@@ -42,6 +42,17 @@ describe("external worker catalog", () => {
     expect(validWorkerKey("stocksharp")).toBe(true);
   });
 
+  it("registers RQAlpha as a bounded event-driven backtest worker", () => {
+    const worker = externalWorkerCatalog.find((item) => item.key === "rqalpha");
+
+    expect(worker?.urlEnv).toBe("RQALPHA_WORKER_URL");
+    expect(worker?.allowedJobs).toContain("backtest");
+    expect(worker?.allowedJobs).toContain("parameter-sweep");
+    expect(worker?.allowedJobs).toContain("portfolio");
+    expect(validWorkerKey("rqalpha")).toBe(true);
+    expect(validExternalWorkerJob({ jobType: "backtest", symbols: ["000001.XSHE"], strategy: "rqalpha-mod-risk-simulation" })).toBe(true);
+  });
+
   it("registers StockPredictionAI as a research-only forecast worker", () => {
     const worker = externalWorkerCatalog.find((item) => item.key === "stockpredictionai");
 

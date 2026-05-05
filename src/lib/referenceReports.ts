@@ -163,6 +163,14 @@ export const referenceReportLessons: ReferenceReportLesson[] = [
     category: "research",
   },
   {
+    key: "rqalpha",
+    title: "RQAlpha Reference",
+    source: "https://github.com/ricequant/rqalpha",
+    lesson: "RQAlpha-style strategy proof should expose event-driven simulation, Mod-based risk checks, scheduled logic, transaction-cost assumptions, fills, holdings, portfolio records, and analyser metrics.",
+    systemRule: "RQAlpha worker output is research pressure only until simulated orders, costs, risk checks, walk-forward proof, and paper outcomes agree; respect the non-commercial license boundary and do not route worker output to broker orders.",
+    category: "research",
+  },
+  {
     key: "vibe-trading",
     title: "Vibe-Trading Reference",
     source: "external-repos/Vibe-Trading/README.md",

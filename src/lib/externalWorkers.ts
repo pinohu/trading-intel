@@ -8,6 +8,7 @@ export type ExternalWorkerKey =
   | "llmtradinglab"
   | "lean"
   | "stocksharp"
+  | "rqalpha"
   | "stockpredictionai"
   | "stockpredictionmodels"
   | "backtrader"
@@ -81,6 +82,13 @@ export const externalWorkerCatalog: Array<{
     urlEnv: "STOCKSHARP_WORKER_URL",
     purpose: "C#/.NET connector research, multi-market strategy tests, and broker-adapter simulations behind platform safety gates.",
     allowedJobs: ["backtest", "parameter-sweep", "crypto-paper"],
+  },
+  {
+    key: "rqalpha",
+    label: "RQAlpha",
+    urlEnv: "RQALPHA_WORKER_URL",
+    purpose: "Research-only Python event-driven backtests, simulation, risk checks, analyser outputs, transaction-cost modeling, and Mod-style extensibility.",
+    allowedJobs: ["backtest", "parameter-sweep", "portfolio"],
   },
   {
     key: "stockpredictionai",

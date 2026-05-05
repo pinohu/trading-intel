@@ -51,6 +51,12 @@ Optional StockSharp worker check:
 - Dispatch a research-only job through `/api/research-workers/run` with `worker: "stocksharp"` and `jobType: "backtest"`.
 - Confirm the worker returns metrics without placing broker orders.
 
+Optional RQAlpha worker check:
+
+- Set `RQALPHA_WORKER_URL` to the self-hosted Python worker endpoint.
+- Dispatch a research-only job through `/api/research-workers/run` with `worker: "rqalpha"` and `jobType: "backtest"`.
+- Confirm the worker returns event-driven simulation metrics, transaction-cost assumptions, holdings/portfolio reports, risk/analyser output, and no broker-order side effects.
+
 Optional StockPredictionAI worker check:
 
 - Set `STOCKPREDICTIONAI_WORKER_URL` to the self-hosted forecast worker endpoint.

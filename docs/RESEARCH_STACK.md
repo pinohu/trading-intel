@@ -52,6 +52,7 @@ Set these when you host workers outside Vercel:
 - `LLM_TRADING_LAB_WORKER_URL`
 - `LEAN_WORKER_URL`
 - `STOCKSHARP_WORKER_URL`
+- `RQALPHA_WORKER_URL`
 - `STOCKPREDICTIONAI_WORKER_URL`
 - `STOCK_PREDICTION_MODELS_WORKER_URL`
 - `BACKTRADER_WORKER_URL`
@@ -129,6 +130,20 @@ Accepted job families:
 - `crypto-paper`
 
 The worker request includes `safety.researchOnly=true`, `safety.noAutonomousExecution=true`, and `safety.brokerOrdersBlocked=true`. Keep StockSharp live execution behind the app's normal operator-armed live-agent route instead of accepting broker orders from `/api/research-workers/run`.
+
+## RQAlpha Worker
+
+RQAlpha is integrated as a self-hosted Python event-driven backtest worker, not as code running inside the Next.js serverless app. Configure `RQALPHA_WORKER_URL` to expose RQAlpha-style research jobs through the existing worker bridge.
+
+Accepted job families:
+
+- `backtest`
+- `parameter-sweep`
+- `portfolio`
+
+Use it for event-driven simulation, scheduled strategy logic, Mod-style risk and analyser extensions, transaction-cost assumptions, fills, holdings, and portfolio reports. Worker output must stay research-only and cannot place orders.
+
+RQAlpha's upstream license allows non-commercial use under Apache 2.0 terms and requires Ricequant authorization for commercial use. This app treats it as a separately hosted worker/reference lane and does not vendor its source.
 
 ## StockPredictionAI Worker
 

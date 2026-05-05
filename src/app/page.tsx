@@ -569,9 +569,9 @@ const quantPipelines = [
   },
   {
     title: "Backtest Ladder",
-    repo: "backtesting.py -> vectorbt -> LEAN -> StockSharp",
+    repo: "backtesting.py -> vectorbt -> RQAlpha -> LEAN -> StockSharp",
     icon: GitBranch,
-    body: "Validate simple logic first, sweep parameters second, then promote robust candidates to event-driven C#/.NET or LEAN simulation.",
+    body: "Validate simple logic first, sweep parameters second, then promote robust candidates to Python or C#/.NET event-driven simulation.",
   },
   {
     title: "AI Research",
@@ -836,7 +836,7 @@ function simulateStrategies(symbol: string, price: number, lookback: number, ris
       1,
       Math.min(100, Math.round(58 + expectedReturn * 4 - maxDrawdown * 1.4 + winRate * 0.35)),
     );
-    const repo = index === 0 ? "backtesting.py" : index === 1 ? "vectorbt" : index === 2 ? "Backtrader" : index === 3 ? "LEAN / StockSharp" : "FinGPT filter";
+    const repo = index === 0 ? "backtesting.py" : index === 1 ? "vectorbt" : index === 2 ? "Backtrader" : index === 3 ? "RQAlpha / LEAN / StockSharp" : "FinGPT filter";
     return { name, repo, description: `${symbol} @ ${formatUsd(price)} with ${lookback}D lookback`, expectedReturn, maxDrawdown, winRate, trades, robustness };
   });
 }

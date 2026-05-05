@@ -275,6 +275,18 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
       docs: "https://github.com/StockSharp/StockSharp",
     },
     {
+      key: "rqalpha",
+      label: "RQAlpha backtest worker",
+      category: "backtesting",
+      ready: workerReady("RQALPHA_WORKER_URL"),
+      mode: workerReady("RQALPHA_WORKER_URL") ? "worker" : "missing",
+      costProfile: "free-self-hosted",
+      env: ["RQALPHA_WORKER_URL"],
+      detail: "External non-commercial RQAlpha Python worker for event-driven backtests, simulated fills, risk pre-checks, transaction-cost models, analyser output, and Mod-style extension pressure.",
+      freeAlternative: "Native cost-aware backtests remain the default; self-host RQAlpha only when its event model and analyser reports add research proof.",
+      docs: "https://github.com/ricequant/rqalpha",
+    },
+    {
       key: "backtrader",
       label: "Backtrader worker",
       category: "backtesting",
@@ -473,6 +485,12 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
         purpose: "C#/.NET connector research, strategy tests, and broker-adapter simulations.",
         command: "dotnet run --project workers/StockSharpWorker",
         urlEnv: "STOCKSHARP_WORKER_URL",
+      },
+      {
+        name: "RQAlpha worker",
+        purpose: "Research-only event-driven backtests, simulation, risk checks, transaction costs, and analyser metrics.",
+        command: "python workers/rqalpha_worker.py",
+        urlEnv: "RQALPHA_WORKER_URL",
       },
       {
         name: "StockPredictionAI worker",

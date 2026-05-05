@@ -418,6 +418,28 @@ function buildEngineFinding({
     });
   }
 
+  if (key === "rqalpha") {
+    const value = average([
+      eventSimulationScore(backtest, activeBuy),
+      vectorRobustnessScore(backtest),
+      signal?.rewardRisk ? clamp(signal.rewardRisk * 26, 28, 84) : 50,
+      signal?.dataFresh ? 70 : 30,
+    ]);
+    return finding({
+      ...base,
+      status,
+      score: value,
+      finding: component?.ready
+        ? "RQAlpha worker is available for event-driven simulation, Mod risk checks, analyser metrics, and transaction-cost pressure."
+        : "RQAlpha lane is proxy-only until a self-hosted worker returns simulated order, holding, portfolio, risk, and transaction-cost evidence.",
+      evidence: [
+        backtestStatus(backtest),
+        validationEvidence(backtest),
+        signal?.rewardRisk ? `Reward/risk: ${signal.rewardRisk}R` : "Reward/risk unavailable.",
+      ],
+    });
+  }
+
   if (key === "backtesting-py") {
     const value = backtestScore(backtest);
     return finding({
@@ -683,6 +705,7 @@ function engineKey(engine: EngineCapability) {
   if (engine.repo.includes("Stock-Prediction-Models")) return "stockpredictionmodels";
   if (engine.repo.includes("Lean")) return "lean";
   if (engine.repo.includes("StockSharp")) return "stocksharp";
+  if (engine.repo.includes("rqalpha")) return "rqalpha";
   if (engine.repo.includes("backtesting.py")) return "backtesting-py";
   if (engine.repo.includes("vectorbt")) return "vectorbt";
   if (engine.repo.includes("backtrader")) return "backtrader";
@@ -713,6 +736,7 @@ function engineWeight(key: string) {
     stockpredictionmodels: 0.06,
     lean: 0.095,
     stocksharp: 0.075,
+    rqalpha: 0.07,
     "backtesting-py": 0.105,
     vectorbt: 0.085,
     backtrader: 0.065,
