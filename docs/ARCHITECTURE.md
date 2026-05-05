@@ -9,6 +9,7 @@ Runtime shape:
 - Browser dashboard renders the trading command center.
 - Serverless API routes fetch market data, generate rule-based signals, create trade tickets, and expose readiness metadata.
 - The Ising/QUBO optimizer chooses baskets from generated buy leads under budget, risk, max-position, and overlap constraints.
+- Native reference maps, including the systematic-trading map, classify missing data, alpha, analytics, backtest, live-control, architecture, tooling, and AI proof lanes before a trade idea is trusted.
 - Broker routes can connect to Alpaca account, positions, open orders, and guarded order placement when credentials are configured.
 - Vercel Cron calls `/api/monitor` every five minutes.
 - Alerts use free browser notifications first; webhook, Twilio, or Resend are optional off-device channels when configured.
@@ -24,7 +25,7 @@ Production real-money trading requires these external systems before live execut
 - Free-first research data is implemented; licensed real-time market data is required only before execution-grade promotion.
 - Persistent database with the provided schema applied.
 - Broker execution account gates, live acknowledgement, and order audit storage.
-- Historical backtesting, factor-analysis, companion market-app, alert-pattern, portfolio analytics, research data, LLM agent research, and ML forecast workers, including optional Alpha Vantage, Alphalens, OpenStock, StreetMerchant, Ghostfolio, AKShare, LSTM Time Series, LLM Trading Lab, StockSharp C#/.NET, RQAlpha, StockPredictionAI-style, and Stock Prediction Models worker integrations.
+- Historical backtesting, factor-analysis, native systematic reference maps, companion market-app, alert-pattern, portfolio analytics, research data, LLM agent research, and ML forecast workers, including optional Alpha Vantage, Alphalens, OpenStock, StreetMerchant, Ghostfolio, AKShare, LSTM Time Series, LLM Trading Lab, StockSharp C#/.NET, RQAlpha, StockPredictionAI-style, and Stock Prediction Models worker integrations.
 - Signal outcome tracker.
 - Immutable audit retention and export policy beyond the current audit-events table.
 - User auth and RBAC.
@@ -45,6 +46,7 @@ flowchart LR
   BFF --> Ising["Ising/QUBO Basket Optimizer"]
   BFF --> TradingAgents["Native TradingAgents: in-code multi-agent debate"]
   TradingAgents --> DB
+  ReferenceMaps["Native Reference Maps: systematic trading taxonomy + proof coverage"] --> BFF
   BacktestWorker["Companion + Alert + Portfolio + Research Data + Factor + Agent + Backtest + Forecast Workers: Alpha Vantage/Alphalens/OpenStock/StreetMerchant/Ghostfolio/AKShare/LSTM Time Series/LLM Trading Lab/StockPredictionAI/Stock Prediction Models/LEAN/StockSharp/RQAlpha/vectorbt/backtesting.py"] --> DB
   Broker["Broker Paper/Read-Only APIs"] --> BFF
   BFF --> BrokerExec["Broker Execution API: user-session only, live gated"]
@@ -58,6 +60,7 @@ flowchart LR
 - Never place live orders from the app until paper results, audit logs, broker permissions, and operator approvals exist.
 - Never allow cron or agent bearer tokens to place broker orders.
 - Never let TradingAgents, Alpha Vantage, Alphalens, LSTM Time Series, LLM Trading Lab, OpenStock, StreetMerchant, Ghostfolio, AKShare, StockPredictionAI, Stock Prediction Models, StockSharp, or RQAlpha worker output place autonomous broker orders; manual paper/live execution stays in the broker controls and audit rail.
+- Never treat a curated reference map as market data, a signal, a backtest result, or execution authorization.
 - Never submit a market order from the current execution rail.
 - Never treat the Ising optimizer as a price predictor; it only selects among existing candidates.
 - Never allow auth to fail open.

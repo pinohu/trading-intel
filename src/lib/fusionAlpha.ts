@@ -293,6 +293,29 @@ function buildEngineFinding({
     });
   }
 
+  if (key === "systematic-reference-map") {
+    const value = average([
+      qualityScore(quote),
+      signal?.dataFresh ? 78 : 20,
+      score ? score.confidence : 42,
+      backtest ? vectorRobustnessScore(backtest) : 38,
+      agent ? agentScore(agent) : 44,
+      activeBuy || signal?.rewardRisk ? clamp((activeBuy?.rewardRisk ?? signal?.rewardRisk ?? 1) * 28, 28, 86) : 46,
+    ]);
+    return finding({
+      ...base,
+      status,
+      score: value,
+      finding: component?.ready
+        ? "Systematic Trading Reference Map checks whether this idea has data, alpha, analytics, backtest, live-control, architecture, tooling, and AI challenge coverage before it scores as decision-ready."
+        : "Systematic Trading Reference Map is proxy-only until the native readiness checklist is loaded.",
+      evidence: [
+        `Quote source: ${quote.source}; quality ${quote.quality}.`,
+        ...pipelineEvidence({ signal, score, backtest, agent, activeBuy }),
+      ],
+    });
+  }
+
   if (key === "openstock") {
     const coverage = score?.dataCoveragePct ?? qualityScore(quote);
     const value = average([qualityScore(quote), coverage, signal?.dataFresh ? 68 : 32, agent ? agentScore(agent) : 50]);
@@ -785,6 +808,7 @@ function engineKey(engine: EngineCapability) {
   if (engine.repo.includes("OpenBB")) return "openbb";
   if (engine.repo.includes("alpha_vantage")) return "alphavantage";
   if (engine.repo.includes("alphalens")) return "alphalens";
+  if (engine.repo.includes("awesome-systematic-trading")) return "systematic-reference-map";
   if (engine.repo.includes("OpenStock")) return "openstock";
   if (engine.repo.includes("streetmerchant")) return "streetmerchant";
   if (engine.repo.includes("ghostfolio")) return "ghostfolio";
@@ -821,6 +845,7 @@ function engineWeight(key: string) {
     openbb: 0.075,
     alphavantage: 0.06,
     alphalens: 0.075,
+    "systematic-reference-map": 0.05,
     openstock: 0.055,
     streetmerchant: 0.045,
     ghostfolio: 0.07,

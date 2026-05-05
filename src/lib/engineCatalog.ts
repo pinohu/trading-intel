@@ -41,6 +41,16 @@ export const engineCapabilities: EngineCapability[] = [
     priority: "Next",
   },
   {
+    repo: "wangzhe3224/awesome-systematic-trading",
+    productName: "Systematic Trading Reference Map",
+    lane: "Research ecosystem map",
+    bestUse: "Classify the stack into data, alpha strategy, analytics, backtesting, live trading, architecture, tools, resources, and AI/LLM research lanes before accepting a decision.",
+    featureUnlocked: "Native coverage checklist that turns curated systematic-trading resources into proof requirements, not copied source or an execution engine.",
+    integrationMode: "Native UI",
+    safety: "Research",
+    priority: "Now",
+  },
+  {
     repo: "TauricResearch/TradingAgents",
     productName: "TradingAgents Debate Desk",
     lane: "Multi-agent research",
@@ -323,6 +333,7 @@ export const engineCapabilities: EngineCapability[] = [
 ];
 
 export const engineWorkflow = [
+  "Map every idea against the systematic-trading taxonomy: data, alpha thesis, analytics, backtest proof, live-trading controls, architecture, tools, and AI/LLM challenge lanes.",
   "Collect data with OpenBB/Alpha Vantage/OpenStock/Ghostfolio/AKShare-style connectors and current quote/news APIs.",
   "Challenge interesting tickers with TradingAgents and LLM-Trading-Lab-style agent logs before writing a trade thesis.",
   "Use Alphalens-style factor tear sheets to test whether ranks, quantiles, IC, and turnover support the signal.",

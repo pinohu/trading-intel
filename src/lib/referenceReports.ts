@@ -75,6 +75,14 @@ export const referenceReportLessons: ReferenceReportLesson[] = [
     category: "research",
   },
   {
+    key: "awesome-systematic-trading",
+    title: "Awesome Systematic Trading Reference",
+    source: "https://github.com/wangzhe3224/awesome-systematic-trading",
+    lesson: "Systematic trading maturity requires separate tracks for data, alpha strategy, trading analytics, backtesting, live trading, architecture, tooling, research resources, and AI/LLM challenge work.",
+    systemRule: "Use the systematic-trading map as a coverage checklist only; it can reveal missing proof lanes but cannot become a signal, market-data source, or execution engine.",
+    category: "research",
+  },
+  {
     key: "openstock",
     title: "OpenStock Reference",
     source: "https://github.com/Open-Dev-Society/OpenStock",

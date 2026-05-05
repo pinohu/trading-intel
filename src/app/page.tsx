@@ -568,6 +568,12 @@ const quantPipelines = [
     body: "Pull quotes, fundamentals, indicators, companion watchlist context, portfolio exposure, China/Asia datasets, options, filings, macro series, and research snapshots into one normalized intelligence layer.",
   },
   {
+    title: "Systematic Map",
+    repo: "awesome-systematic-trading + native readiness",
+    icon: ListOrdered,
+    body: "Classify every idea across data, alpha, analytics, backtesting, live-control, architecture, tooling, resources, and AI/LLM challenge lanes before it earns decision-ready status.",
+  },
+  {
     title: "Backtest Ladder",
     repo: "Alphalens -> backtesting.py -> vectorbt -> RQAlpha -> LEAN -> StockSharp",
     icon: GitBranch,
@@ -5201,7 +5207,7 @@ function ResearchStackPanel({ stack, autoResearch }: { stack: ResearchStackApi |
           </div>
         </div>
         <div className="rounded-md border border-white/10 bg-white/[0.03] p-3">
-          <div className="font-semibold text-white">External Research Workers</div>
+          <div className="font-semibold text-white">Research Workers And Reference Maps</div>
           <div className="mt-3 grid gap-2">
             {workerRows.map((component) => (
               <ResearchStackRow key={component.key} component={component} />

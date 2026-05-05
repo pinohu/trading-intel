@@ -40,8 +40,8 @@ export const trustOperationGaps: TrustOperationGap[] = [
     status: "Live",
     proofStatus: "Partial",
     evidenceStandard: "A strategy needs live or paper outcomes at 5m, 15m, 1h, 1d, and multi-day horizons, plus slippage, fees, spreads, and cost-adjusted backtests across regimes.",
-    currentState: "Signal snapshots and outcome checks are stored in SQL/AITable, and the monitor evaluates 5m, 15m, 1h, and 1d follow-through.",
-    nextAction: "Require minimum sample sizes, slippage/fee assumptions, and regime labels before any strategy can be called proven.",
+    currentState: "Signal snapshots and outcome checks are stored in SQL/AITable, the monitor evaluates 5m, 15m, 1h, and 1d follow-through, and the systematic-trading reference map now keeps data, alpha, analytics, backtest, live-control, architecture, tooling, and AI lanes visible.",
+    nextAction: "Require minimum sample sizes, slippage/fee assumptions, regime labels, and full systematic-lane coverage before any strategy can be called proven.",
     acceptanceCriteria: [
       "At least 100 outcome checks exist for a strategy family before it can graduate from watch to proven.",
       "Backtests include slippage, fees, drawdown, and out-of-sample validation metadata.",
@@ -86,8 +86,8 @@ export const trustOperationGaps: TrustOperationGap[] = [
     status: "Live",
     proofStatus: "Live",
     evidenceStandard: "Backtests must disclose trade count, return, max drawdown, profit factor, slippage, fees, and out-of-sample validation.",
-    currentState: "The Quant Lab can run Alpaca historical-bars backtests with slippage, fees, drawdown, validation metadata, and SQL storage.",
-    nextAction: "Promote robust strategies into deeper vectorbt/LEAN worker tests when external compute is added.",
+    currentState: "The Quant Lab can run Alpaca historical-bars backtests with slippage, fees, drawdown, validation metadata, SQL storage, and systematic taxonomy pressure for when to escalate to factor, vectorized, event-driven, or live-control proof.",
+    nextAction: "Promote robust strategies into deeper Alphalens/vectorbt/RQAlpha/LEAN/StockSharp worker tests when the systematic map shows a proof lane is missing.",
     acceptanceCriteria: [
       "Historical runs store assumptions and validation metadata.",
       "Weak sample sizes and high drawdown remain visible blockers.",

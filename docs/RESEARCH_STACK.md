@@ -5,8 +5,9 @@ This platform uses a layered research architecture:
 1. Free/public providers by default.
 2. Credentialed providers only when the user selects or configures them.
 3. Native TypeScript research engines for bounded workflows that can safely run inside the app.
-4. External workers for heavyweight engines that do not belong inside Vercel serverless functions.
-5. Durable SQL storage for signals, notes, backtests, outcomes, and AutoResearch runs.
+4. Native reference maps for deciding which proof lanes are missing before an idea is trusted.
+5. External workers for heavyweight engines that do not belong inside Vercel serverless functions.
+6. Durable SQL storage for signals, notes, backtests, outcomes, and AutoResearch runs.
 
 ## Provider Lanes
 
@@ -40,6 +41,12 @@ That route runs inside the Next.js codebase. It builds a bounded debate across m
 - Postgres research-note persistence when `DATABASE_URL` is configured
 
 It does not place broker orders. Manual paper/live orders still go through the visible broker controls, acknowledgement, and audit logging.
+
+## Native Reference Maps
+
+`wangzhe3224/awesome-systematic-trading` is integrated as a native systematic-trading reference map. It helps the app classify proof across data, alpha strategy, trading analysis, backtesting, live trading, architecture, tools, resources, and AI/LLM lanes.
+
+There is no worker URL because it is not a runtime engine. The map is used as a readiness checklist in Research Stack, a weighted coverage finding in Fusion Alpha, and a Trust Matrix reminder that durable proof requires more than another ticker or model score.
 
 ## External Worker URLs
 

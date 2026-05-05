@@ -239,6 +239,17 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
       docs: "https://github.com/TauricResearch/TradingAgents",
     },
     {
+      key: "systematic-reference-map",
+      label: "Systematic trading reference map",
+      category: "operations",
+      ready: true,
+      mode: "native",
+      costProfile: "free-public",
+      env: [],
+      detail: "Native readiness checklist inspired by wangzhe3224/awesome-systematic-trading for separating data, alpha research, analytics, backtesting, live trading, architecture, tools, resources, and AI/LLM lanes before trusting a setup.",
+      docs: "https://github.com/wangzhe3224/awesome-systematic-trading",
+    },
+    {
       key: "local-llm",
       label: "Local OpenAI-compatible analyst LLM",
       category: "ai-research",
