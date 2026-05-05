@@ -67,6 +67,14 @@ export const referenceReportLessons: ReferenceReportLesson[] = [
     category: "data",
   },
   {
+    key: "alphalens",
+    title: "Alphalens Reference",
+    source: "https://github.com/quantopian/alphalens",
+    lesson: "Alphalens-style factor analysis turns raw alpha scores into forward-return, information-coefficient, turnover, grouped, and quantile-spread evidence before a signal is trusted.",
+    systemRule: "Factor evidence can raise confidence only when IC, forward returns, turnover, costs, freshness, and paper outcomes agree; Alphalens output cannot authorize broker orders.",
+    category: "research",
+  },
+  {
     key: "openstock",
     title: "OpenStock Reference",
     source: "https://github.com/Open-Dev-Society/OpenStock",

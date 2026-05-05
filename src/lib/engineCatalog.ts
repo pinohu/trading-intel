@@ -31,6 +31,16 @@ export const engineCapabilities: EngineCapability[] = [
     priority: "Next",
   },
   {
+    repo: "quantopian/alphalens",
+    productName: "Alphalens Factor Tear Sheet",
+    lane: "Factor performance analysis",
+    bestUse: "Evaluate predictive alpha factors with forward returns, information coefficient, turnover, grouped analysis, quantile spreads, and tear sheets.",
+    featureUnlocked: "Factor-proof lane that asks whether a signal actually ranks future returns before it can raise conviction.",
+    integrationMode: "Python worker",
+    safety: "Research",
+    priority: "Next",
+  },
+  {
     repo: "TauricResearch/TradingAgents",
     productName: "TradingAgents Debate Desk",
     lane: "Multi-agent research",
@@ -315,6 +325,7 @@ export const engineCapabilities: EngineCapability[] = [
 export const engineWorkflow = [
   "Collect data with OpenBB/Alpha Vantage/OpenStock/Ghostfolio/AKShare-style connectors and current quote/news APIs.",
   "Challenge interesting tickers with TradingAgents and LLM-Trading-Lab-style agent logs before writing a trade thesis.",
+  "Use Alphalens-style factor tear sheets to test whether ranks, quantiles, IC, and turnover support the signal.",
   "Use LSTM-Time-Series, StockPredictionAI, Stock-Prediction-Models, and LLM-Trading-Lab-style outputs as research pressure, not as trade authorization.",
   "Run simple first-pass validation in the native Backtest Lab.",
   "Stress-test parameters with a vectorbt-style sweep before trusting a setup.",
@@ -324,5 +335,5 @@ export const engineWorkflow = [
   "Use Vibe-Trading and AutoHedge patterns to orchestrate specialist teams instead of trusting one model.",
   "Use OpenAlice and QuantDinger patterns to demand versioned orders, guard checks, alerts, and operations continuity.",
   "Use TensorTrade, AI-Trader, and Polymarket-agent patterns as RL, collective-signal, and event-probability pressure tests.",
-  "Keep LLM Trading Lab, StreetMerchant, LSTM Time Series, StockPredictionAI, Stock Prediction Models, Alpha Vantage, StockSharp, RQAlpha, FinRL, FinRL-Trading, TensorTrade, Nautilus, Jesse, OpenAlice, and all autonomous-agent lanes behind paper/live gates until broker keys, acknowledgement, audit storage, and risk controls exist.",
+  "Keep LLM Trading Lab, StreetMerchant, LSTM Time Series, StockPredictionAI, Stock Prediction Models, Alpha Vantage, Alphalens, StockSharp, RQAlpha, FinRL, FinRL-Trading, TensorTrade, Nautilus, Jesse, OpenAlice, and all autonomous-agent lanes behind paper/live gates until broker keys, acknowledgement, audit storage, and risk controls exist.",
 ];

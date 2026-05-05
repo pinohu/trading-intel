@@ -3,6 +3,7 @@ import { cleanSecret } from "@/lib/security";
 export type ExternalWorkerKey =
   | "openbb"
   | "alphavantage"
+  | "alphalens"
   | "openstock"
   | "streetmerchant"
   | "ghostfolio"
@@ -30,6 +31,7 @@ export type ExternalWorkerJob = {
     | "parameter-sweep"
     | "forecast"
     | "agent-research"
+    | "factor-analysis"
     | "alert-monitor"
     | "nlp"
     | "rl-research"
@@ -39,7 +41,7 @@ export type ExternalWorkerJob = {
   parameters?: Record<string, unknown>;
 };
 
-const externalWorkerJobTypes = ["market-data", "portfolio", "fundamentals", "backtest", "parameter-sweep", "forecast", "agent-research", "alert-monitor", "nlp", "rl-research", "crypto-paper"];
+const externalWorkerJobTypes = ["market-data", "portfolio", "fundamentals", "backtest", "parameter-sweep", "forecast", "agent-research", "factor-analysis", "alert-monitor", "nlp", "rl-research", "crypto-paper"];
 
 export const externalWorkerCatalog: Array<{
   key: ExternalWorkerKey;
@@ -61,6 +63,13 @@ export const externalWorkerCatalog: Array<{
     urlEnv: "ALPHA_VANTAGE_WORKER_URL",
     purpose: "MIT-licensed Python Alpha Vantage wrapper lane for free-account time series, technical indicators, fundamentals, FX, crypto, and rate-limit-labeled data enrichment.",
     allowedJobs: ["market-data", "fundamentals", "forecast"],
+  },
+  {
+    key: "alphalens",
+    label: "Alphalens",
+    urlEnv: "ALPHALENS_WORKER_URL",
+    purpose: "Apache-2.0 factor performance analysis lane for forward returns, information coefficient, turnover, grouped analysis, quantile spreads, and tear-sheet evidence.",
+    allowedJobs: ["factor-analysis", "backtest", "parameter-sweep"],
   },
   {
     key: "openstock",

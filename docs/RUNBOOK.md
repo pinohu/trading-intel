@@ -33,6 +33,12 @@ Optional Alpha Vantage worker check:
 - Dispatch a research-only job through `/api/research-workers/run` with `worker: "alphavantage"` and `jobType: "market-data"`.
 - Confirm the worker returns source function, timestamp, provider warning/rate-limit status, adjusted/delayed labels, and no broker-order side effects.
 
+Optional Alphalens worker check:
+
+- Set `ALPHALENS_WORKER_URL` to the self-hosted Python worker endpoint.
+- Dispatch a research-only job through `/api/research-workers/run` with `worker: "alphalens"` and `jobType: "factor-analysis"`.
+- Confirm the worker returns forward returns, IC, turnover, quantile/group analysis, cost assumptions, missing-data warnings, and no broker-order side effects.
+
 Optional OpenStock companion check:
 
 - Set `OPENSTOCK_WORKER_URL` to the self-hosted companion worker endpoint.

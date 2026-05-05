@@ -569,9 +569,9 @@ const quantPipelines = [
   },
   {
     title: "Backtest Ladder",
-    repo: "backtesting.py -> vectorbt -> RQAlpha -> LEAN -> StockSharp",
+    repo: "Alphalens -> backtesting.py -> vectorbt -> RQAlpha -> LEAN -> StockSharp",
     icon: GitBranch,
-    body: "Validate simple logic first, sweep parameters second, then promote robust candidates to Python or C#/.NET event-driven simulation.",
+    body: "Check factor tear sheets first, validate simple logic, sweep parameters, then promote robust candidates to Python or C#/.NET event-driven simulation.",
   },
   {
     title: "AI Research",

@@ -13,6 +13,16 @@ describe("external worker catalog", () => {
     expect(validExternalWorkerJob({ jobType: "market-data", symbols: ["IBM"], strategy: "daily-adjusted-with-rate-labels" })).toBe(true);
   });
 
+  it("registers Alphalens as a bounded factor-analysis worker", () => {
+    const worker = externalWorkerCatalog.find((item) => item.key === "alphalens");
+
+    expect(worker?.urlEnv).toBe("ALPHALENS_WORKER_URL");
+    expect(worker?.allowedJobs).toContain("factor-analysis");
+    expect(worker?.allowedJobs).toContain("backtest");
+    expect(validWorkerKey("alphalens")).toBe(true);
+    expect(validExternalWorkerJob({ jobType: "factor-analysis", symbols: ["SPY", "QQQ"], strategy: "factor-tear-sheet" })).toBe(true);
+  });
+
   it("registers OpenStock as a bounded companion market worker", () => {
     const openstock = externalWorkerCatalog.find((worker) => worker.key === "openstock");
 

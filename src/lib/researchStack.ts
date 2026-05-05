@@ -168,6 +168,18 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
       docs: "https://github.com/RomelTorres/alpha_vantage",
     },
     {
+      key: "alphalens",
+      label: "Alphalens factor worker",
+      category: "backtesting",
+      ready: workerReady("ALPHALENS_WORKER_URL"),
+      mode: workerReady("ALPHALENS_WORKER_URL") ? "worker" : "missing",
+      costProfile: "free-self-hosted",
+      env: ["ALPHALENS_WORKER_URL"],
+      detail: "External Apache-2.0 factor-performance worker for forward returns, information coefficient, turnover, grouped analysis, quantile spreads, and tear-sheet evidence.",
+      freeAlternative: "Native Algorithm Council and cost-aware backtests remain available; self-host Alphalens when factor evidence needs IC/turnover/quantile proof.",
+      docs: "https://github.com/quantopian/alphalens",
+    },
+    {
       key: "openstock",
       label: "OpenStock companion worker",
       category: "market-data",
@@ -497,6 +509,12 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
         purpose: "Free-account Alpha Vantage time series, technical indicators, fundamentals, FX, crypto, and rate-limit-aware enrichment.",
         command: "python workers/alpha_vantage_worker.py",
         urlEnv: "ALPHA_VANTAGE_WORKER_URL",
+      },
+      {
+        name: "Alphalens factor worker",
+        purpose: "Factor tear sheets, forward returns, information coefficient, turnover, grouped analysis, and quantile spread evidence.",
+        command: "python workers/alphalens_worker.py",
+        urlEnv: "ALPHALENS_WORKER_URL",
       },
       {
         name: "OpenStock companion",

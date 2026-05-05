@@ -47,6 +47,7 @@ Set these when you host workers outside Vercel:
 
 - `OPENBB_WORKER_URL`
 - `ALPHA_VANTAGE_WORKER_URL`
+- `ALPHALENS_WORKER_URL`
 - `OPENSTOCK_WORKER_URL`
 - `STREETMERCHANT_WORKER_URL`
 - `GHOSTFOLIO_WORKER_URL`
@@ -100,6 +101,20 @@ Accepted job families:
 Use it for daily/intraday time series, technical indicators, fundamentals, FX, crypto, and economic data enrichment. Worker output must include source function, symbol, timestamp, provider warnings, rate-limit status, and whether the result is delayed, adjusted, or incomplete.
 
 Alpha Vantage data is useful for free-account research, but it is not automatically execution-grade. Buy-now and live routes still require fresh, trusted trade-critical quotes and the app's normal broker gates.
+
+## Alphalens Worker
+
+Alphalens is integrated as an optional self-hosted factor-performance worker. Configure `ALPHALENS_WORKER_URL` to expose factor tear-sheet jobs through the existing worker bridge.
+
+Accepted job families:
+
+- `factor-analysis`
+- `backtest`
+- `parameter-sweep`
+
+Use it for forward-return analysis, information coefficient, quantile returns, factor turnover, grouped analysis, quantile spreads, and tear-sheet style evidence. Worker output must include factor universe, pricing source, horizon, quantile/binning method, cost assumptions, and any missing-data warnings.
+
+Alphalens is Apache-2.0 licensed. Its output is factor proof only; it cannot place orders or bypass freshness, risk, paper/live, or broker gates.
 
 ## OpenStock Companion Worker
 
