@@ -2,6 +2,7 @@ import { cleanSecret } from "@/lib/security";
 
 export type ExternalWorkerKey =
   | "openbb"
+  | "openstock"
   | "akshare"
   | "lean"
   | "stocksharp"
@@ -35,6 +36,13 @@ export const externalWorkerCatalog: Array<{
     urlEnv: "OPENBB_WORKER_URL",
     purpose: "Fundamentals, macro, options, and provider-key research.",
     allowedJobs: ["fundamentals"],
+  },
+  {
+    key: "openstock",
+    label: "OpenStock",
+    urlEnv: "OPENSTOCK_WORKER_URL",
+    purpose: "AGPL-licensed companion market app lane for search, watchlists, company insights, market/news context, alerts, and UI/UX pattern comparison.",
+    allowedJobs: ["market-data", "fundamentals", "nlp"],
   },
   {
     key: "akshare",

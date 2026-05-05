@@ -41,6 +41,16 @@ export const engineCapabilities: EngineCapability[] = [
     priority: "Next",
   },
   {
+    repo: "Open-Dev-Society/OpenStock",
+    productName: "OpenStock Companion",
+    lane: "Open market app",
+    bestUse: "Self-hosted stock search, watchlists, company insights, Finnhub/TradingView-style market views, alerts, and product-pattern comparison.",
+    featureUnlocked: "Companion dashboard and alert UX pressure without importing AGPL source into the main app.",
+    integrationMode: "External engine",
+    safety: "Research",
+    priority: "Next",
+  },
+  {
     repo: "akfamily/akshare",
     productName: "AKShare Data Worker",
     lane: "Free financial data",
@@ -233,7 +243,7 @@ export const engineCapabilities: EngineCapability[] = [
 ];
 
 export const engineWorkflow = [
-  "Collect data with OpenBB/AKShare-style connectors and current quote/news APIs.",
+  "Collect data with OpenBB/OpenStock/AKShare-style connectors and current quote/news APIs.",
   "Challenge interesting tickers with TradingAgents multi-agent debate before writing a trade thesis.",
   "Use StockPredictionAI-style deep forecasts as research pressure, not as trade authorization.",
   "Run simple first-pass validation in the native Backtest Lab.",

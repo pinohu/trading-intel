@@ -2,6 +2,17 @@ import { describe, expect, it } from "vitest";
 import { externalWorkerCatalog, validExternalWorkerJob, validWorkerKey } from "@/lib/externalWorkers";
 
 describe("external worker catalog", () => {
+  it("registers OpenStock as a bounded companion market worker", () => {
+    const openstock = externalWorkerCatalog.find((worker) => worker.key === "openstock");
+
+    expect(openstock?.urlEnv).toBe("OPENSTOCK_WORKER_URL");
+    expect(openstock?.allowedJobs).toContain("market-data");
+    expect(openstock?.allowedJobs).toContain("fundamentals");
+    expect(openstock?.allowedJobs).toContain("nlp");
+    expect(validWorkerKey("openstock")).toBe(true);
+    expect(validExternalWorkerJob({ jobType: "market-data", symbols: ["AAPL"], strategy: "companion-watchlist-context" })).toBe(true);
+  });
+
   it("registers AKShare as a bounded research data worker", () => {
     const akshare = externalWorkerCatalog.find((worker) => worker.key === "akshare");
 

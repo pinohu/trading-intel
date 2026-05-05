@@ -12,6 +12,7 @@ describe("research stack readiness", () => {
     expect(keys).toContain("sec-edgar");
     expect(keys).toContain("local-llm");
     expect(keys).toContain("openbb");
+    expect(keys).toContain("openstock");
     expect(keys).toContain("akshare");
     expect(keys).toContain("tradingagents");
     expect(keys).toContain("stockpredictionai");

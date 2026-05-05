@@ -156,6 +156,18 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
       docs: "https://docs.openbb.co/",
     },
     {
+      key: "openstock",
+      label: "OpenStock companion worker",
+      category: "market-data",
+      ready: workerReady("OPENSTOCK_WORKER_URL"),
+      mode: workerReady("OPENSTOCK_WORKER_URL") ? "worker" : "missing",
+      costProfile: "free-self-hosted",
+      env: ["OPENSTOCK_WORKER_URL"],
+      detail: "External AGPL-licensed companion app lane for stock search, watchlists, company insights, market/news context, alerts, and UX comparison without vendoring source.",
+      freeAlternative: "Native dashboard search/watchlist/news and public quote stack remain available; self-host OpenStock when you want its companion market-app workflow.",
+      docs: "https://github.com/Open-Dev-Society/OpenStock",
+    },
+    {
       key: "akshare",
       label: "AKShare data worker",
       category: "market-data",
@@ -395,6 +407,12 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
         purpose: "Fundamentals, macro, options, and provider-key research.",
         command: "python workers/openbb_worker.py",
         urlEnv: "OPENBB_WORKER_URL",
+      },
+      {
+        name: "OpenStock companion",
+        purpose: "Self-hosted market-app companion for search, watchlists, company insights, market/news context, alerts, and UX comparison.",
+        command: "node workers/openstock-worker.mjs",
+        urlEnv: "OPENSTOCK_WORKER_URL",
       },
       {
         name: "AKShare worker",

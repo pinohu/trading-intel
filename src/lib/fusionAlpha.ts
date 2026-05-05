@@ -251,6 +251,24 @@ function buildEngineFinding({
     });
   }
 
+  if (key === "openstock") {
+    const coverage = score?.dataCoveragePct ?? qualityScore(quote);
+    const value = average([qualityScore(quote), coverage, signal?.dataFresh ? 68 : 32, agent ? agentScore(agent) : 50]);
+    return finding({
+      ...base,
+      status,
+      score: value,
+      finding: component?.ready
+        ? "OpenStock companion lane can cross-check market-app search, watchlist, company-insight, news, and alert context."
+        : "OpenStock lane is proxy-only until a self-hosted companion worker supplies labeled market-app context.",
+      evidence: [
+        `Quote source: ${quote.source}`,
+        `Quote quality: ${quote.quality}`,
+        signal?.dataFresh ? "Fresh dashboard signal exists." : "Fresh dashboard signal missing.",
+      ],
+    });
+  }
+
   if (key === "akshare") {
     const coverage = score?.dataCoveragePct ?? qualityScore(quote);
     const value = average([qualityScore(quote), coverage, signal?.dataFresh ? 70 : 30]);
@@ -587,6 +605,7 @@ function finding(input: Omit<FusionEngineFinding, "stance" | "impact">): FusionE
 
 function engineKey(engine: EngineCapability) {
   if (engine.repo.includes("OpenBB")) return "openbb";
+  if (engine.repo.includes("OpenStock")) return "openstock";
   if (engine.repo.includes("akshare")) return "akshare";
   if (engine.repo.includes("TradingAgents-CN")) return "tradingagents-cn";
   if (engine.repo.includes("TradingAgents")) return "tradingagents";
@@ -614,6 +633,7 @@ function engineKey(engine: EngineCapability) {
 function engineWeight(key: string) {
   const weights: Record<string, number> = {
     openbb: 0.075,
+    openstock: 0.055,
     akshare: 0.06,
     tradingagents: 0.13,
     stockpredictionai: 0.065,

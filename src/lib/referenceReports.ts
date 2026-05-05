@@ -59,6 +59,14 @@ export const referenceReportLessons: ReferenceReportLesson[] = [
     category: "research",
   },
   {
+    key: "openstock",
+    title: "OpenStock Reference",
+    source: "https://github.com/Open-Dev-Society/OpenStock",
+    lesson: "OpenStock provides open market-app patterns for search, watchlists, company insights, news/context surfaces, alerts, and auth-backed personal workflows.",
+    systemRule: "Use OpenStock as a self-hosted companion/reference lane; do not copy AGPL source into this app without accepting the license obligations.",
+    category: "operations",
+  },
+  {
     key: "akshare",
     title: "AKShare Reference",
     source: "https://github.com/akfamily/akshare",

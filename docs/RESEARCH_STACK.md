@@ -46,6 +46,7 @@ It does not place broker orders. Manual paper/live orders still go through the v
 Set these when you host workers outside Vercel:
 
 - `OPENBB_WORKER_URL`
+- `OPENSTOCK_WORKER_URL`
 - `AKSHARE_WORKER_URL`
 - `LEAN_WORKER_URL`
 - `STOCKSHARP_WORKER_URL`
@@ -78,6 +79,18 @@ with a payload:
 ```
 
 Use `WORKER_SHARED_SECRET` for worker-to-worker authorization if the external service supports it.
+
+## OpenStock Companion Worker
+
+OpenStock is integrated as an optional self-hosted companion market-app worker. Configure `OPENSTOCK_WORKER_URL` to expose search, watchlists, company insights, market/news context, alerts, and UX comparison through the existing worker bridge.
+
+Accepted job families:
+
+- `market-data`
+- `fundamentals`
+- `nlp`
+
+OpenStock is AGPL-3.0 licensed, so this app treats it as a separately hosted companion/reference lane and does not vendor its source. Worker output must remain research-only and cannot place broker orders.
 
 ## AKShare Worker
 

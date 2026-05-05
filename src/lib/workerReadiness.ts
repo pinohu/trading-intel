@@ -59,11 +59,11 @@ export function buildWorkerReadiness(): WorkerReadiness {
     {
       key: "external-data-workers",
       label: "External data workers",
-      ready: Boolean(process.env.OPENBB_WORKER_URL || process.env.AKSHARE_WORKER_URL),
+      ready: Boolean(process.env.OPENBB_WORKER_URL || process.env.OPENSTOCK_WORKER_URL || process.env.AKSHARE_WORKER_URL),
       detail:
-        process.env.OPENBB_WORKER_URL || process.env.AKSHARE_WORKER_URL
+        process.env.OPENBB_WORKER_URL || process.env.OPENSTOCK_WORKER_URL || process.env.AKSHARE_WORKER_URL
           ? "At least one external research data worker URL is configured."
-          : "Set OPENBB_WORKER_URL or AKSHARE_WORKER_URL for deeper market-data and fundamentals research outside Vercel.",
+          : "Set OPENBB_WORKER_URL, OPENSTOCK_WORKER_URL, or AKSHARE_WORKER_URL for deeper market-data and fundamentals research outside Vercel.",
     },
     {
       key: "external-quant-workers",
@@ -113,6 +113,12 @@ export function buildWorkerReadiness(): WorkerReadiness {
         purpose: "Run bounded AutoResearch-style strategy experiments and store champions.",
         cadence: "nightly or on demand",
         command: "node scripts/autoresearch-lab.mjs",
+      },
+      {
+        name: "openstock-worker",
+        purpose: "Bridge self-hosted OpenStock-style search, watchlists, company insights, market/news context, and alert UX patterns for research.",
+        cadence: "on demand / scheduled research jobs",
+        command: "node workers/openstock-worker.mjs",
       },
       {
         name: "akshare-worker",

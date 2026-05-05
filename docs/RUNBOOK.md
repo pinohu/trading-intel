@@ -27,6 +27,12 @@ Then authenticate and check:
 - `/api/research-workers/readiness`
 - `/api/tradingagents/analyze` with an authenticated session; no worker URL is required
 
+Optional OpenStock companion check:
+
+- Set `OPENSTOCK_WORKER_URL` to the self-hosted companion worker endpoint.
+- Dispatch a research-only job through `/api/research-workers/run` with `worker: "openstock"` and `jobType: "market-data"`.
+- Confirm the worker returns search/watchlist/company/news/alert context and no broker-order side effects.
+
 Optional AKShare worker check:
 
 - Set `AKSHARE_WORKER_URL` to the self-hosted Python worker endpoint.
