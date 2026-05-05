@@ -569,9 +569,9 @@ const quantPipelines = [
   },
   {
     title: "Backtest Ladder",
-    repo: "backtesting.py -> vectorbt -> LEAN",
+    repo: "backtesting.py -> vectorbt -> LEAN -> StockSharp",
     icon: GitBranch,
-    body: "Validate simple logic first, sweep parameters second, then promote robust candidates to event-driven simulation.",
+    body: "Validate simple logic first, sweep parameters second, then promote robust candidates to event-driven C#/.NET or LEAN simulation.",
   },
   {
     title: "AI Research",
@@ -581,7 +581,7 @@ const quantPipelines = [
   },
   {
     title: "Execution Gate",
-    repo: "Nautilus + Jesse",
+    repo: "Nautilus + StockSharp + Jesse",
     icon: ShieldCheck,
     body: "Prepare professional trading rails and crypto lanes without enabling real-money execution by default.",
   },
@@ -836,7 +836,7 @@ function simulateStrategies(symbol: string, price: number, lookback: number, ris
       1,
       Math.min(100, Math.round(58 + expectedReturn * 4 - maxDrawdown * 1.4 + winRate * 0.35)),
     );
-    const repo = index === 0 ? "backtesting.py" : index === 1 ? "vectorbt" : index === 2 ? "Backtrader" : index === 3 ? "LEAN" : "FinGPT filter";
+    const repo = index === 0 ? "backtesting.py" : index === 1 ? "vectorbt" : index === 2 ? "Backtrader" : index === 3 ? "LEAN / StockSharp" : "FinGPT filter";
     return { name, repo, description: `${symbol} @ ${formatUsd(price)} with ${lookback}D lookback`, expectedReturn, maxDrawdown, winRate, trades, robustness };
   });
 }

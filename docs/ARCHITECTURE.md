@@ -24,7 +24,7 @@ Production real-money trading requires these external systems before live execut
 - Free-first research data is implemented; licensed real-time market data is required only before execution-grade promotion.
 - Persistent database with the provided schema applied.
 - Broker execution account gates, live acknowledgement, and order audit storage.
-- Historical backtesting workers.
+- Historical backtesting workers, including optional StockSharp C#/.NET worker integration.
 - Signal outcome tracker.
 - Immutable audit retention and export policy beyond the current audit-events table.
 - User auth and RBAC.
@@ -45,7 +45,7 @@ flowchart LR
   BFF --> Ising["Ising/QUBO Basket Optimizer"]
   BFF --> TradingAgents["Native TradingAgents: in-code multi-agent debate"]
   TradingAgents --> DB
-  BacktestWorker["Backtest Workers: LEAN/vectorbt/backtesting.py"] --> DB
+  BacktestWorker["Backtest Workers: LEAN/StockSharp/vectorbt/backtesting.py"] --> DB
   Broker["Broker Paper/Read-Only APIs"] --> BFF
   BFF --> BrokerExec["Broker Execution API: user-session only, live gated"]
   Queue --> Alerts["Webhook/SMS/Email/Push"]
@@ -57,7 +57,7 @@ flowchart LR
 - Never promote stale quotes to buy/sell actions.
 - Never place live orders from the app until paper results, audit logs, broker permissions, and operator approvals exist.
 - Never allow cron or agent bearer tokens to place broker orders.
-- Never let TradingAgents output place autonomous broker orders; manual paper/live execution stays in the broker controls and audit rail.
+- Never let TradingAgents or StockSharp worker output place autonomous broker orders; manual paper/live execution stays in the broker controls and audit rail.
 - Never submit a market order from the current execution rail.
 - Never treat the Ising optimizer as a price predictor; it only selects among existing candidates.
 - Never allow auth to fail open.

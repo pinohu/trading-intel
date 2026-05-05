@@ -47,6 +47,7 @@ Set these when you host workers outside Vercel:
 
 - `OPENBB_WORKER_URL`
 - `LEAN_WORKER_URL`
+- `STOCKSHARP_WORKER_URL`
 - `BACKTRADER_WORKER_URL`
 - `VECTORBT_WORKER_URL`
 - `NAUTILUS_WORKER_URL`
@@ -75,6 +76,18 @@ with a payload:
 ```
 
 Use `WORKER_SHARED_SECRET` for worker-to-worker authorization if the external service supports it.
+
+## StockSharp Worker
+
+StockSharp is integrated as a self-hosted C#/.NET worker, not as code running inside the Next.js serverless app. Configure `STOCKSHARP_WORKER_URL` to expose StockSharp research jobs through the existing worker bridge.
+
+Accepted job families:
+
+- `backtest`
+- `parameter-sweep`
+- `crypto-paper`
+
+The worker request includes `safety.researchOnly=true`, `safety.noAutonomousExecution=true`, and `safety.brokerOrdersBlocked=true`. Keep StockSharp live execution behind the app's normal operator-armed live-agent route instead of accepting broker orders from `/api/research-workers/run`.
 
 ## Free Alternatives
 

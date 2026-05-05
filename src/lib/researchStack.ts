@@ -191,6 +191,18 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
       docs: "https://www.quantconnect.com/docs/v2/lean-cli",
     },
     {
+      key: "stocksharp",
+      label: "StockSharp C# worker",
+      category: "backtesting",
+      ready: workerReady("STOCKSHARP_WORKER_URL"),
+      mode: workerReady("STOCKSHARP_WORKER_URL") ? "worker" : "missing",
+      costProfile: "free-self-hosted",
+      env: ["STOCKSHARP_WORKER_URL"],
+      detail: "External Apache-2.0 C#/.NET worker for StockSharp connector research, multi-market strategy tests, and broker-adapter simulations.",
+      freeAlternative: "Self-host StockSharp beside the app; native cost-aware backtests remain available when the worker is absent.",
+      docs: "https://github.com/StockSharp/StockSharp",
+    },
+    {
       key: "backtrader",
       label: "Backtrader worker",
       category: "backtesting",
@@ -365,6 +377,12 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
         purpose: "Event-driven historical backtests and paper/live promotion trials.",
         command: "lean backtest \"TradingIntelStrategy\"",
         urlEnv: "LEAN_WORKER_URL",
+      },
+      {
+        name: "StockSharp worker",
+        purpose: "C#/.NET connector research, strategy tests, and broker-adapter simulations.",
+        command: "dotnet run --project workers/StockSharpWorker",
+        urlEnv: "STOCKSHARP_WORKER_URL",
       },
       {
         name: "Backtrader/vectorbt worker",

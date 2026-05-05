@@ -3,6 +3,7 @@ import { cleanSecret } from "@/lib/security";
 export type ExternalWorkerKey =
   | "openbb"
   | "lean"
+  | "stocksharp"
   | "backtrader"
   | "vectorbt"
   | "nautilus"
@@ -39,6 +40,13 @@ export const externalWorkerCatalog: Array<{
     urlEnv: "LEAN_WORKER_URL",
     purpose: "Event-driven historical backtests and paper/live promotion trials.",
     allowedJobs: ["backtest"],
+  },
+  {
+    key: "stocksharp",
+    label: "StockSharp",
+    urlEnv: "STOCKSHARP_WORKER_URL",
+    purpose: "C#/.NET connector research, multi-market strategy tests, and broker-adapter simulations behind platform safety gates.",
+    allowedJobs: ["backtest", "parameter-sweep", "crypto-paper"],
   },
   {
     key: "backtrader",

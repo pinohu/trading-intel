@@ -27,6 +27,12 @@ Then authenticate and check:
 - `/api/research-workers/readiness`
 - `/api/tradingagents/analyze` with an authenticated session; no worker URL is required
 
+Optional StockSharp worker check:
+
+- Set `STOCKSHARP_WORKER_URL` to the self-hosted C#/.NET worker endpoint.
+- Dispatch a research-only job through `/api/research-workers/run` with `worker: "stocksharp"` and `jobType: "backtest"`.
+- Confirm the worker returns metrics without placing broker orders.
+
 ## Persistence Setup
 
 1. Create a Postgres-compatible database.

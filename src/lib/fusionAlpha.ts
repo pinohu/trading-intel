@@ -277,6 +277,23 @@ function buildEngineFinding({
     });
   }
 
+  if (key === "stocksharp") {
+    const value = average([eventSimulationScore(backtest, activeBuy), brokerReady ? 68 : 44, signal?.dataFresh ? 72 : 36]);
+    return finding({
+      ...base,
+      status,
+      score: value,
+      finding: component?.ready
+        ? "StockSharp C# worker is available for connector research, strategy simulation, and broker-adapter cross-checks."
+        : "StockSharp C# worker is not connected; Fusion uses a proxy score from native backtests, broker readiness, and signal freshness.",
+      evidence: [
+        backtestStatus(backtest),
+        brokerReady ? "Broker readiness gate is available." : "Broker readiness gate is locked.",
+        activeBuy ? "Buy-now ticket exists." : "No executable buy-now ticket.",
+      ],
+    });
+  }
+
   if (key === "backtesting-py") {
     const value = backtestScore(backtest);
     return finding({
@@ -535,6 +552,7 @@ function engineKey(engine: EngineCapability) {
   if (engine.repo.includes("TradingAgents-CN")) return "tradingagents-cn";
   if (engine.repo.includes("TradingAgents")) return "tradingagents";
   if (engine.repo.includes("Lean")) return "lean";
+  if (engine.repo.includes("StockSharp")) return "stocksharp";
   if (engine.repo.includes("backtesting.py")) return "backtesting-py";
   if (engine.repo.includes("vectorbt")) return "vectorbt";
   if (engine.repo.includes("backtrader")) return "backtrader";
@@ -558,6 +576,7 @@ function engineWeight(key: string) {
     openbb: 0.075,
     tradingagents: 0.13,
     lean: 0.095,
+    stocksharp: 0.075,
     "backtesting-py": 0.105,
     vectorbt: 0.085,
     backtrader: 0.065,
