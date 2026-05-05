@@ -4,7 +4,7 @@ import { cleanSecret } from "@/lib/security";
 export type ResearchStackComponent = {
   key: string;
   label: string;
-  category: "market-data" | "news" | "filings" | "fundamentals" | "portfolio" | "backtesting" | "ai-research" | "crypto" | "database";
+  category: "market-data" | "news" | "filings" | "fundamentals" | "portfolio" | "backtesting" | "ai-research" | "crypto" | "operations" | "database";
   ready: boolean;
   mode: "credentialed" | "free-fallback" | "worker" | "native" | "missing";
   costProfile: "free-default" | "free-public" | "free-self-hosted" | "free-account" | "optional-paid";
@@ -166,6 +166,18 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
       detail: "External AGPL-licensed companion app lane for stock search, watchlists, company insights, market/news context, alerts, and UX comparison without vendoring source.",
       freeAlternative: "Native dashboard search/watchlist/news and public quote stack remain available; self-host OpenStock when you want its companion market-app workflow.",
       docs: "https://github.com/Open-Dev-Society/OpenStock",
+    },
+    {
+      key: "streetmerchant",
+      label: "StreetMerchant alert-pattern worker",
+      category: "operations",
+      ready: workerReady("STREETMERCHANT_WORKER_URL"),
+      mode: workerReady("STREETMERCHANT_WORKER_URL") ? "worker" : "missing",
+      costProfile: "free-self-hosted",
+      env: ["STREETMERCHANT_WORKER_URL"],
+      detail: "External MIT-licensed alert-operations worker inspired by jef/streetmerchant for 24/7 watch loops, dashboard matrices, notification fanout, cooldown discipline, and manual-action guardrails. It is retail-inventory stock monitoring, not equity market data.",
+      freeAlternative: "Native monitor scans, SQL alert events, browser notifications, webhook, Twilio, and Resend remain available; self-host StreetMerchant-style checks only to harden alert-loop operations.",
+      docs: "https://github.com/jef/streetmerchant",
     },
     {
       key: "ghostfolio",
@@ -461,6 +473,12 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
         purpose: "Self-hosted market-app companion for search, watchlists, company insights, market/news context, alerts, and UX comparison.",
         command: "node workers/openstock-worker.mjs",
         urlEnv: "OPENSTOCK_WORKER_URL",
+      },
+      {
+        name: "StreetMerchant alert-pattern worker",
+        purpose: "Self-hosted alert-loop, cooldown, notification fanout, and dashboard-status pressure testing. Not a financial quote feed.",
+        command: "node workers/streetmerchant-alert-worker.mjs",
+        urlEnv: "STREETMERCHANT_WORKER_URL",
       },
       {
         name: "Ghostfolio portfolio worker",

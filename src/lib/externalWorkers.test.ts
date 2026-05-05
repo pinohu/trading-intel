@@ -13,6 +13,15 @@ describe("external worker catalog", () => {
     expect(validExternalWorkerJob({ jobType: "market-data", symbols: ["AAPL"], strategy: "companion-watchlist-context" })).toBe(true);
   });
 
+  it("registers StreetMerchant as a bounded alert monitor worker", () => {
+    const worker = externalWorkerCatalog.find((item) => item.key === "streetmerchant");
+
+    expect(worker?.urlEnv).toBe("STREETMERCHANT_WORKER_URL");
+    expect(worker?.allowedJobs).toEqual(["alert-monitor"]);
+    expect(validWorkerKey("streetmerchant")).toBe(true);
+    expect(validExternalWorkerJob({ jobType: "alert-monitor", symbols: ["NVDA", "AMD"], strategy: "trigger-watch-alert-fanout" })).toBe(true);
+  });
+
   it("registers Ghostfolio as a bounded portfolio analytics worker", () => {
     const ghostfolio = externalWorkerCatalog.find((worker) => worker.key === "ghostfolio");
 

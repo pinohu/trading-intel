@@ -47,6 +47,7 @@ Set these when you host workers outside Vercel:
 
 - `OPENBB_WORKER_URL`
 - `OPENSTOCK_WORKER_URL`
+- `STREETMERCHANT_WORKER_URL`
 - `GHOSTFOLIO_WORKER_URL`
 - `AKSHARE_WORKER_URL`
 - `LLM_TRADING_LAB_WORKER_URL`
@@ -95,6 +96,18 @@ Accepted job families:
 - `nlp`
 
 OpenStock is AGPL-3.0 licensed, so this app treats it as a separately hosted companion/reference lane and does not vendor its source. Worker output must remain research-only and cannot place broker orders.
+
+## StreetMerchant Alert Worker
+
+StreetMerchant is integrated as an optional self-hosted alert-operations worker. Configure `STREETMERCHANT_WORKER_URL` only when you want a separate worker to pressure-test watch loops, source/status matrices, notification fanout, retry/cooldown policy, and manual-action guardrails through the existing worker bridge.
+
+Accepted job family:
+
+- `alert-monitor`
+
+Important boundary: StreetMerchant monitors retail inventory stock, not financial equities. This app uses it only as an alert-loop and notification-pattern reference. It must not be treated as market data, a buy/sell signal, or broker-order authorization.
+
+StreetMerchant is MIT licensed. Preserve license attribution if you distribute a worker that includes upstream source.
 
 ## Ghostfolio Portfolio Worker
 

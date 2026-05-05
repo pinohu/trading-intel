@@ -585,6 +585,12 @@ const quantPipelines = [
     icon: ShieldCheck,
     body: "Prepare professional trading rails and crypto lanes without enabling real-money execution by default.",
   },
+  {
+    title: "Alert Ops",
+    repo: "StreetMerchant + native monitor",
+    icon: BellRing,
+    body: "Keep watch loops, channel status, cooldowns, trigger alerts, and manual-action guardrails visible without treating alerts as orders.",
+  },
 ];
 
 function formatUsd(value: number) {
@@ -5152,9 +5158,9 @@ function ResearchStackPanel({ stack, autoResearch }: { stack: ResearchStackApi |
       </div>
     );
   }
-  const missingWorkers = stack.components.filter((component) => component.mode === "missing" && ["backtesting", "ai-research", "crypto", "fundamentals"].includes(component.category));
+  const missingWorkers = stack.components.filter((component) => component.mode === "missing" && ["backtesting", "ai-research", "crypto", "fundamentals", "operations"].includes(component.category));
   const providerRows = stack.components.filter((component) => ["market-data", "news", "filings", "database"].includes(component.category));
-  const workerRows = stack.components.filter((component) => ["fundamentals", "backtesting", "ai-research", "crypto"].includes(component.category));
+  const workerRows = stack.components.filter((component) => ["fundamentals", "backtesting", "ai-research", "crypto", "operations"].includes(component.category));
   const recentRuns = autoResearch?.recentRuns ?? [];
   const appliedFreeReplacements = stack.freeReplacements.filter((item) => item.applied).length;
 

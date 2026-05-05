@@ -67,6 +67,14 @@ export const referenceReportLessons: ReferenceReportLesson[] = [
     category: "operations",
   },
   {
+    key: "streetmerchant",
+    title: "StreetMerchant Reference",
+    source: "https://github.com/jef/streetmerchant",
+    lesson: "StreetMerchant is a retail inventory stock monitor, not a financial-equity data source; its useful lessons are persistent watch loops, store/source matrices, notification fanout, cooldowns, and manual purchase boundaries.",
+    systemRule: "StreetMerchant-style output can only harden alert operations; it must never be treated as market data, a buy/sell signal, or authorization for broker execution.",
+    category: "operations",
+  },
+  {
     key: "ghostfolio",
     title: "Ghostfolio Reference",
     source: "https://github.com/ghostfolio/ghostfolio",

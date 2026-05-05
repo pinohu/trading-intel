@@ -146,8 +146,8 @@ export const trustOperationGaps: TrustOperationGap[] = [
     status: "Live",
     proofStatus: "Partial",
     evidenceStandard: "Each alert path should show channel, subscription state, last delivery result, and whether it is browser-only or off-device.",
-    currentState: "Browser notifications, in-dashboard monitor alerts, webhook/SMS/email adapters, and SQL alert event storage are implemented.",
-    nextAction: "Use browser notifications as the free default, then add user-owned webhook or paid SMS/email only when off-device delivery is required.",
+    currentState: "Browser notifications, in-dashboard monitor alerts, webhook/SMS/email adapters, SQL alert event storage, and an optional StreetMerchant-style alert-loop worker lane are implemented.",
+    nextAction: "Use browser notifications as the free default, use StreetMerchant-style checks for loop/cooldown/channel proof, then add user-owned webhook or paid SMS/email only when off-device delivery is required.",
     acceptanceCriteria: [
       "Browser alerts can request permission and show armed/unarmed state without paid providers.",
       "Optional off-device channels can send a test alert and store delivery result.",

@@ -269,6 +269,28 @@ function buildEngineFinding({
     });
   }
 
+  if (key === "streetmerchant") {
+    const value = average([
+      signal?.dataFresh ? 76 : 24,
+      activeBuy ? 72 : signal?.action === "Buy Watch" || signal?.action === "Sell/Exit Watch" ? 62 : 45,
+      signal?.confidence ?? 50,
+      component?.ready ? 70 : 46,
+    ]);
+    return finding({
+      ...base,
+      status,
+      score: value,
+      finding: component?.ready
+        ? "StreetMerchant-style alert worker can pressure-test watch loops, channel fanout, cooldowns, and manual-action guardrails."
+        : "StreetMerchant lane is proxy-only; it contributes alert-operations discipline, not equity quote data or trade authorization.",
+      evidence: [
+        signal?.dataFresh ? "Fresh signal can drive alert state." : "Fresh signal is missing; alert should not fire.",
+        activeBuy ? "Actionable ticket candidate exists." : "No actionable ticket candidate.",
+        "StreetMerchant monitors retail inventory stock; this app uses only its alert-loop pattern.",
+      ],
+    });
+  }
+
   if (key === "ghostfolio") {
     const exposureScore = average([
       activeBuy ? 68 : 48,
@@ -696,6 +718,7 @@ function finding(input: Omit<FusionEngineFinding, "stance" | "impact">): FusionE
 function engineKey(engine: EngineCapability) {
   if (engine.repo.includes("OpenBB")) return "openbb";
   if (engine.repo.includes("OpenStock")) return "openstock";
+  if (engine.repo.includes("streetmerchant")) return "streetmerchant";
   if (engine.repo.includes("ghostfolio")) return "ghostfolio";
   if (engine.repo.includes("akshare")) return "akshare";
   if (engine.repo.includes("TradingAgents-CN")) return "tradingagents-cn";
@@ -728,6 +751,7 @@ function engineWeight(key: string) {
   const weights: Record<string, number> = {
     openbb: 0.075,
     openstock: 0.055,
+    streetmerchant: 0.045,
     ghostfolio: 0.07,
     akshare: 0.06,
     tradingagents: 0.13,

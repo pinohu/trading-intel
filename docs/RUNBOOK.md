@@ -33,6 +33,12 @@ Optional OpenStock companion check:
 - Dispatch a research-only job through `/api/research-workers/run` with `worker: "openstock"` and `jobType: "market-data"`.
 - Confirm the worker returns search/watchlist/company/news/alert context and no broker-order side effects.
 
+Optional StreetMerchant alert-pattern check:
+
+- Set `STREETMERCHANT_WORKER_URL` to the self-hosted alert worker endpoint.
+- Dispatch a research-only job through `/api/research-workers/run` with `worker: "streetmerchant"` and `jobType: "alert-monitor"`.
+- Confirm the worker returns watch-loop state, channel fanout status, cooldown/retry evidence, and no market-data or broker-order side effects.
+
 Optional Ghostfolio portfolio check:
 
 - Set `GHOSTFOLIO_WORKER_URL` to the self-hosted portfolio worker endpoint.

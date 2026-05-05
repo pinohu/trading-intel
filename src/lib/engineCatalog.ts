@@ -51,6 +51,16 @@ export const engineCapabilities: EngineCapability[] = [
     priority: "Next",
   },
   {
+    repo: "jef/streetmerchant",
+    productName: "StreetMerchant Alert Ops",
+    lane: "24/7 alert monitoring",
+    bestUse: "Watch-loop discipline, dashboard status matrices, notification channel fanout, retry/cooldown policy, and manual-action confirmation patterns.",
+    featureUnlocked: "Alert-operations pressure that keeps trigger state, channel readiness, cooldowns, and no-auto-buy guardrails visible next to trade ideas.",
+    integrationMode: "External engine",
+    safety: "Research",
+    priority: "Next",
+  },
+  {
     repo: "ghostfolio/ghostfolio",
     productName: "Ghostfolio Portfolio Companion",
     lane: "Portfolio analytics",
@@ -290,8 +300,9 @@ export const engineWorkflow = [
   "Stress-test parameters with a vectorbt-style sweep before trusting a setup.",
   "Promote only robust ideas to StockPredictionAI, LEAN, StockSharp, RQAlpha, or Backtrader for deeper forecast and event-driven simulation.",
   "Use FinGPT-style NLP to challenge the thesis with sentiment, filings, and contradiction checks.",
+  "Use StreetMerchant-style alert loops to show trigger state, channel readiness, cooldowns, and manual-action requirements before the operator reacts.",
   "Use Vibe-Trading and AutoHedge patterns to orchestrate specialist teams instead of trusting one model.",
   "Use OpenAlice and QuantDinger patterns to demand versioned orders, guard checks, alerts, and operations continuity.",
   "Use TensorTrade, AI-Trader, and Polymarket-agent patterns as RL, collective-signal, and event-probability pressure tests.",
-  "Keep LLM Trading Lab, StockPredictionAI, Stock Prediction Models, StockSharp, RQAlpha, FinRL, FinRL-Trading, TensorTrade, Nautilus, Jesse, OpenAlice, and all autonomous-agent lanes behind paper/live gates until broker keys, acknowledgement, audit storage, and risk controls exist.",
+  "Keep LLM Trading Lab, StreetMerchant, StockPredictionAI, Stock Prediction Models, StockSharp, RQAlpha, FinRL, FinRL-Trading, TensorTrade, Nautilus, Jesse, OpenAlice, and all autonomous-agent lanes behind paper/live gates until broker keys, acknowledgement, audit storage, and risk controls exist.",
 ];

@@ -3,6 +3,7 @@ import { cleanSecret } from "@/lib/security";
 export type ExternalWorkerKey =
   | "openbb"
   | "openstock"
+  | "streetmerchant"
   | "ghostfolio"
   | "akshare"
   | "llmtradinglab"
@@ -19,13 +20,24 @@ export type ExternalWorkerKey =
   | "jesse";
 
 export type ExternalWorkerJob = {
-  jobType: "market-data" | "portfolio" | "fundamentals" | "backtest" | "parameter-sweep" | "forecast" | "agent-research" | "nlp" | "rl-research" | "crypto-paper";
+  jobType:
+    | "market-data"
+    | "portfolio"
+    | "fundamentals"
+    | "backtest"
+    | "parameter-sweep"
+    | "forecast"
+    | "agent-research"
+    | "alert-monitor"
+    | "nlp"
+    | "rl-research"
+    | "crypto-paper";
   symbols: string[];
   strategy?: string;
   parameters?: Record<string, unknown>;
 };
 
-const externalWorkerJobTypes = ["market-data", "portfolio", "fundamentals", "backtest", "parameter-sweep", "forecast", "agent-research", "nlp", "rl-research", "crypto-paper"];
+const externalWorkerJobTypes = ["market-data", "portfolio", "fundamentals", "backtest", "parameter-sweep", "forecast", "agent-research", "alert-monitor", "nlp", "rl-research", "crypto-paper"];
 
 export const externalWorkerCatalog: Array<{
   key: ExternalWorkerKey;
@@ -47,6 +59,13 @@ export const externalWorkerCatalog: Array<{
     urlEnv: "OPENSTOCK_WORKER_URL",
     purpose: "AGPL-licensed companion market app lane for search, watchlists, company insights, market/news context, alerts, and UI/UX pattern comparison.",
     allowedJobs: ["market-data", "fundamentals", "nlp"],
+  },
+  {
+    key: "streetmerchant",
+    label: "StreetMerchant",
+    urlEnv: "STREETMERCHANT_WORKER_URL",
+    purpose: "MIT-licensed alert-operations reference for 24/7 watch loops, dashboard status matrices, cooldowns, notification fanout, and manual-action guardrails; not a financial market-data source.",
+    allowedJobs: ["alert-monitor"],
   },
   {
     key: "ghostfolio",

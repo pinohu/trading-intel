@@ -74,6 +74,14 @@ export function buildWorkerReadiness(): WorkerReadiness {
         : "Set GHOSTFOLIO_WORKER_URL for self-hosted portfolio performance, holdings, risk, and transaction analytics.",
     },
     {
+      key: "alert-pattern-worker",
+      label: "StreetMerchant-style alert worker",
+      ready: Boolean(process.env.STREETMERCHANT_WORKER_URL),
+      detail: process.env.STREETMERCHANT_WORKER_URL
+        ? "StreetMerchant-style alert-pattern worker URL is configured."
+        : "Set STREETMERCHANT_WORKER_URL only if you want a self-hosted alert loop/cooldown/notification fanout reference lane.",
+    },
+    {
       key: "external-quant-workers",
       label: "External quant workers",
       ready: Boolean(process.env.LEAN_WORKER_URL || process.env.STOCKSHARP_WORKER_URL || process.env.RQALPHA_WORKER_URL || process.env.BACKTRADER_WORKER_URL || process.env.VECTORBT_WORKER_URL),
@@ -127,6 +135,12 @@ export function buildWorkerReadiness(): WorkerReadiness {
         purpose: "Bridge self-hosted OpenStock-style search, watchlists, company insights, market/news context, and alert UX patterns for research.",
         cadence: "on demand / scheduled research jobs",
         command: "node workers/openstock-worker.mjs",
+      },
+      {
+        name: "streetmerchant-alert-worker",
+        purpose: "Run StreetMerchant-style alert-loop checks, cooldown audits, notification fanout tests, and dashboard status snapshots without placing orders.",
+        cadence: "persistent loop or on demand",
+        command: "node workers/streetmerchant-alert-worker.mjs",
       },
       {
         name: "ghostfolio-worker",
