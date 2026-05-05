@@ -115,6 +115,14 @@ export const referenceReportLessons: ReferenceReportLesson[] = [
     category: "research",
   },
   {
+    key: "stockpredictionai",
+    title: "StockPredictionAI Reference",
+    source: "https://github.com/borisbanushev/stockpredictionai",
+    lesson: "Deep stock forecasts can combine technical indicators, sentiment, Fourier/ARIMA trend features, XGBoost importance, autoencoders, PCA, and GAN/LSTM/CNN models, but they are vulnerable to overfit and dependency drift.",
+    systemRule: "StockPredictionAI-style output is research pressure only until holdout proof, cost/slippage tests, data freshness, and risk gates agree; do not vendor unlicensed source code without legal review.",
+    category: "research",
+  },
+  {
     key: "vibe-trading",
     title: "Vibe-Trading Reference",
     source: "external-repos/Vibe-Trading/README.md",

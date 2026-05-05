@@ -68,11 +68,11 @@ export function buildWorkerReadiness(): WorkerReadiness {
     {
       key: "ai-research-workers",
       label: "AI research workers",
-      ready: Boolean(process.env.FINGPT_WORKER_URL || process.env.FINRL_WORKER_URL),
+      ready: Boolean(process.env.STOCKPREDICTIONAI_WORKER_URL || process.env.FINGPT_WORKER_URL || process.env.FINRL_WORKER_URL),
       detail:
-        process.env.FINGPT_WORKER_URL || process.env.FINRL_WORKER_URL
+        process.env.STOCKPREDICTIONAI_WORKER_URL || process.env.FINGPT_WORKER_URL || process.env.FINRL_WORKER_URL
           ? "At least one optional AI research worker URL is configured."
-          : "TradingAgents now runs in-code. Set FINGPT_WORKER_URL or FINRL_WORKER_URL only for optional external AI experiments.",
+          : "TradingAgents now runs in-code. Set STOCKPREDICTIONAI_WORKER_URL, FINGPT_WORKER_URL, or FINRL_WORKER_URL only for optional external AI experiments.",
     },
   ];
   const readyCount = components.filter((item) => item.ready).length;
@@ -107,7 +107,7 @@ export function buildWorkerReadiness(): WorkerReadiness {
       },
       {
         name: "external-quant-worker",
-        purpose: "Bridge LEAN, StockSharp, Backtrader, vectorbt, NautilusTrader, FinGPT, FinRL, and Jesse outside Vercel limits.",
+        purpose: "Bridge StockPredictionAI, LEAN, StockSharp, Backtrader, vectorbt, NautilusTrader, FinGPT, FinRL, and Jesse outside Vercel limits.",
         cadence: "on demand / scheduled research jobs",
         command: "python workers/quant_worker.py",
       },
@@ -116,6 +116,12 @@ export function buildWorkerReadiness(): WorkerReadiness {
         purpose: "Run StockSharp C#/.NET connector research, strategy tests, and broker-adapter simulations behind the platform worker API.",
         cadence: "on demand / scheduled research jobs",
         command: "dotnet run --project workers/StockSharpWorker",
+      },
+      {
+        name: "stockpredictionai-worker",
+        purpose: "Run research-only GAN/LSTM/CNN stock-movement forecasts with feature and overfit diagnostics.",
+        cadence: "on demand / nightly research jobs",
+        command: "python workers/stockpredictionai_worker.py",
       },
     ],
   };

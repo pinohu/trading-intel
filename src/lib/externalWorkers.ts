@@ -4,6 +4,7 @@ export type ExternalWorkerKey =
   | "openbb"
   | "lean"
   | "stocksharp"
+  | "stockpredictionai"
   | "backtrader"
   | "vectorbt"
   | "nautilus"
@@ -12,13 +13,13 @@ export type ExternalWorkerKey =
   | "jesse";
 
 export type ExternalWorkerJob = {
-  jobType: "fundamentals" | "backtest" | "parameter-sweep" | "nlp" | "rl-research" | "crypto-paper";
+  jobType: "fundamentals" | "backtest" | "parameter-sweep" | "forecast" | "nlp" | "rl-research" | "crypto-paper";
   symbols: string[];
   strategy?: string;
   parameters?: Record<string, unknown>;
 };
 
-const externalWorkerJobTypes = ["fundamentals", "backtest", "parameter-sweep", "nlp", "rl-research", "crypto-paper"];
+const externalWorkerJobTypes = ["fundamentals", "backtest", "parameter-sweep", "forecast", "nlp", "rl-research", "crypto-paper"];
 
 export const externalWorkerCatalog: Array<{
   key: ExternalWorkerKey;
@@ -47,6 +48,13 @@ export const externalWorkerCatalog: Array<{
     urlEnv: "STOCKSHARP_WORKER_URL",
     purpose: "C#/.NET connector research, multi-market strategy tests, and broker-adapter simulations behind platform safety gates.",
     allowedJobs: ["backtest", "parameter-sweep", "crypto-paper"],
+  },
+  {
+    key: "stockpredictionai",
+    label: "StockPredictionAI",
+    urlEnv: "STOCKPREDICTIONAI_WORKER_URL",
+    purpose: "Research-only GAN/LSTM/CNN stock-movement forecasts with technical, sentiment, Fourier, ARIMA, XGBoost, and autoencoder-style features.",
+    allowedJobs: ["forecast", "parameter-sweep", "nlp"],
   },
   {
     key: "backtrader",

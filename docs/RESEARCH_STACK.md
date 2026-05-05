@@ -48,6 +48,7 @@ Set these when you host workers outside Vercel:
 - `OPENBB_WORKER_URL`
 - `LEAN_WORKER_URL`
 - `STOCKSHARP_WORKER_URL`
+- `STOCKPREDICTIONAI_WORKER_URL`
 - `BACKTRADER_WORKER_URL`
 - `VECTORBT_WORKER_URL`
 - `NAUTILUS_WORKER_URL`
@@ -88,6 +89,20 @@ Accepted job families:
 - `crypto-paper`
 
 The worker request includes `safety.researchOnly=true`, `safety.noAutonomousExecution=true`, and `safety.brokerOrdersBlocked=true`. Keep StockSharp live execution behind the app's normal operator-armed live-agent route instead of accepting broker orders from `/api/research-workers/run`.
+
+## StockPredictionAI Worker
+
+StockPredictionAI is integrated as a self-hosted research forecast worker. Configure `STOCKPREDICTIONAI_WORKER_URL` to expose GAN/LSTM/CNN-style stock-movement forecasts through the existing worker bridge.
+
+Accepted job families:
+
+- `forecast`
+- `parameter-sweep`
+- `nlp`
+
+The reference GitHub repo did not expose a license file during integration, so this app treats it as an architectural/modeling reference and worker contract only. Do not vendor or redistribute its source from this codebase without legal review or explicit permission.
+
+Worker output must remain research-only and cannot place orders. Fusion Alpha can use it as a forecast pressure lane only after holdout evidence, slippage/fee assumptions, data freshness, and overfit warnings are visible.
 
 ## Free Alternatives
 

@@ -33,6 +33,12 @@ Optional StockSharp worker check:
 - Dispatch a research-only job through `/api/research-workers/run` with `worker: "stocksharp"` and `jobType: "backtest"`.
 - Confirm the worker returns metrics without placing broker orders.
 
+Optional StockPredictionAI worker check:
+
+- Set `STOCKPREDICTIONAI_WORKER_URL` to the self-hosted forecast worker endpoint.
+- Dispatch a research-only job through `/api/research-workers/run` with `worker: "stockpredictionai"` and `jobType: "forecast"`.
+- Confirm the worker returns holdout metrics, overfit warnings, feature coverage, and no broker-order side effects.
+
 ## Persistence Setup
 
 1. Create a Postgres-compatible database.

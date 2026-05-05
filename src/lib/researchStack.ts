@@ -179,6 +179,18 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
       docs: "https://docs.ollama.com/openai",
     },
     {
+      key: "stockpredictionai",
+      label: "StockPredictionAI forecast worker",
+      category: "ai-research",
+      ready: workerReady("STOCKPREDICTIONAI_WORKER_URL"),
+      mode: workerReady("STOCKPREDICTIONAI_WORKER_URL") ? "worker" : "missing",
+      costProfile: "free-self-hosted",
+      env: ["STOCKPREDICTIONAI_WORKER_URL"],
+      detail: "External research-only worker inspired by borisbanushev/stockpredictionai: GAN/LSTM generator, CNN discriminator, technical indicators, sentiment, Fourier/ARIMA, XGBoost, autoencoder, and PCA feature ideas.",
+      freeAlternative: "Native Fusion Alpha, TradingAgents, Algorithm Council, and cost-aware backtests remain available when this heavy GPU/ML worker is absent.",
+      docs: "https://github.com/borisbanushev/stockpredictionai",
+    },
+    {
       key: "lean",
       label: "QuantConnect LEAN worker",
       category: "backtesting",
@@ -383,6 +395,12 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
         purpose: "C#/.NET connector research, strategy tests, and broker-adapter simulations.",
         command: "dotnet run --project workers/StockSharpWorker",
         urlEnv: "STOCKSHARP_WORKER_URL",
+      },
+      {
+        name: "StockPredictionAI worker",
+        purpose: "Research-only GAN/LSTM/CNN forecasts and feature-importance diagnostics.",
+        command: "python workers/stockpredictionai_worker.py",
+        urlEnv: "STOCKPREDICTIONAI_WORKER_URL",
       },
       {
         name: "Backtrader/vectorbt worker",

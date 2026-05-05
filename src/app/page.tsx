@@ -575,9 +575,9 @@ const quantPipelines = [
   },
   {
     title: "AI Research",
-    repo: "FinGPT + FinRL",
+    repo: "StockPredictionAI + FinGPT + FinRL",
     icon: Brain,
-    body: "Summarize catalysts, score sentiment, flag contradictions, and keep reinforcement-learning work paper-only.",
+    body: "Pressure-test forecasts, summarize catalysts, score sentiment, flag contradictions, and keep ML/RL work research-only.",
   },
   {
     title: "Execution Gate",

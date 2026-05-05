@@ -264,6 +264,30 @@ function buildEngineFinding({
     });
   }
 
+  if (key === "stockpredictionai") {
+    const coverage = score?.dataCoveragePct ?? qualityScore(quote);
+    const value = average([
+      signalScore(signal),
+      vectorRobustnessScore(backtest),
+      coverage,
+      agent ? agentScore(agent) : 50,
+      signal?.dataFresh ? 72 : 28,
+    ]);
+    return finding({
+      ...base,
+      status,
+      score: value,
+      finding: component?.ready
+        ? "StockPredictionAI forecast worker is available for GAN/LSTM/CNN research pressure and feature diagnostics."
+        : "StockPredictionAI forecast lane is proxy-only until a self-hosted worker returns holdout-tested forecasts.",
+      evidence: [
+        `Data coverage: ${Math.round(coverage)}/100`,
+        validationEvidence(backtest),
+        signal?.dataFresh ? "Fresh signal features available." : "Fresh signal features missing.",
+      ],
+    });
+  }
+
   if (key === "lean") {
     const value = leanGateScore(backtest, signal);
     return finding({
@@ -551,6 +575,7 @@ function engineKey(engine: EngineCapability) {
   if (engine.repo.includes("OpenBB")) return "openbb";
   if (engine.repo.includes("TradingAgents-CN")) return "tradingagents-cn";
   if (engine.repo.includes("TradingAgents")) return "tradingagents";
+  if (engine.repo.includes("stockpredictionai")) return "stockpredictionai";
   if (engine.repo.includes("Lean")) return "lean";
   if (engine.repo.includes("StockSharp")) return "stocksharp";
   if (engine.repo.includes("backtesting.py")) return "backtesting-py";
@@ -575,6 +600,7 @@ function engineWeight(key: string) {
   const weights: Record<string, number> = {
     openbb: 0.075,
     tradingagents: 0.13,
+    stockpredictionai: 0.065,
     lean: 0.095,
     stocksharp: 0.075,
     "backtesting-py": 0.105,
