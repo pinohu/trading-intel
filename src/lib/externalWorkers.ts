@@ -7,6 +7,7 @@ export type ExternalWorkerKey =
   | "lean"
   | "stocksharp"
   | "stockpredictionai"
+  | "stockpredictionmodels"
   | "backtrader"
   | "vectorbt"
   | "nautilus"
@@ -71,6 +72,13 @@ export const externalWorkerCatalog: Array<{
     urlEnv: "STOCKPREDICTIONAI_WORKER_URL",
     purpose: "Research-only GAN/LSTM/CNN stock-movement forecasts with technical, sentiment, Fourier, ARIMA, XGBoost, and autoencoder-style features.",
     allowedJobs: ["forecast", "parameter-sweep", "nlp"],
+  },
+  {
+    key: "stockpredictionmodels",
+    label: "Stock Prediction Models",
+    urlEnv: "STOCK_PREDICTION_MODELS_WORKER_URL",
+    purpose: "Research-only ML/DL forecast, stacking, simulation, and reinforcement-learning agent experiments inspired by huseinzol05/Stock-Prediction-Models.",
+    allowedJobs: ["forecast", "backtest", "parameter-sweep", "rl-research", "crypto-paper"],
   },
   {
     key: "backtrader",

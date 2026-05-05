@@ -215,6 +215,18 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
       docs: "https://github.com/borisbanushev/stockpredictionai",
     },
     {
+      key: "stockpredictionmodels",
+      label: "Stock Prediction Models worker",
+      category: "ai-research",
+      ready: workerReady("STOCK_PREDICTION_MODELS_WORKER_URL"),
+      mode: workerReady("STOCK_PREDICTION_MODELS_WORKER_URL") ? "worker" : "missing",
+      costProfile: "free-self-hosted",
+      env: ["STOCK_PREDICTION_MODELS_WORKER_URL"],
+      detail: "External Apache-2.0 research worker inspired by huseinzol05/Stock-Prediction-Models: deep learning forecasts, simulations, stacking, agent experiments, and TensorFlow.js-style model demos.",
+      freeAlternative: "Native Fusion Alpha, TradingAgents, Algorithm Council, and cost-aware backtests remain available when this archived ML worker is absent.",
+      docs: "https://github.com/huseinzol05/Stock-Prediction-Models",
+    },
+    {
       key: "lean",
       label: "QuantConnect LEAN worker",
       category: "backtesting",
@@ -437,6 +449,12 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
         purpose: "Research-only GAN/LSTM/CNN forecasts and feature-importance diagnostics.",
         command: "python workers/stockpredictionai_worker.py",
         urlEnv: "STOCKPREDICTIONAI_WORKER_URL",
+      },
+      {
+        name: "Stock Prediction Models worker",
+        purpose: "Research-only ML/DL forecasts, simulations, stacking, and RL-agent experiments.",
+        command: "python workers/stock_prediction_models_worker.py",
+        urlEnv: "STOCK_PREDICTION_MODELS_WORKER_URL",
       },
       {
         name: "Backtrader/vectorbt worker",

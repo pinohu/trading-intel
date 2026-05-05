@@ -51,6 +51,12 @@ Optional StockPredictionAI worker check:
 - Dispatch a research-only job through `/api/research-workers/run` with `worker: "stockpredictionai"` and `jobType: "forecast"`.
 - Confirm the worker returns holdout metrics, overfit warnings, feature coverage, and no broker-order side effects.
 
+Optional Stock Prediction Models worker check:
+
+- Set `STOCK_PREDICTION_MODELS_WORKER_URL` to the self-hosted ML model worker endpoint.
+- Dispatch a research-only job through `/api/research-workers/run` with `worker: "stockpredictionmodels"` and `jobType: "forecast"`.
+- Confirm the worker returns model comparison metrics, holdout/walk-forward evidence, overfit warnings, and no broker-order side effects.
+
 ## Persistence Setup
 
 1. Create a Postgres-compatible database.

@@ -77,11 +77,11 @@ export function buildWorkerReadiness(): WorkerReadiness {
     {
       key: "ai-research-workers",
       label: "AI research workers",
-      ready: Boolean(process.env.STOCKPREDICTIONAI_WORKER_URL || process.env.FINGPT_WORKER_URL || process.env.FINRL_WORKER_URL),
+      ready: Boolean(process.env.STOCKPREDICTIONAI_WORKER_URL || process.env.STOCK_PREDICTION_MODELS_WORKER_URL || process.env.FINGPT_WORKER_URL || process.env.FINRL_WORKER_URL),
       detail:
-        process.env.STOCKPREDICTIONAI_WORKER_URL || process.env.FINGPT_WORKER_URL || process.env.FINRL_WORKER_URL
+        process.env.STOCKPREDICTIONAI_WORKER_URL || process.env.STOCK_PREDICTION_MODELS_WORKER_URL || process.env.FINGPT_WORKER_URL || process.env.FINRL_WORKER_URL
           ? "At least one optional AI research worker URL is configured."
-          : "TradingAgents now runs in-code. Set STOCKPREDICTIONAI_WORKER_URL, FINGPT_WORKER_URL, or FINRL_WORKER_URL only for optional external AI experiments.",
+          : "TradingAgents now runs in-code. Set STOCKPREDICTIONAI_WORKER_URL, STOCK_PREDICTION_MODELS_WORKER_URL, FINGPT_WORKER_URL, or FINRL_WORKER_URL only for optional external AI experiments.",
     },
   ];
   const readyCount = components.filter((item) => item.ready).length;
@@ -143,6 +143,12 @@ export function buildWorkerReadiness(): WorkerReadiness {
         purpose: "Run research-only GAN/LSTM/CNN stock-movement forecasts with feature and overfit diagnostics.",
         cadence: "on demand / nightly research jobs",
         command: "python workers/stockpredictionai_worker.py",
+      },
+      {
+        name: "stock-prediction-models-worker",
+        purpose: "Run research-only ML/DL forecasts, simulations, stacking, and RL-agent experiments with holdout and overfit diagnostics.",
+        cadence: "on demand / nightly research jobs",
+        command: "python workers/stock_prediction_models_worker.py",
       },
     ],
   };

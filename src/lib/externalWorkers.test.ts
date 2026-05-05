@@ -42,6 +42,16 @@ describe("external worker catalog", () => {
     expect(validExternalWorkerJob({ jobType: "forecast", symbols: ["GS"], strategy: "gan-lstm-cnn" })).toBe(true);
   });
 
+  it("registers Stock Prediction Models as a research-only model-zoo worker", () => {
+    const worker = externalWorkerCatalog.find((item) => item.key === "stockpredictionmodels");
+
+    expect(worker?.urlEnv).toBe("STOCK_PREDICTION_MODELS_WORKER_URL");
+    expect(worker?.allowedJobs).toContain("forecast");
+    expect(worker?.allowedJobs).toContain("rl-research");
+    expect(validWorkerKey("stockpredictionmodels")).toBe(true);
+    expect(validExternalWorkerJob({ jobType: "rl-research", symbols: ["SPY"], strategy: "agent-comparison" })).toBe(true);
+  });
+
   it("accepts bounded worker jobs and rejects empty symbol jobs", () => {
     expect(validExternalWorkerJob({ jobType: "backtest", symbols: ["SPY", "NVDA"], strategy: "daily-momentum-breakout" })).toBe(true);
     expect(validExternalWorkerJob({ jobType: "backtest", symbols: [] })).toBe(false);

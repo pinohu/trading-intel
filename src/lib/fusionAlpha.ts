@@ -320,6 +320,29 @@ function buildEngineFinding({
     });
   }
 
+  if (key === "stockpredictionmodels") {
+    const value = average([
+      signalScore(signal),
+      backtestScore(backtest),
+      vectorRobustnessScore(backtest),
+      agent ? agentScore(agent) : 50,
+      signal?.dataFresh ? 70 : 25,
+    ]);
+    return finding({
+      ...base,
+      status,
+      score: value,
+      finding: component?.ready
+        ? "Stock Prediction Models worker is available for ML/DL model-zoo comparison, simulations, stacking, and RL-agent research."
+        : "Stock Prediction Models lane is proxy-only until a self-hosted worker returns holdout-tested model comparisons.",
+      evidence: [
+        backtestStatus(backtest),
+        validationEvidence(backtest),
+        signal?.dataFresh ? "Fresh feature set available." : "Fresh feature set missing.",
+      ],
+    });
+  }
+
   if (key === "lean") {
     const value = leanGateScore(backtest, signal);
     return finding({
@@ -610,6 +633,7 @@ function engineKey(engine: EngineCapability) {
   if (engine.repo.includes("TradingAgents-CN")) return "tradingagents-cn";
   if (engine.repo.includes("TradingAgents")) return "tradingagents";
   if (engine.repo.includes("stockpredictionai")) return "stockpredictionai";
+  if (engine.repo.includes("Stock-Prediction-Models")) return "stockpredictionmodels";
   if (engine.repo.includes("Lean")) return "lean";
   if (engine.repo.includes("StockSharp")) return "stocksharp";
   if (engine.repo.includes("backtesting.py")) return "backtesting-py";
@@ -637,6 +661,7 @@ function engineWeight(key: string) {
     akshare: 0.06,
     tradingagents: 0.13,
     stockpredictionai: 0.065,
+    stockpredictionmodels: 0.06,
     lean: 0.095,
     stocksharp: 0.075,
     "backtesting-py": 0.105,

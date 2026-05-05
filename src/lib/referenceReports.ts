@@ -139,6 +139,14 @@ export const referenceReportLessons: ReferenceReportLesson[] = [
     category: "research",
   },
   {
+    key: "stock-prediction-models",
+    title: "Stock Prediction Models Reference",
+    source: "https://github.com/huseinzol05/Stock-Prediction-Models",
+    lesson: "Archived ML model-zoo projects can broaden forecast research with deep learning, stacking, simulations, and agent experiments, but dependencies and notebooks require modern holdout validation before trust.",
+    systemRule: "Stock Prediction Models output is research pressure only until reproduced on current data with holdout proof, slippage/fee costs, freshness labels, and risk gates.",
+    category: "research",
+  },
+  {
     key: "vibe-trading",
     title: "Vibe-Trading Reference",
     source: "external-repos/Vibe-Trading/README.md",

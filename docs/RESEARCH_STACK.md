@@ -51,6 +51,7 @@ Set these when you host workers outside Vercel:
 - `LEAN_WORKER_URL`
 - `STOCKSHARP_WORKER_URL`
 - `STOCKPREDICTIONAI_WORKER_URL`
+- `STOCK_PREDICTION_MODELS_WORKER_URL`
 - `BACKTRADER_WORKER_URL`
 - `VECTORBT_WORKER_URL`
 - `NAUTILUS_WORKER_URL`
@@ -128,6 +129,20 @@ Accepted job families:
 The reference GitHub repo did not expose a license file during integration, so this app treats it as an architectural/modeling reference and worker contract only. Do not vendor or redistribute its source from this codebase without legal review or explicit permission.
 
 Worker output must remain research-only and cannot place orders. Fusion Alpha can use it as a forecast pressure lane only after holdout evidence, slippage/fee assumptions, data freshness, and overfit warnings are visible.
+
+## Stock Prediction Models Worker
+
+Stock Prediction Models is integrated as a self-hosted model-zoo worker inspired by `huseinzol05/Stock-Prediction-Models`. Configure `STOCK_PREDICTION_MODELS_WORKER_URL` for research-only deep learning forecasts, stacking, simulations, and RL-agent experiments.
+
+Accepted job families:
+
+- `forecast`
+- `backtest`
+- `parameter-sweep`
+- `rl-research`
+- `crypto-paper`
+
+The reference repo is archived and Apache-2.0 licensed. Treat worker output as research pressure only until current-data reproduction, holdout/walk-forward proof, cost assumptions, freshness labels, and risk gates agree.
 
 ## Free Alternatives
 
