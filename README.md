@@ -36,7 +36,7 @@ This is a mobile-first trading research and intelligence cockpit. It is built fo
 - `/api/provider-stack/readiness` for market/news/database provider status without exposing secrets
 - `/api/research-notes` for database-backed notes across devices
 - AutoResearch Lab at `/api/autoresearch/lab`, with bounded candidate experiments, champion scoring, run history, and a research-only guardrail
-- External worker bridge at `/api/research-workers/run` and `/api/research-workers/readiness` for OpenBB, Alpha Vantage, Alphalens, OpenStock, StockSight, StreetMerchant alert ops, Ghostfolio, AKShare, LSTM Time Series, LLM Trading Lab, LEAN, StockSharp, RQAlpha, Freqtrade, StockPredictionAI, Stock Prediction Models, Backtrader, vectorbt, NautilusTrader, FinGPT, FinRL, and Jesse workers outside Vercel
+- External worker bridge at `/api/research-workers/run` and `/api/research-workers/readiness` for OpenBB, Alpha Vantage, Alphalens, OpenStock, StockSight, StreetMerchant alert ops, Ghostfolio, AKShare, LSTM Time Series, LLM Trading Lab, LEAN, StockSharp, RQAlpha, Freqtrade, Hummingbot, StockPredictionAI, Stock Prediction Models, Backtrader, vectorbt, NautilusTrader, FinGPT, FinRL, and Jesse workers outside Vercel
 - Native systematic-trading reference map inspired by `awesome-systematic-trading`, used to keep data, alpha, analytics, backtest, live-control, architecture, tooling, resource, and AI/LLM proof lanes visible before a setup is trusted
 - Native TradingAgents integration at `/api/tradingagents/analyze` for in-code market/fundamental/bull/bear/trader/risk/portfolio-manager debate persisted to research notes when Postgres is configured
 - Analyst chat can use `LOCAL_LLM_BASE_URL` with a free/self-hosted OpenAI-compatible model before paid OpenAI models, then deterministic cockpit fallback
@@ -59,7 +59,7 @@ This is a mobile-first trading research and intelligence cockpit. It is built fo
 - Agent desk showing how Codex, OpenClaw, Hermes, and KiloCode should split research work
 - Risk constitution to prevent impulsive execution
 - Demo-only fallback quotes when `DEMO_MARKET_DATA=true`; production live routes return unavailable instead of inventing prices
-- Engine Fusion Map covering OpenBB, Alpha Vantage, Alphalens, Systematic Trading Map, OpenStock, StockSight, StreetMerchant alert ops, Ghostfolio, AKShare, TradingAgents, LSTM Time Series, LLM Trading Lab, StockPredictionAI, Stock Prediction Models, LEAN, StockSharp, RQAlpha, Freqtrade, backtesting.py, vectorbt, Backtrader, Nautilus Trader, FinRL, FinRL-Trading, FinGPT, and Jesse
+- Engine Fusion Map covering OpenBB, Alpha Vantage, Alphalens, Systematic Trading Map, OpenStock, StockSight, StreetMerchant alert ops, Ghostfolio, AKShare, TradingAgents, LSTM Time Series, LLM Trading Lab, StockPredictionAI, Stock Prediction Models, LEAN, StockSharp, RQAlpha, Freqtrade, Hummingbot, backtesting.py, vectorbt, Backtrader, Nautilus Trader, FinRL, FinRL-Trading, FinGPT, and Jesse
 - Quant Lab with first-pass strategy simulation inspired by lightweight and vectorized backtesting workflows
 - Research Pipeline that promotes ideas from data collection to simple tests, parameter sweeps, event-driven simulation, NLP challenge checks, and paper/live gates
 - `/api/engines` endpoint exposing the integrated engine catalog and guardrails
@@ -171,6 +171,7 @@ Free/no-license feeds are now the default for research and monitoring, but they 
 - [StockSharp Worker](docs/STOCKSHARP_WORKER.md)
 - [RQAlpha Worker](docs/RQALPHA_WORKER.md)
 - [Freqtrade Worker](docs/FREQTRADE_WORKER.md)
+- [Hummingbot Worker](docs/HUMMINGBOT_WORKER.md)
 - [LSTM Time Series Worker](docs/LSTM_TIME_SERIES_WORKER.md)
 - [StockPredictionAI Worker](docs/STOCKPREDICTIONAI_WORKER.md)
 - [Stock Prediction Models Worker](docs/STOCK_PREDICTION_MODELS_WORKER.md)
@@ -189,9 +190,9 @@ The app now prefers free alternatives before paid services. Paid/licensed feeds 
 - OpenBB external worker hook for deeper fundamentals and macro workflows
 - TradingAgents native debate desk for market, fundamentals, bull/bear researcher, trader, risk, and portfolio-manager review
 - Systematic-trading reference map for free public research taxonomy and proof-lane coverage checks
-- Alpha Vantage, Alphalens, OpenStock, StockSight, StreetMerchant, Ghostfolio, AKShare, LSTM Time Series, LLM Trading Lab, StockPredictionAI, Stock Prediction Models, LEAN, StockSharp, RQAlpha, Freqtrade, Backtrader, vectorbt, and Nautilus external worker hooks for free-account market data, factor proof, companion market workflows, sentiment/catalyst research, alert-loop operations, portfolio analytics, broader research data, agent research, crypto dry-run/backtest research, forecast research, and real historical backtests outside Vercel serverless limits
+- Alpha Vantage, Alphalens, OpenStock, StockSight, StreetMerchant, Ghostfolio, AKShare, LSTM Time Series, LLM Trading Lab, StockPredictionAI, Stock Prediction Models, LEAN, StockSharp, RQAlpha, Freqtrade, Hummingbot, Backtrader, vectorbt, and Nautilus external worker hooks for free-account market data, factor proof, companion market workflows, sentiment/catalyst research, alert-loop operations, portfolio analytics, broader research data, agent research, crypto dry-run/backtest/liquidity research, forecast research, and real historical backtests outside Vercel serverless limits
 - FinGPT/FinRL worker hooks for research-only NLP and reinforcement-learning experiments
-- Freqtrade and Jesse worker hooks for separate crypto paper/dry-run strategy lanes
+- Freqtrade, Hummingbot, and Jesse worker hooks for separate crypto paper/dry-run strategy and liquidity lanes
 - Postgres via `DATABASE_URL` for saved notes across devices; Supabase can be used when its Postgres connection string is supplied
 
 ## Risk Note

@@ -22,6 +22,7 @@ export type ExternalWorkerKey =
   | "fingpt"
   | "finrl"
   | "freqtrade"
+  | "hummingbot"
   | "jesse";
 
 export type ExternalWorkerJob = {
@@ -197,6 +198,13 @@ export const externalWorkerCatalog: Array<{
     label: "Freqtrade",
     urlEnv: "FREQTRADE_WORKER_URL",
     purpose: "GPL-3.0 self-hosted crypto strategy worker for dry-run/paper trading, backtests, hyperopt-style parameter sweeps, strategy reports, and exchange-aware risk evidence.",
+    allowedJobs: ["crypto-paper", "backtest", "parameter-sweep"],
+  },
+  {
+    key: "hummingbot",
+    label: "Hummingbot",
+    urlEnv: "HUMMINGBOT_WORKER_URL",
+    purpose: "Apache-2.0 self-hosted crypto market-making and liquidity worker for connector readiness, CEX/DEX/AMM venue checks, dry-run/paper strategies, spread and inventory risk, fee/slippage assumptions, and parameter-sweep evidence.",
     allowedJobs: ["crypto-paper", "backtest", "parameter-sweep"],
   },
   {

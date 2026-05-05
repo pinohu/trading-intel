@@ -719,6 +719,41 @@ function buildEngineFinding({
     });
   }
 
+  if (key === "hummingbot") {
+    if (!isCryptoSymbol(quote.symbol)) {
+      return finding({
+        ...base,
+        status: "not-applicable",
+        score: 50,
+        weight: 0.01,
+        finding: "Hummingbot liquidity lane is intentionally separated from stock/ETF predictions.",
+        evidence: ["Non-crypto symbol."],
+      });
+    }
+    const value = average([
+      qualityScore(quote),
+      signal?.dataFresh ? 72 : 24,
+      backtestScore(backtest),
+      vectorRobustnessScore(backtest),
+      activeBuy ? 62 : signal?.action === "Buy Watch" ? 55 : 48,
+    ]);
+    return finding({
+      ...base,
+      status,
+      score: value,
+      finding: component?.ready
+        ? "Hummingbot worker can pressure-test crypto liquidity setups with connector readiness, dry-run market-making, inventory skew, spread, fee, and venue evidence."
+        : "Hummingbot lane is proxy-only until a self-hosted liquidity worker returns connector and dry-run evidence.",
+      evidence: [
+        `Crypto symbol: ${quote.symbol}`,
+        backtestStatus(backtest),
+        validationEvidence(backtest),
+        signal?.dataFresh ? "Fresh crypto signal available." : "Fresh crypto signal missing.",
+        "Hummingbot worker output cannot place live exchange orders through this app.",
+      ],
+    });
+  }
+
   if (key === "vibe-trading") {
     const value = swarmStrategyScore({ quote, signal, score, backtest, agent, algorithmFindings });
     return finding({
@@ -893,6 +928,7 @@ function engineKey(engine: EngineCapability) {
   if (engine.repo.includes("FinRL-Trading")) return "finrl-trading";
   if (engine.repo.includes("FinGPT")) return "fingpt";
   if (engine.repo.includes("freqtrade")) return "freqtrade";
+  if (engine.repo.includes("hummingbot")) return "hummingbot";
   if (engine.repo.includes("jesse")) return "jesse";
   if (engine.repo.includes("Vibe-Trading")) return "vibe-trading";
   if (engine.repo.includes("AI-Trader")) return "ai-trader";
@@ -931,6 +967,7 @@ function engineWeight(key: string) {
     "finrl-trading": 0.06,
     fingpt: 0.07,
     freqtrade: 0.055,
+    hummingbot: 0.05,
     jesse: 0.035,
     "vibe-trading": 0.075,
     "ai-trader": 0.06,

@@ -235,6 +235,14 @@ export const referenceReportLessons: ReferenceReportLesson[] = [
     category: "research",
   },
   {
+    key: "hummingbot",
+    title: "Hummingbot Reference",
+    source: "https://github.com/hummingbot/hummingbot",
+    lesson: "Hummingbot-style crypto liquidity systems need connector readiness, CEX/DEX/AMM venue labels, spread and inventory controls, fee/slippage assumptions, dry-run records, and explicit live-trading boundaries.",
+    systemRule: "Hummingbot output can strengthen crypto liquidity research only when connector health, inventory risk, spreads, fees, venue type, and dry-run/paper outcomes are visible; worker output cannot place exchange orders through this app.",
+    category: "research",
+  },
+  {
     key: "vibe-trading",
     title: "Vibe-Trading Reference",
     source: "external-repos/Vibe-Trading/README.md",

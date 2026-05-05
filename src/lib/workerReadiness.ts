@@ -84,11 +84,27 @@ export function buildWorkerReadiness(): WorkerReadiness {
     {
       key: "external-quant-workers",
       label: "External quant workers",
-      ready: Boolean(process.env.LEAN_WORKER_URL || process.env.ALPHALENS_WORKER_URL || process.env.STOCKSHARP_WORKER_URL || process.env.RQALPHA_WORKER_URL || process.env.BACKTRADER_WORKER_URL || process.env.VECTORBT_WORKER_URL),
+      ready: Boolean(
+        process.env.LEAN_WORKER_URL ||
+          process.env.ALPHALENS_WORKER_URL ||
+          process.env.STOCKSHARP_WORKER_URL ||
+          process.env.RQALPHA_WORKER_URL ||
+          process.env.BACKTRADER_WORKER_URL ||
+          process.env.VECTORBT_WORKER_URL ||
+          process.env.FREQTRADE_WORKER_URL ||
+          process.env.HUMMINGBOT_WORKER_URL,
+      ),
       detail:
-        process.env.LEAN_WORKER_URL || process.env.ALPHALENS_WORKER_URL || process.env.STOCKSHARP_WORKER_URL || process.env.RQALPHA_WORKER_URL || process.env.BACKTRADER_WORKER_URL || process.env.VECTORBT_WORKER_URL
+        process.env.LEAN_WORKER_URL ||
+        process.env.ALPHALENS_WORKER_URL ||
+        process.env.STOCKSHARP_WORKER_URL ||
+        process.env.RQALPHA_WORKER_URL ||
+        process.env.BACKTRADER_WORKER_URL ||
+        process.env.VECTORBT_WORKER_URL ||
+        process.env.FREQTRADE_WORKER_URL ||
+        process.env.HUMMINGBOT_WORKER_URL
           ? "At least one heavyweight quant worker URL is configured."
-          : "Set LEAN_WORKER_URL, ALPHALENS_WORKER_URL, STOCKSHARP_WORKER_URL, RQALPHA_WORKER_URL, BACKTRADER_WORKER_URL, or VECTORBT_WORKER_URL to run serious backtests outside Vercel.",
+          : "Set LEAN_WORKER_URL, ALPHALENS_WORKER_URL, STOCKSHARP_WORKER_URL, RQALPHA_WORKER_URL, BACKTRADER_WORKER_URL, VECTORBT_WORKER_URL, FREQTRADE_WORKER_URL, or HUMMINGBOT_WORKER_URL to run serious backtests or crypto liquidity tests outside Vercel.",
     },
     {
       key: "ai-research-workers",
@@ -174,7 +190,7 @@ export function buildWorkerReadiness(): WorkerReadiness {
       },
       {
         name: "external-quant-worker",
-        purpose: "Bridge StockPredictionAI, LEAN, Alphalens, StockSharp, RQAlpha, Backtrader, vectorbt, NautilusTrader, FinGPT, FinRL, and Jesse outside Vercel limits.",
+        purpose: "Bridge StockPredictionAI, LEAN, Alphalens, StockSharp, RQAlpha, Backtrader, vectorbt, NautilusTrader, FinGPT, FinRL, Freqtrade, Hummingbot, and Jesse outside Vercel limits.",
         cadence: "on demand / scheduled research jobs",
         command: "python workers/quant_worker.py",
       },

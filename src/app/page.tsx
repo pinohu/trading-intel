@@ -587,9 +587,9 @@ const quantPipelines = [
   },
   {
     title: "Execution Gate",
-    repo: "Nautilus + StockSharp + Freqtrade + Jesse",
+    repo: "Nautilus + StockSharp + Freqtrade + Hummingbot + Jesse",
     icon: ShieldCheck,
-    body: "Prepare professional trading rails and crypto dry-run lanes without enabling real-money execution by default.",
+    body: "Prepare professional trading rails plus crypto dry-run, liquidity, and market-making lanes without enabling real-money execution by default.",
   },
   {
     title: "Alert Ops",

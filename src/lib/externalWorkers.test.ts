@@ -154,6 +154,17 @@ describe("external worker catalog", () => {
     expect(validExternalWorkerJob({ jobType: "crypto-paper", symbols: ["BTC/USDT"], strategy: "freqtrade-dry-run" })).toBe(true);
   });
 
+  it("registers Hummingbot as a bounded crypto liquidity worker", () => {
+    const worker = externalWorkerCatalog.find((item) => item.key === "hummingbot");
+
+    expect(worker?.urlEnv).toBe("HUMMINGBOT_WORKER_URL");
+    expect(worker?.allowedJobs).toContain("crypto-paper");
+    expect(worker?.allowedJobs).toContain("backtest");
+    expect(worker?.allowedJobs).toContain("parameter-sweep");
+    expect(validWorkerKey("hummingbot")).toBe(true);
+    expect(validExternalWorkerJob({ jobType: "crypto-paper", symbols: ["ETH/USDT"], strategy: "hummingbot-market-making-dry-run" })).toBe(true);
+  });
+
   it("accepts bounded worker jobs and rejects empty symbol jobs", () => {
     expect(validExternalWorkerJob({ jobType: "backtest", symbols: ["SPY", "NVDA"], strategy: "daily-momentum-breakout" })).toBe(true);
     expect(validExternalWorkerJob({ jobType: "backtest", symbols: [] })).toBe(false);

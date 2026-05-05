@@ -442,6 +442,18 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
       docs: "https://github.com/freqtrade/freqtrade",
     },
     {
+      key: "hummingbot",
+      label: "Hummingbot liquidity worker",
+      category: "crypto",
+      ready: workerReady("HUMMINGBOT_WORKER_URL"),
+      mode: workerReady("HUMMINGBOT_WORKER_URL") ? "worker" : "missing",
+      costProfile: "free-self-hosted",
+      env: ["HUMMINGBOT_WORKER_URL"],
+      detail: "External Apache-2.0 crypto market-making/liquidity worker for CEX/DEX/AMM connector readiness, dry-run/paper strategies, spread and inventory risk, fee/slippage assumptions, and crypto-specific execution evidence.",
+      freeAlternative: "Binance public crypto quotes, Alpaca crypto endpoints, native signal gates, Freqtrade, and Jesse remain available; self-host Hummingbot when liquidity/market-making proof is needed.",
+      docs: "https://github.com/hummingbot/hummingbot",
+    },
+    {
       key: "postgres",
       label: "Neon/Supabase Postgres",
       category: "database",
@@ -640,6 +652,12 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
         purpose: "Self-hosted crypto dry-run/paper trading, backtests, strategy reports, and hyperopt-style parameter sweeps.",
         command: "freqtrade backtesting --strategy TradingIntelStrategy",
         urlEnv: "FREQTRADE_WORKER_URL",
+      },
+      {
+        name: "Hummingbot worker",
+        purpose: "Self-hosted crypto market-making/liquidity dry-run, connector readiness, spread/inventory risk, and parameter sweeps.",
+        command: "hummingbot",
+        urlEnv: "HUMMINGBOT_WORKER_URL",
       },
       {
         name: "Jesse worker",

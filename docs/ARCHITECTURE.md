@@ -25,7 +25,7 @@ Production real-money trading requires these external systems before live execut
 - Free-first research data is implemented; licensed real-time market data is required only before execution-grade promotion.
 - Persistent database with the provided schema applied.
 - Broker execution account gates, live acknowledgement, and order audit storage.
-- Historical backtesting, factor-analysis, native systematic reference maps, companion market-app, sentiment, alert-pattern, portfolio analytics, research data, LLM agent research, crypto strategy, and ML forecast workers, including optional Alpha Vantage, Alphalens, OpenStock, StockSight, StreetMerchant, Ghostfolio, AKShare, LSTM Time Series, LLM Trading Lab, StockSharp C#/.NET, RQAlpha, Freqtrade, StockPredictionAI-style, and Stock Prediction Models worker integrations.
+- Historical backtesting, factor-analysis, native systematic reference maps, companion market-app, sentiment, alert-pattern, portfolio analytics, research data, LLM agent research, crypto strategy/liquidity, and ML forecast workers, including optional Alpha Vantage, Alphalens, OpenStock, StockSight, StreetMerchant, Ghostfolio, AKShare, LSTM Time Series, LLM Trading Lab, StockSharp C#/.NET, RQAlpha, Freqtrade, Hummingbot, StockPredictionAI-style, and Stock Prediction Models worker integrations.
 - Signal outcome tracker.
 - Immutable audit retention and export policy beyond the current audit-events table.
 - User auth and RBAC.
@@ -47,7 +47,7 @@ flowchart LR
   BFF --> TradingAgents["Native TradingAgents: in-code multi-agent debate"]
   TradingAgents --> DB
   ReferenceMaps["Native Reference Maps: systematic trading taxonomy + proof coverage"] --> BFF
-  BacktestWorker["Companion + Sentiment + Alert + Portfolio + Research Data + Factor + Agent + Backtest + Crypto + Forecast Workers: Alpha Vantage/Alphalens/OpenStock/StockSight/StreetMerchant/Ghostfolio/AKShare/LSTM Time Series/LLM Trading Lab/StockPredictionAI/Stock Prediction Models/LEAN/StockSharp/RQAlpha/Freqtrade/vectorbt/backtesting.py"] --> DB
+  BacktestWorker["Companion + Sentiment + Alert + Portfolio + Research Data + Factor + Agent + Backtest + Crypto + Forecast Workers: Alpha Vantage/Alphalens/OpenStock/StockSight/StreetMerchant/Ghostfolio/AKShare/LSTM Time Series/LLM Trading Lab/StockPredictionAI/Stock Prediction Models/LEAN/StockSharp/RQAlpha/Freqtrade/Hummingbot/vectorbt/backtesting.py"] --> DB
   Broker["Broker Paper/Read-Only APIs"] --> BFF
   BFF --> BrokerExec["Broker Execution API: user-session only, live gated"]
   Queue --> Alerts["Webhook/SMS/Email/Push"]
@@ -59,7 +59,7 @@ flowchart LR
 - Never promote stale quotes to buy/sell actions.
 - Never place live orders from the app until paper results, audit logs, broker permissions, and operator approvals exist.
 - Never allow cron or agent bearer tokens to place broker orders.
-- Never let TradingAgents, Alpha Vantage, Alphalens, LSTM Time Series, LLM Trading Lab, OpenStock, StockSight, StreetMerchant, Ghostfolio, AKShare, StockPredictionAI, Stock Prediction Models, LEAN, StockSharp, RQAlpha, or Freqtrade worker output place autonomous broker or exchange orders; manual paper/live execution stays in the broker controls and audit rail.
+- Never let TradingAgents, Alpha Vantage, Alphalens, LSTM Time Series, LLM Trading Lab, OpenStock, StockSight, StreetMerchant, Ghostfolio, AKShare, StockPredictionAI, Stock Prediction Models, LEAN, StockSharp, RQAlpha, Freqtrade, or Hummingbot worker output place autonomous broker or exchange orders; manual paper/live execution stays in the broker controls and audit rail.
 - Never treat a curated reference map as market data, a signal, a backtest result, or execution authorization.
 - Never submit a market order from the current execution rail.
 - Never treat the Ising optimizer as a price predictor; it only selects among existing candidates.
