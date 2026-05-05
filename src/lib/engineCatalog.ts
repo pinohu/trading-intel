@@ -131,6 +131,16 @@ export const engineCapabilities: EngineCapability[] = [
     priority: "Next",
   },
   {
+    repo: "virattt/dexter",
+    productName: "Dexter Research Agent",
+    lane: "Autonomous financial research",
+    bestUse: "Self-hosted financial research agent workflows: task planning, tool selection, self-validation, fundamental statement pulls, scratchpad audit logs, eval scoring, and chat/gateway patterns.",
+    featureUnlocked: "Research-trace lane that asks whether an autonomous answer has a written plan, tool-call evidence, self-checks, data-source labels, and eval/scratchpad artifacts before it can support a thesis.",
+    integrationMode: "External engine",
+    safety: "Research",
+    priority: "Next",
+  },
+  {
     repo: "huseinzol05/Stock-Prediction-Models",
     productName: "Stock Prediction Models Lab",
     lane: "ML model zoo",
@@ -365,7 +375,7 @@ export const engineCapabilities: EngineCapability[] = [
 export const engineWorkflow = [
   "Map every idea against the systematic-trading taxonomy: data, alpha thesis, analytics, backtest proof, live-trading controls, architecture, tools, and AI/LLM challenge lanes.",
   "Collect data with OpenBB/Alpha Vantage/OpenStock/Ghostfolio/AKShare-style connectors and current quote/news APIs.",
-  "Challenge interesting tickers with TradingAgents and LLM-Trading-Lab-style agent logs before writing a trade thesis.",
+  "Challenge interesting tickers with TradingAgents, Dexter, and LLM-Trading-Lab-style agent logs before writing a trade thesis.",
   "Use Alphalens-style factor tear sheets to test whether ranks, quantiles, IC, and turnover support the signal.",
   "Use LSTM-Time-Series, StockPredictionAI, Stock-Prediction-Models, and LLM-Trading-Lab-style outputs as research pressure, not as trade authorization.",
   "Run simple first-pass validation in the native Backtest Lab.",
@@ -373,8 +383,8 @@ export const engineWorkflow = [
   "Promote only robust ideas to StockPredictionAI, LEAN, StockSharp, RQAlpha, Backtrader, Freqtrade, or Hummingbot for deeper forecast, event-driven, crypto strategy, and liquidity simulation.",
   "Use StockSight and FinGPT-style NLP to challenge the thesis with source-labeled sentiment, filings, and contradiction checks.",
   "Use StreetMerchant-style alert loops to show trigger state, channel readiness, cooldowns, and manual-action requirements before the operator reacts.",
-  "Use Vibe-Trading and AutoHedge patterns to orchestrate specialist teams instead of trusting one model.",
+  "Use Dexter, Vibe-Trading, and AutoHedge patterns to orchestrate specialist plans and self-checks instead of trusting one model.",
   "Use OpenAlice and QuantDinger patterns to demand versioned orders, guard checks, alerts, and operations continuity.",
   "Use TensorTrade, AI-Trader, and Polymarket-agent patterns as RL, collective-signal, and event-probability pressure tests.",
-  "Keep LLM Trading Lab, StockSight, StreetMerchant, LSTM Time Series, StockPredictionAI, Stock Prediction Models, Alpha Vantage, Alphalens, StockSharp, RQAlpha, FinRL, FinRL-Trading, TensorTrade, Nautilus, Freqtrade, Hummingbot, Jesse, OpenAlice, and all autonomous-agent lanes behind paper/live gates until broker keys, acknowledgement, audit storage, and risk controls exist.",
+  "Keep Dexter, LLM Trading Lab, StockSight, StreetMerchant, LSTM Time Series, StockPredictionAI, Stock Prediction Models, Alpha Vantage, Alphalens, StockSharp, RQAlpha, FinRL, FinRL-Trading, TensorTrade, Nautilus, Freqtrade, Hummingbot, Jesse, OpenAlice, and all autonomous-agent lanes behind paper/live gates until broker keys, acknowledgement, audit storage, and risk controls exist.",
 ];

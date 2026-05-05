@@ -203,6 +203,14 @@ export const referenceReportLessons: ReferenceReportLesson[] = [
     category: "research",
   },
   {
+    key: "dexter",
+    title: "Dexter Reference",
+    source: "https://github.com/virattt/dexter",
+    lesson: "Dexter-style financial agents are useful when they break questions into explicit plans, select tools, self-validate, keep scratchpad JSONL logs, and expose eval results instead of returning unsupported confidence.",
+    systemRule: "Dexter output can support a thesis only when the task plan, tool-call evidence, data-source labels, self-checks, scratchpad artifacts, and eval status are visible; it cannot place or authorize broker orders.",
+    category: "research",
+  },
+  {
     key: "stock-prediction-models",
     title: "Stock Prediction Models Reference",
     source: "https://github.com/huseinzol05/Stock-Prediction-Models",

@@ -122,6 +122,17 @@ describe("external worker catalog", () => {
     expect(validExternalWorkerJob({ jobType: "agent-research", symbols: ["SPY"], strategy: "forward-only-daily-agent-log" })).toBe(true);
   });
 
+  it("registers Dexter as a bounded financial research agent worker", () => {
+    const worker = externalWorkerCatalog.find((item) => item.key === "dexter");
+
+    expect(worker?.urlEnv).toBe("DEXTER_WORKER_URL");
+    expect(worker?.allowedJobs).toContain("agent-research");
+    expect(worker?.allowedJobs).toContain("fundamentals");
+    expect(worker?.allowedJobs).toContain("nlp");
+    expect(validWorkerKey("dexter")).toBe(true);
+    expect(validExternalWorkerJob({ jobType: "agent-research", symbols: ["AAPL"], strategy: "dexter-scratchpad-research" })).toBe(true);
+  });
+
   it("registers LEAN as a bounded backtest and optimization worker", () => {
     const worker = externalWorkerCatalog.find((item) => item.key === "lean");
 

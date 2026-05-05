@@ -22,6 +22,7 @@ describe("research stack readiness", () => {
     expect(keys).toContain("tradingagents");
     expect(keys).toContain("systematic-reference-map");
     expect(keys).toContain("llmtradinglab");
+    expect(keys).toContain("dexter");
     expect(keys).toContain("lstmtimeseries");
     expect(keys).toContain("stockpredictionai");
     expect(keys).toContain("stockpredictionmodels");

@@ -107,6 +107,7 @@ describe("fusionAlpha", () => {
     expect(predictions[0].engineFindings.some((finding) => finding.key === "stocksight")).toBe(true);
     expect(predictions[0].engineFindings.some((finding) => finding.key === "freqtrade")).toBe(true);
     expect(predictions[0].engineFindings.some((finding) => finding.key === "hummingbot")).toBe(true);
+    expect(predictions[0].engineFindings.some((finding) => finding.key === "dexter")).toBe(true);
     expect(predictions[0].algorithmFindings).toHaveLength(7);
     expect(predictions[0].algorithmFindings.some((finding) => finding.key === "legendary-strategy-minds")).toBe(true);
     expect(predictions[0].score).toBeGreaterThan(65);

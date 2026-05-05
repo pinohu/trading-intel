@@ -10,6 +10,7 @@ export type ExternalWorkerKey =
   | "ghostfolio"
   | "akshare"
   | "llmtradinglab"
+  | "dexter"
   | "lean"
   | "stocksharp"
   | "rqalpha"
@@ -115,6 +116,13 @@ export const externalWorkerCatalog: Array<{
     urlEnv: "LLM_TRADING_LAB_WORKER_URL",
     purpose: "Research-only LLM portfolio decision experiments with forward-only logs, hard constraints, stop-loss compliance, benchmark comparisons, and risk metrics.",
     allowedJobs: ["agent-research", "portfolio", "backtest", "forecast"],
+  },
+  {
+    key: "dexter",
+    label: "Dexter",
+    urlEnv: "DEXTER_WORKER_URL",
+    purpose: "MIT-licensed autonomous financial research agent for task planning, self-validation, fundamental data gathering, tool-call scratchpads, eval evidence, and chat/gateway research workflows.",
+    allowedJobs: ["agent-research", "fundamentals", "nlp"],
   },
   {
     key: "lean",

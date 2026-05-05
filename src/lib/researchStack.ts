@@ -310,6 +310,18 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
       docs: "https://github.com/LuckyOne7777/LLM-Trading-Lab",
     },
     {
+      key: "dexter",
+      label: "Dexter financial research agent",
+      category: "ai-research",
+      ready: workerReady("DEXTER_WORKER_URL"),
+      mode: workerReady("DEXTER_WORKER_URL") ? "worker" : "missing",
+      costProfile: "free-self-hosted",
+      env: ["DEXTER_WORKER_URL"],
+      detail: "External MIT-licensed autonomous financial research agent for task planning, self-validation, fundamental data gathering, tool-call scratchpads, eval evidence, and chat/gateway workflow pressure.",
+      freeAlternative: "Native TradingAgents debate, Analyst Chat with LOCAL_LLM_BASE_URL, SEC EDGAR, public quotes, Yahoo RSS, Algorithm Council, and AutoResearch remain available without this worker.",
+      docs: "https://github.com/virattt/dexter",
+    },
+    {
       key: "stockpredictionmodels",
       label: "Stock Prediction Models worker",
       category: "ai-research",
@@ -628,6 +640,12 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
         purpose: "Research-only LLM decision logs, portfolio experiments, stop-loss compliance, hard constraints, and benchmark comparisons.",
         command: "python workers/llm_trading_lab_worker.py",
         urlEnv: "LLM_TRADING_LAB_WORKER_URL",
+      },
+      {
+        name: "Dexter worker",
+        purpose: "Self-hosted financial research agent with task planning, self-validation, scratchpad logs, fundamentals, and eval evidence.",
+        command: "bun start",
+        urlEnv: "DEXTER_WORKER_URL",
       },
       {
         name: "Stock Prediction Models worker",

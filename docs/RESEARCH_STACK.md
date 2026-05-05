@@ -61,6 +61,7 @@ Set these when you host workers outside Vercel:
 - `GHOSTFOLIO_WORKER_URL`
 - `AKSHARE_WORKER_URL`
 - `LLM_TRADING_LAB_WORKER_URL`
+- `DEXTER_WORKER_URL`
 - `LEAN_WORKER_URL`
 - `STOCKSHARP_WORKER_URL`
 - `RQALPHA_WORKER_URL`
@@ -262,6 +263,20 @@ Accepted job families:
 - `forecast`
 
 No root license file was visible during integration, so this app treats the repository as a reference and worker contract only. Worker output must remain research-only and cannot place orders.
+
+## Dexter Worker
+
+Dexter is integrated as an optional self-hosted financial research agent worker. Configure `DEXTER_WORKER_URL` to expose task-planned research, fundamental data gathering, self-validation, scratchpad logs, and eval evidence through the existing worker bridge.
+
+Accepted job families:
+
+- `agent-research`
+- `fundamentals`
+- `nlp`
+
+Use it for question decomposition, source-labeled financial research, tool-call audit trails, self-checks, reasoning traces, and eval summaries. Worker output must include the prompt, task plan, tools called, source labels, self-validation result, scratchpad or run id, eval status when available, and explicit limits.
+
+Dexter is MIT licensed, but its upstream runtime can depend on paid or credentialed services such as cloud LLMs, Financial Datasets, or Exa. This app keeps native TradingAgents, local/self-hosted Analyst Chat, SEC EDGAR, public quotes, Yahoo RSS, Algorithm Council, and AutoResearch as the free default path. Dexter output is research evidence only and cannot place orders or bypass freshness, risk, paper/live, or broker gates.
 
 ## Stock Prediction Models Worker
 

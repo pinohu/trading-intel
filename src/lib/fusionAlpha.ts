@@ -497,6 +497,31 @@ function buildEngineFinding({
     });
   }
 
+  if (key === "dexter") {
+    const value = average([
+      agent ? agentScore(agent) : agreementProxyScore({ signal, score, backtest }),
+      qualityScore(quote),
+      signalScore(signal),
+      score?.dataCoveragePct ?? 50,
+      symbolNews.length ? sentimentScore(symbolNews).score : 50,
+      component?.ready ? 72 : 48,
+    ]);
+    return finding({
+      ...base,
+      status,
+      score: value,
+      finding: component?.ready
+        ? "Dexter worker can decompose financial questions into research plans, gather labeled evidence, self-validate, and return scratchpad/eval artifacts."
+        : "Dexter lane is proxy-only until a self-hosted research agent returns task-plan, tool-call, self-check, and scratchpad evidence.",
+      evidence: [
+        agent ? `Native agent decision: ${agent.rating}` : "Native agent decision unavailable.",
+        score ? `Data coverage: ${score.dataCoveragePct}/100.` : "Algorithm Council coverage unavailable.",
+        symbolNews.length ? `${symbolNews.length} headline(s) available for catalyst research.` : "No headline set loaded for this symbol.",
+        "Dexter output can support a thesis only; it cannot authorize broker orders.",
+      ],
+    });
+  }
+
   if (key === "stockpredictionmodels") {
     const value = average([
       signalScore(signal),
@@ -916,6 +941,7 @@ function engineKey(engine: EngineCapability) {
   if (engine.repo.includes("stockpredictionai")) return "stockpredictionai";
   if (engine.repo.includes("LSTM-Neural-Network")) return "lstmtimeseries";
   if (engine.repo.includes("LLM-Trading-Lab")) return "llmtradinglab";
+  if (engine.repo.includes("virattt/dexter")) return "dexter";
   if (engine.repo.includes("Stock-Prediction-Models")) return "stockpredictionmodels";
   if (engine.repo.includes("Lean")) return "lean";
   if (engine.repo.includes("StockSharp")) return "stocksharp";
@@ -955,6 +981,7 @@ function engineWeight(key: string) {
     stockpredictionai: 0.065,
     lstmtimeseries: 0.055,
     llmtradinglab: 0.075,
+    dexter: 0.07,
     stockpredictionmodels: 0.06,
     lean: 0.095,
     stocksharp: 0.075,
