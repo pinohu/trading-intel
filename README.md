@@ -167,6 +167,7 @@ Free/no-license feeds are now the default for research and monitoring, but they 
 - [Ghostfolio Worker](docs/GHOSTFOLIO_WORKER.md)
 - [AKShare Worker](docs/AKSHARE_WORKER.md)
 - [LLM Trading Lab Worker](docs/LLM_TRADING_LAB_WORKER.md)
+- [LEAN Worker](docs/LEAN_WORKER.md)
 - [StockSharp Worker](docs/STOCKSHARP_WORKER.md)
 - [RQAlpha Worker](docs/RQALPHA_WORKER.md)
 - [Freqtrade Worker](docs/FREQTRADE_WORKER.md)

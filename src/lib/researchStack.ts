@@ -329,9 +329,9 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
       mode: workerReady("LEAN_WORKER_URL") ? "worker" : "missing",
       costProfile: "free-self-hosted",
       env: ["LEAN_WORKER_URL"],
-      detail: "External event-driven backtest/paper/live engine path outside Vercel limits.",
-      freeAlternative: "Native cost-aware daily-bar backtest and bounded AutoResearch lab.",
-      docs: "https://www.quantconnect.com/docs/v2/lean-cli",
+      detail: "External Apache-2.0 event-driven algorithm engine for self-hosted multi-asset backtests, optimizer-style parameter sweeps, research reports, and paper/live promotion evidence outside Vercel limits.",
+      freeAlternative: "Native cost-aware daily-bar backtest and bounded AutoResearch lab remain available; self-host LEAN when event-driven fills, universes, and multi-asset proof are needed.",
+      docs: "https://github.com/QuantConnect/Lean",
     },
     {
       key: "stocksharp",
@@ -583,8 +583,8 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
       },
       {
         name: "LEAN worker",
-        purpose: "Event-driven historical backtests and paper/live promotion trials.",
-        command: "lean backtest \"TradingIntelStrategy\"",
+        purpose: "Self-hosted event-driven backtests, optimizer-style parameter sweeps, multi-asset reports, and paper/live promotion evidence.",
+        command: "lean backtest TradingIntelStrategy",
         urlEnv: "LEAN_WORKER_URL",
       },
       {

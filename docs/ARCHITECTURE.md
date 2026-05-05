@@ -59,7 +59,7 @@ flowchart LR
 - Never promote stale quotes to buy/sell actions.
 - Never place live orders from the app until paper results, audit logs, broker permissions, and operator approvals exist.
 - Never allow cron or agent bearer tokens to place broker orders.
-- Never let TradingAgents, Alpha Vantage, Alphalens, LSTM Time Series, LLM Trading Lab, OpenStock, StockSight, StreetMerchant, Ghostfolio, AKShare, StockPredictionAI, Stock Prediction Models, StockSharp, RQAlpha, or Freqtrade worker output place autonomous broker or exchange orders; manual paper/live execution stays in the broker controls and audit rail.
+- Never let TradingAgents, Alpha Vantage, Alphalens, LSTM Time Series, LLM Trading Lab, OpenStock, StockSight, StreetMerchant, Ghostfolio, AKShare, StockPredictionAI, Stock Prediction Models, LEAN, StockSharp, RQAlpha, or Freqtrade worker output place autonomous broker or exchange orders; manual paper/live execution stays in the broker controls and audit rail.
 - Never treat a curated reference map as market data, a signal, a backtest result, or execution authorization.
 - Never submit a market order from the current execution rail.
 - Never treat the Ising optimizer as a price predictor; it only selects among existing candidates.

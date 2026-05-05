@@ -184,6 +184,19 @@ Accepted job families:
 
 AKShare output must stay labeled as research data unless a separate licensed/execution-grade feed confirms trade-critical prices. The worker request includes `safety.researchOnly=true`, `safety.noAutonomousExecution=true`, and `safety.brokerOrdersBlocked=true`.
 
+## LEAN Worker
+
+LEAN is integrated as an optional self-hosted event-driven algorithm worker. Configure `LEAN_WORKER_URL` to expose institutional-grade backtest and optimizer-style parameter-sweep jobs through the existing worker bridge.
+
+Accepted job families:
+
+- `backtest`
+- `parameter-sweep`
+
+Use it for multi-asset strategy proof, event-driven fills, brokerage/fill/slippage model assumptions, optimizer reports, and paper/live promotion evidence. Worker output must identify engine version, project, algorithm, symbols, asset class, data source, fees, slippage, fill model, brokerage model, validation period, drawdown, and whether live order placement is disabled for the bridge.
+
+LEAN is Apache-2.0 licensed. This app treats it as a separately hosted worker/reference lane; `/api/research-workers/run` may request research evidence but cannot place broker or exchange orders.
+
 ## StockSharp Worker
 
 StockSharp is integrated as a self-hosted C#/.NET worker, not as code running inside the Next.js serverless app. Configure `STOCKSHARP_WORKER_URL` to expose StockSharp research jobs through the existing worker bridge.

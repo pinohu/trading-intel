@@ -119,8 +119,8 @@ export const externalWorkerCatalog: Array<{
     key: "lean",
     label: "QuantConnect LEAN",
     urlEnv: "LEAN_WORKER_URL",
-    purpose: "Event-driven historical backtests and paper/live promotion trials.",
-    allowedJobs: ["backtest"],
+    purpose: "Apache-2.0 event-driven algorithm engine for self-hosted backtests, optimization-style parameter sweeps, multi-asset research reports, and paper/live promotion evidence with live execution disabled in this bridge.",
+    allowedJobs: ["backtest", "parameter-sweep"],
   },
   {
     key: "stocksharp",

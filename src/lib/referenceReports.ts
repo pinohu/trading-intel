@@ -219,6 +219,14 @@ export const referenceReportLessons: ReferenceReportLesson[] = [
     category: "research",
   },
   {
+    key: "lean",
+    title: "LEAN Reference",
+    source: "https://github.com/QuantConnect/Lean",
+    lesson: "LEAN-style institutional research should expose event-driven fills, universes, multi-asset data handling, optimizer reports, brokerage adapter assumptions, and reproducible backtest artifacts.",
+    systemRule: "LEAN output can strengthen promotion only after costs, slippage, validation, paper evidence, and live-control gates agree; worker jobs cannot place broker or exchange orders through this app.",
+    category: "research",
+  },
+  {
     key: "freqtrade",
     title: "Freqtrade Reference",
     source: "https://github.com/freqtrade/freqtrade",

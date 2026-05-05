@@ -122,6 +122,17 @@ describe("external worker catalog", () => {
     expect(validExternalWorkerJob({ jobType: "agent-research", symbols: ["SPY"], strategy: "forward-only-daily-agent-log" })).toBe(true);
   });
 
+  it("registers LEAN as a bounded backtest and optimization worker", () => {
+    const worker = externalWorkerCatalog.find((item) => item.key === "lean");
+
+    expect(worker?.urlEnv).toBe("LEAN_WORKER_URL");
+    expect(worker?.allowedJobs).toContain("backtest");
+    expect(worker?.allowedJobs).toContain("parameter-sweep");
+    expect(worker?.allowedJobs).not.toContain("crypto-paper");
+    expect(validWorkerKey("lean")).toBe(true);
+    expect(validExternalWorkerJob({ jobType: "parameter-sweep", symbols: ["SPY", "QQQ"], strategy: "lean-optimizer-grid" })).toBe(true);
+  });
+
   it("registers Stock Prediction Models as a research-only model-zoo worker", () => {
     const worker = externalWorkerCatalog.find((item) => item.key === "stockpredictionmodels");
 

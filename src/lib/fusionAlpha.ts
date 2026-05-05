@@ -526,10 +526,17 @@ function buildEngineFinding({
       ...base,
       status,
       score: value,
-      finding: backtest
-        ? `LEAN-style promotion gate reviews ${backtest.trades} historical trade(s), ${pct(backtest.totalReturnPct)} return, ${pct(backtest.maxDrawdownPct)} max drawdown.`
-        : "LEAN-style promotion gate is neutral until historical bars or an external LEAN worker supplies proof.",
-      evidence: [backtestStatus(backtest), signal ? `Signal: ${signal.action}` : "Signal unavailable"],
+      finding: component?.ready
+        ? "LEAN worker can supply event-driven backtests, optimizer-style sweeps, fill models, and multi-asset promotion evidence."
+        : backtest
+          ? `LEAN-style promotion gate reviews ${backtest.trades} historical trade(s), ${pct(backtest.totalReturnPct)} return, ${pct(backtest.maxDrawdownPct)} max drawdown.`
+          : "LEAN-style promotion gate is neutral until historical bars or an external LEAN worker supplies proof.",
+      evidence: [
+        backtestStatus(backtest),
+        validationEvidence(backtest),
+        signal ? `Signal: ${signal.action}` : "Signal unavailable",
+        "LEAN worker output cannot place live orders through this app.",
+      ],
     });
   }
 
