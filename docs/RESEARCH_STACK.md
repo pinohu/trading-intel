@@ -56,6 +56,7 @@ Set these when you host workers outside Vercel:
 - `ALPHA_VANTAGE_WORKER_URL`
 - `ALPHALENS_WORKER_URL`
 - `OPENSTOCK_WORKER_URL`
+- `STOCKSIGHT_WORKER_URL`
 - `STREETMERCHANT_WORKER_URL`
 - `GHOSTFOLIO_WORKER_URL`
 - `AKSHARE_WORKER_URL`
@@ -134,6 +135,18 @@ Accepted job families:
 - `nlp`
 
 OpenStock is AGPL-3.0 licensed, so this app treats it as a separately hosted companion/reference lane and does not vendor its source. Worker output must remain research-only and cannot place broker orders.
+
+## StockSight Sentiment Worker
+
+StockSight is integrated as an optional self-hosted Python NLP worker. Configure `STOCKSIGHT_WORKER_URL` to expose Twitter/news headline sentiment jobs through the existing worker bridge.
+
+Accepted job family:
+
+- `nlp`
+
+Use it for source-labeled sentiment pressure, polarity, subjectivity, headline/link context, and Elasticsearch/Kibana-reviewable evidence. Worker output must include source counts, timestamps, collection limits, API/rate-limit warnings, and whether Twitter/news credentials are missing.
+
+StockSight is Apache-2.0 licensed. Its output is sentiment context only; it cannot place orders, replace execution-grade quote data, or bypass freshness, risk, paper/live, or broker gates.
 
 ## StreetMerchant Alert Worker
 

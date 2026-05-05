@@ -34,6 +34,15 @@ describe("external worker catalog", () => {
     expect(validExternalWorkerJob({ jobType: "market-data", symbols: ["AAPL"], strategy: "companion-watchlist-context" })).toBe(true);
   });
 
+  it("registers StockSight as a bounded sentiment worker", () => {
+    const worker = externalWorkerCatalog.find((item) => item.key === "stocksight");
+
+    expect(worker?.urlEnv).toBe("STOCKSIGHT_WORKER_URL");
+    expect(worker?.allowedJobs).toEqual(["nlp"]);
+    expect(validWorkerKey("stocksight")).toBe(true);
+    expect(validExternalWorkerJob({ jobType: "nlp", symbols: ["TSLA"], strategy: "news-twitter-sentiment" })).toBe(true);
+  });
+
   it("registers StreetMerchant as a bounded alert monitor worker", () => {
     const worker = externalWorkerCatalog.find((item) => item.key === "streetmerchant");
 

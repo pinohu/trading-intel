@@ -192,6 +192,18 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
       docs: "https://github.com/Open-Dev-Society/OpenStock",
     },
     {
+      key: "stocksight",
+      label: "StockSight sentiment worker",
+      category: "ai-research",
+      ready: workerReady("STOCKSIGHT_WORKER_URL"),
+      mode: workerReady("STOCKSIGHT_WORKER_URL") ? "worker" : "missing",
+      costProfile: "free-self-hosted",
+      env: ["STOCKSIGHT_WORKER_URL"],
+      detail: "External Apache-2.0 Python sentiment worker inspired by shirosaidev/stocksight for Elasticsearch-backed Twitter/news headline mining, TextBlob/VADER/NLTK polarity, subjectivity, and catalyst-pressure labels.",
+      freeAlternative: "Yahoo RSS, native headline sentiment, FinGPT-style research, and TradingAgents thesis challenge remain available; self-host StockSight when source-labeled social/news sentiment adds value.",
+      docs: "https://github.com/shirosaidev/stocksight",
+    },
+    {
       key: "streetmerchant",
       label: "StreetMerchant alert-pattern worker",
       category: "operations",
@@ -532,6 +544,12 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
         purpose: "Self-hosted market-app companion for search, watchlists, company insights, market/news context, alerts, and UX comparison.",
         command: "node workers/openstock-worker.mjs",
         urlEnv: "OPENSTOCK_WORKER_URL",
+      },
+      {
+        name: "StockSight sentiment worker",
+        purpose: "Self-hosted Twitter/news headline sentiment, Elasticsearch/Kibana evidence, polarity, subjectivity, and source freshness labels.",
+        command: "python sentiment.py -s TSLA --newsheadlines --followlinks",
+        urlEnv: "STOCKSIGHT_WORKER_URL",
       },
       {
         name: "StreetMerchant alert-pattern worker",

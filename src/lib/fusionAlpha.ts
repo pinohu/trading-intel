@@ -334,6 +334,27 @@ function buildEngineFinding({
     });
   }
 
+  if (key === "stocksight") {
+    const sentiment = sentimentScore(symbolNews);
+    const sourceBreadth = clamp(28 + symbolNews.length * 14 + (component?.ready ? 12 : 0), 20, 88);
+    const value = average([sentiment.score, sourceBreadth, signalScore(signal), score?.ensembleScore ?? 50, signal?.dataFresh ? 72 : 24]);
+    return finding({
+      ...base,
+      status: component?.ready ? "active" : symbolNews.length ? "proxy" : status,
+      score: value,
+      finding: component?.ready
+        ? `StockSight worker can mine Twitter/news sentiment and label catalyst tone as ${sentiment.label}.`
+        : symbolNews.length
+          ? `StockSight lane is proxy-only; current headline text reads as ${sentiment.label}.`
+          : "StockSight lane is neutral until a self-hosted worker or current headline set supplies sentiment evidence.",
+      evidence: [
+        `Sentiment source count: ${symbolNews.length}`,
+        signal?.dataFresh ? "Fresh signal can be challenged by catalyst sentiment." : "Fresh signal missing; sentiment cannot promote action.",
+        ...(symbolNews.length ? symbolNews.slice(0, 2).map((item) => `${item.source ?? "news"}: ${item.title}`) : ["No current headline evidence loaded for this symbol."]),
+      ],
+    });
+  }
+
   if (key === "streetmerchant") {
     const value = average([
       signal?.dataFresh ? 76 : 24,
@@ -810,6 +831,7 @@ function engineKey(engine: EngineCapability) {
   if (engine.repo.includes("alphalens")) return "alphalens";
   if (engine.repo.includes("awesome-systematic-trading")) return "systematic-reference-map";
   if (engine.repo.includes("OpenStock")) return "openstock";
+  if (engine.repo.includes("stocksight")) return "stocksight";
   if (engine.repo.includes("streetmerchant")) return "streetmerchant";
   if (engine.repo.includes("ghostfolio")) return "ghostfolio";
   if (engine.repo.includes("akshare")) return "akshare";
@@ -847,6 +869,7 @@ function engineWeight(key: string) {
     alphalens: 0.075,
     "systematic-reference-map": 0.05,
     openstock: 0.055,
+    stocksight: 0.055,
     streetmerchant: 0.045,
     ghostfolio: 0.07,
     akshare: 0.06,

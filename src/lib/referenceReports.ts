@@ -91,6 +91,14 @@ export const referenceReportLessons: ReferenceReportLesson[] = [
     category: "operations",
   },
   {
+    key: "stocksight",
+    title: "StockSight Reference",
+    source: "https://github.com/shirosaidev/stocksight",
+    lesson: "StockSight-style sentiment research can mine Twitter, news headlines, linked pages, polarity, subjectivity, and Kibana-reviewable evidence, but social/news tone is noisy and source-dependent.",
+    systemRule: "StockSight output can challenge or contextualize a catalyst only when source count, timestamps, polarity, subjectivity, and collection limits are visible; it cannot become market data or authorize broker orders.",
+    category: "research",
+  },
+  {
     key: "streetmerchant",
     title: "StreetMerchant Reference",
     source: "https://github.com/jef/streetmerchant",

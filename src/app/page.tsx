@@ -581,9 +581,9 @@ const quantPipelines = [
   },
   {
     title: "AI Research",
-    repo: "LSTM Time Series + LLM Trading Lab + StockPredictionAI + Stock Prediction Models + FinGPT + FinRL",
+    repo: "StockSight + LSTM Time Series + LLM Trading Lab + StockPredictionAI + Stock Prediction Models + FinGPT + FinRL",
     icon: Brain,
-    body: "Pressure-test forecasts, summarize catalysts, score sentiment, flag contradictions, and keep ML/RL work research-only.",
+    body: "Pressure-test forecasts, mine source-labeled news/social sentiment, summarize catalysts, flag contradictions, and keep ML/RL work research-only.",
   },
   {
     title: "Execution Gate",

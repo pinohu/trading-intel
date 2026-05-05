@@ -5,6 +5,7 @@ export type ExternalWorkerKey =
   | "alphavantage"
   | "alphalens"
   | "openstock"
+  | "stocksight"
   | "streetmerchant"
   | "ghostfolio"
   | "akshare"
@@ -77,6 +78,13 @@ export const externalWorkerCatalog: Array<{
     urlEnv: "OPENSTOCK_WORKER_URL",
     purpose: "AGPL-licensed companion market app lane for search, watchlists, company insights, market/news context, alerts, and UI/UX pattern comparison.",
     allowedJobs: ["market-data", "fundamentals", "nlp"],
+  },
+  {
+    key: "stocksight",
+    label: "StockSight",
+    urlEnv: "STOCKSIGHT_WORKER_URL",
+    purpose: "Apache-2.0 Python sentiment lane for Elasticsearch-backed Twitter/news headline mining, TextBlob/VADER/NLTK polarity, subjectivity, and source-labeled catalyst pressure.",
+    allowedJobs: ["nlp"],
   },
   {
     key: "streetmerchant",

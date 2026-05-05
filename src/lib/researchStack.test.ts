@@ -15,6 +15,7 @@ describe("research stack readiness", () => {
     expect(keys).toContain("alphavantage");
     expect(keys).toContain("alphalens");
     expect(keys).toContain("openstock");
+    expect(keys).toContain("stocksight");
     expect(keys).toContain("streetmerchant");
     expect(keys).toContain("ghostfolio");
     expect(keys).toContain("akshare");

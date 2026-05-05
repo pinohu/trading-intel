@@ -131,8 +131,8 @@ export const trustOperationGaps: TrustOperationGap[] = [
     status: "Live",
     proofStatus: "Partial",
     evidenceStandard: "A signal should list known market-moving events and identify when catalyst coverage is only a proxy.",
-    currentState: "Yahoo headlines run first by default; SEC filing routes, EIA/USDA event-risk references, and static catalyst rules are live.",
-    nextAction: "Treat Benzinga/Finnhub/NewsAPI as optional paid enrichments, and expand free official calendar metadata where public endpoints support it.",
+    currentState: "Yahoo headlines run first by default; SEC filing routes, EIA/USDA event-risk references, static catalyst rules, and an optional StockSight sentiment worker lane are live.",
+    nextAction: "Treat Benzinga/Finnhub/NewsAPI as optional paid enrichments, expand free official calendar metadata where public endpoints support it, and require StockSight-style sentiment to show source count, timestamps, polarity, subjectivity, and collection limits.",
     acceptanceCriteria: [
       "Earnings and macro calendars are visible beside affected symbols.",
       "Commodity alerts include inventory, weather, roll, and major report risk when applicable.",
