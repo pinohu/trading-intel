@@ -13,6 +13,16 @@ describe("external worker catalog", () => {
     expect(validExternalWorkerJob({ jobType: "market-data", symbols: ["AAPL"], strategy: "companion-watchlist-context" })).toBe(true);
   });
 
+  it("registers Ghostfolio as a bounded portfolio analytics worker", () => {
+    const ghostfolio = externalWorkerCatalog.find((worker) => worker.key === "ghostfolio");
+
+    expect(ghostfolio?.urlEnv).toBe("GHOSTFOLIO_WORKER_URL");
+    expect(ghostfolio?.allowedJobs).toContain("portfolio");
+    expect(ghostfolio?.allowedJobs).toContain("market-data");
+    expect(validWorkerKey("ghostfolio")).toBe(true);
+    expect(validExternalWorkerJob({ jobType: "portfolio", symbols: ["SPY", "NVDA"], strategy: "exposure-check" })).toBe(true);
+  });
+
   it("registers AKShare as a bounded research data worker", () => {
     const akshare = externalWorkerCatalog.find((worker) => worker.key === "akshare");
 

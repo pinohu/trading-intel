@@ -66,6 +66,14 @@ export function buildWorkerReadiness(): WorkerReadiness {
           : "Set OPENBB_WORKER_URL, OPENSTOCK_WORKER_URL, or AKSHARE_WORKER_URL for deeper market-data and fundamentals research outside Vercel.",
     },
     {
+      key: "portfolio-analytics-worker",
+      label: "Portfolio analytics worker",
+      ready: Boolean(process.env.GHOSTFOLIO_WORKER_URL),
+      detail: process.env.GHOSTFOLIO_WORKER_URL
+        ? "Ghostfolio companion worker URL is configured."
+        : "Set GHOSTFOLIO_WORKER_URL for self-hosted portfolio performance, holdings, risk, and transaction analytics.",
+    },
+    {
       key: "external-quant-workers",
       label: "External quant workers",
       ready: Boolean(process.env.LEAN_WORKER_URL || process.env.STOCKSHARP_WORKER_URL || process.env.BACKTRADER_WORKER_URL || process.env.VECTORBT_WORKER_URL),
@@ -119,6 +127,12 @@ export function buildWorkerReadiness(): WorkerReadiness {
         purpose: "Bridge self-hosted OpenStock-style search, watchlists, company insights, market/news context, and alert UX patterns for research.",
         cadence: "on demand / scheduled research jobs",
         command: "node workers/openstock-worker.mjs",
+      },
+      {
+        name: "ghostfolio-worker",
+        purpose: "Sync self-hosted Ghostfolio portfolio performance, holdings composition, transaction, allocation, and static risk analytics.",
+        cadence: "on demand / scheduled portfolio jobs",
+        command: "node workers/ghostfolio-worker.mjs",
       },
       {
         name: "akshare-worker",

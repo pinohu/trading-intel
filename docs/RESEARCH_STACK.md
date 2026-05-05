@@ -47,6 +47,7 @@ Set these when you host workers outside Vercel:
 
 - `OPENBB_WORKER_URL`
 - `OPENSTOCK_WORKER_URL`
+- `GHOSTFOLIO_WORKER_URL`
 - `AKSHARE_WORKER_URL`
 - `LEAN_WORKER_URL`
 - `STOCKSHARP_WORKER_URL`
@@ -92,6 +93,18 @@ Accepted job families:
 - `nlp`
 
 OpenStock is AGPL-3.0 licensed, so this app treats it as a separately hosted companion/reference lane and does not vendor its source. Worker output must remain research-only and cannot place broker orders.
+
+## Ghostfolio Portfolio Worker
+
+Ghostfolio is integrated as an optional self-hosted portfolio analytics companion. Configure `GHOSTFOLIO_WORKER_URL` to expose portfolio performance, holdings, transactions, allocation, import/export, and static risk context through the existing worker bridge.
+
+Accepted job families:
+
+- `portfolio`
+- `market-data`
+- `fundamentals`
+
+Ghostfolio is AGPL-3.0 licensed, so this app treats it as a separately hosted companion/reference lane and does not vendor its source. Worker output must remain research-only and cannot place broker orders.
 
 ## AKShare Worker
 

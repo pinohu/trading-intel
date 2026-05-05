@@ -3,6 +3,7 @@ import { cleanSecret } from "@/lib/security";
 export type ExternalWorkerKey =
   | "openbb"
   | "openstock"
+  | "ghostfolio"
   | "akshare"
   | "lean"
   | "stocksharp"
@@ -16,13 +17,13 @@ export type ExternalWorkerKey =
   | "jesse";
 
 export type ExternalWorkerJob = {
-  jobType: "market-data" | "fundamentals" | "backtest" | "parameter-sweep" | "forecast" | "nlp" | "rl-research" | "crypto-paper";
+  jobType: "market-data" | "portfolio" | "fundamentals" | "backtest" | "parameter-sweep" | "forecast" | "nlp" | "rl-research" | "crypto-paper";
   symbols: string[];
   strategy?: string;
   parameters?: Record<string, unknown>;
 };
 
-const externalWorkerJobTypes = ["market-data", "fundamentals", "backtest", "parameter-sweep", "forecast", "nlp", "rl-research", "crypto-paper"];
+const externalWorkerJobTypes = ["market-data", "portfolio", "fundamentals", "backtest", "parameter-sweep", "forecast", "nlp", "rl-research", "crypto-paper"];
 
 export const externalWorkerCatalog: Array<{
   key: ExternalWorkerKey;
@@ -44,6 +45,13 @@ export const externalWorkerCatalog: Array<{
     urlEnv: "OPENSTOCK_WORKER_URL",
     purpose: "AGPL-licensed companion market app lane for search, watchlists, company insights, market/news context, alerts, and UI/UX pattern comparison.",
     allowedJobs: ["market-data", "fundamentals", "nlp"],
+  },
+  {
+    key: "ghostfolio",
+    label: "Ghostfolio",
+    urlEnv: "GHOSTFOLIO_WORKER_URL",
+    purpose: "AGPL-licensed companion wealth-management lane for portfolio performance, holdings composition, static risk analysis, transactions, imports/exports, and multi-account context.",
+    allowedJobs: ["portfolio", "market-data", "fundamentals"],
   },
   {
     key: "akshare",

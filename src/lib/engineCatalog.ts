@@ -51,6 +51,16 @@ export const engineCapabilities: EngineCapability[] = [
     priority: "Next",
   },
   {
+    repo: "ghostfolio/ghostfolio",
+    productName: "Ghostfolio Portfolio Companion",
+    lane: "Portfolio analytics",
+    bestUse: "Self-hosted portfolio performance, holdings composition, transactions, imports/exports, allocation, and static risk analysis.",
+    featureUnlocked: "Portfolio source-of-truth pressure that turns trade ideas into account-level exposure and concentration questions.",
+    integrationMode: "External engine",
+    safety: "Research",
+    priority: "Next",
+  },
+  {
     repo: "akfamily/akshare",
     productName: "AKShare Data Worker",
     lane: "Free financial data",
@@ -253,7 +263,7 @@ export const engineCapabilities: EngineCapability[] = [
 ];
 
 export const engineWorkflow = [
-  "Collect data with OpenBB/OpenStock/AKShare-style connectors and current quote/news APIs.",
+  "Collect data with OpenBB/OpenStock/Ghostfolio/AKShare-style connectors and current quote/news APIs.",
   "Challenge interesting tickers with TradingAgents multi-agent debate before writing a trade thesis.",
   "Use StockPredictionAI and Stock-Prediction-Models-style deep forecasts as research pressure, not as trade authorization.",
   "Run simple first-pass validation in the native Backtest Lab.",

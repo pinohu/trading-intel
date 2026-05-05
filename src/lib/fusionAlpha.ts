@@ -269,6 +269,28 @@ function buildEngineFinding({
     });
   }
 
+  if (key === "ghostfolio") {
+    const exposureScore = average([
+      activeBuy ? 68 : 48,
+      brokerReady ? 64 : 42,
+      signal?.action === "Buy Watch" ? 62 : signal?.action === "Sell/Exit Watch" ? 35 : 50,
+      signal?.rewardRisk ? clamp(signal.rewardRisk * 28, 30, 82) : 50,
+    ]);
+    return finding({
+      ...base,
+      status,
+      score: exposureScore,
+      finding: component?.ready
+        ? "Ghostfolio companion lane can cross-check portfolio performance, allocation, holdings concentration, transactions, and static risk context."
+        : "Ghostfolio lane is proxy-only until a self-hosted portfolio worker supplies account-level analytics.",
+      evidence: [
+        activeBuy ? "Trade ticket candidate exists." : "No trade ticket candidate.",
+        brokerReady ? "Broker/portfolio route is available." : "Broker/portfolio route is locked.",
+        signal?.rewardRisk ? `Reward/risk: ${signal.rewardRisk}R` : "Reward/risk unavailable.",
+      ],
+    });
+  }
+
   if (key === "akshare") {
     const coverage = score?.dataCoveragePct ?? qualityScore(quote);
     const value = average([qualityScore(quote), coverage, signal?.dataFresh ? 70 : 30]);
@@ -629,6 +651,7 @@ function finding(input: Omit<FusionEngineFinding, "stance" | "impact">): FusionE
 function engineKey(engine: EngineCapability) {
   if (engine.repo.includes("OpenBB")) return "openbb";
   if (engine.repo.includes("OpenStock")) return "openstock";
+  if (engine.repo.includes("ghostfolio")) return "ghostfolio";
   if (engine.repo.includes("akshare")) return "akshare";
   if (engine.repo.includes("TradingAgents-CN")) return "tradingagents-cn";
   if (engine.repo.includes("TradingAgents")) return "tradingagents";
@@ -658,6 +681,7 @@ function engineWeight(key: string) {
   const weights: Record<string, number> = {
     openbb: 0.075,
     openstock: 0.055,
+    ghostfolio: 0.07,
     akshare: 0.06,
     tradingagents: 0.13,
     stockpredictionai: 0.065,

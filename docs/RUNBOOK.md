@@ -33,6 +33,12 @@ Optional OpenStock companion check:
 - Dispatch a research-only job through `/api/research-workers/run` with `worker: "openstock"` and `jobType: "market-data"`.
 - Confirm the worker returns search/watchlist/company/news/alert context and no broker-order side effects.
 
+Optional Ghostfolio portfolio check:
+
+- Set `GHOSTFOLIO_WORKER_URL` to the self-hosted portfolio worker endpoint.
+- Dispatch a research-only job through `/api/research-workers/run` with `worker: "ghostfolio"` and `jobType: "portfolio"`.
+- Confirm the worker returns portfolio exposure, allocation, holdings, transaction, and static risk context with no broker-order side effects.
+
 Optional AKShare worker check:
 
 - Set `AKSHARE_WORKER_URL` to the self-hosted Python worker endpoint.

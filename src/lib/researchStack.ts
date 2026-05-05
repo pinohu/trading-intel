@@ -4,7 +4,7 @@ import { cleanSecret } from "@/lib/security";
 export type ResearchStackComponent = {
   key: string;
   label: string;
-  category: "market-data" | "news" | "filings" | "fundamentals" | "backtesting" | "ai-research" | "crypto" | "database";
+  category: "market-data" | "news" | "filings" | "fundamentals" | "portfolio" | "backtesting" | "ai-research" | "crypto" | "database";
   ready: boolean;
   mode: "credentialed" | "free-fallback" | "worker" | "native" | "missing";
   costProfile: "free-default" | "free-public" | "free-self-hosted" | "free-account" | "optional-paid";
@@ -166,6 +166,18 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
       detail: "External AGPL-licensed companion app lane for stock search, watchlists, company insights, market/news context, alerts, and UX comparison without vendoring source.",
       freeAlternative: "Native dashboard search/watchlist/news and public quote stack remain available; self-host OpenStock when you want its companion market-app workflow.",
       docs: "https://github.com/Open-Dev-Society/OpenStock",
+    },
+    {
+      key: "ghostfolio",
+      label: "Ghostfolio portfolio worker",
+      category: "portfolio",
+      ready: workerReady("GHOSTFOLIO_WORKER_URL"),
+      mode: workerReady("GHOSTFOLIO_WORKER_URL") ? "worker" : "missing",
+      costProfile: "free-self-hosted",
+      env: ["GHOSTFOLIO_WORKER_URL"],
+      detail: "External AGPL-licensed companion wealth app lane for portfolio performance, holdings composition, static risk analysis, transaction history, and multi-account context without vendoring source.",
+      freeAlternative: "Native Alpaca portfolio/risk routes remain available; self-host Ghostfolio when you want a broader personal finance portfolio source of truth.",
+      docs: "https://github.com/ghostfolio/ghostfolio",
     },
     {
       key: "akshare",
@@ -425,6 +437,12 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
         purpose: "Self-hosted market-app companion for search, watchlists, company insights, market/news context, alerts, and UX comparison.",
         command: "node workers/openstock-worker.mjs",
         urlEnv: "OPENSTOCK_WORKER_URL",
+      },
+      {
+        name: "Ghostfolio portfolio worker",
+        purpose: "Self-hosted portfolio performance, holdings composition, static risk, transaction, and allocation analytics.",
+        command: "node workers/ghostfolio-worker.mjs",
+        urlEnv: "GHOSTFOLIO_WORKER_URL",
       },
       {
         name: "AKShare worker",

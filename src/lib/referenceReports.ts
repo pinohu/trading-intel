@@ -67,6 +67,14 @@ export const referenceReportLessons: ReferenceReportLesson[] = [
     category: "operations",
   },
   {
+    key: "ghostfolio",
+    title: "Ghostfolio Reference",
+    source: "https://github.com/ghostfolio/ghostfolio",
+    lesson: "Ghostfolio-style portfolio analytics add performance, allocation, holdings, transactions, import/export, and static risk context around trade ideas.",
+    systemRule: "Portfolio analytics should challenge every new trade against account-level exposure, concentration, and existing holdings; do not copy AGPL source into this app without accepting the license obligations.",
+    category: "risk",
+  },
+  {
     key: "akshare",
     title: "AKShare Reference",
     source: "https://github.com/akfamily/akshare",
