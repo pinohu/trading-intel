@@ -4937,7 +4937,7 @@ function AgentTradingPanel({
         <MiniStat label="Proposals" value={`${proposals.length}`} tone={proposals.length ? "green" : "plain"} />
       </div>
 
-      <div className="rounded-md border border-amber-300/20 bg-amber-300/10 p-3 text-sm leading-6 text-amber-100">
+      <div className="rounded-md border border-amber-200/35 bg-amber-300/15 p-3 text-sm leading-6 text-amber-50">
         {message} Real-money agent submission requires live-agent arming, a logged-in operator, the live acknowledgement phrase, audit storage, and pre-trade controls.
       </div>
 
@@ -4969,7 +4969,7 @@ function AgentTradingPanel({
               <button
                 onClick={() => onRunPaperAgent(top.symbol)}
                 disabled={executing || !policy?.paperAutomationReady || top.status !== "paper-ready"}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-emerald-300 px-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-200 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
+                className="inline-flex min-h-11 items-center justify-center gap-2 whitespace-normal rounded-md bg-emerald-300 px-3 py-2 text-sm font-semibold leading-5 text-slate-950 transition hover:bg-emerald-200 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
               >
                 <Bot className={`h-4 w-4 ${executing ? "animate-spin" : ""}`} />
                 Paper Trade With Agent
@@ -4977,22 +4977,22 @@ function AgentTradingPanel({
               <button
                 onClick={() => onRunLiveAgent(top.symbol)}
                 disabled={executing || !liveReady}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-rose-300/40 bg-rose-300 px-3 text-sm font-semibold text-slate-950 transition hover:bg-rose-200 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-slate-700 disabled:text-slate-400"
+                className="inline-flex min-h-11 items-center justify-center gap-2 whitespace-normal rounded-md border border-rose-300/40 bg-rose-300 px-3 py-2 text-sm font-semibold leading-5 text-slate-950 transition hover:bg-rose-200 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-slate-700 disabled:text-slate-400"
               >
                 <ShieldCheck className={`h-4 w-4 ${executing ? "animate-pulse" : ""}`} />
                 Submit Live With Agent
               </button>
             </div>
           </div>
-          <div className="mt-3 grid gap-2 sm:grid-cols-3 lg:grid-cols-6">
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
             <MiniStat label="Confidence" value={`${top.confidence}`} tone={top.confidence >= 80 ? "green" : "blue"} />
             <MiniStat label="Units" value={`${top.orderDraft.qty}`} tone="plain" />
             <MiniStat label="Entry" value={formatUsd(top.orderDraft.limitPrice)} tone="green" />
             <MiniStat label="Stop" value={formatUsd(top.orderDraft.stopLossStopPrice ?? top.ticket.stop)} tone="amber" />
             <MiniStat label="Target" value={formatUsd(top.orderDraft.takeProfitLimitPrice ?? top.ticket.target)} tone="blue" />
-            <MiniStat label="Hold" value={top.ticket.expectedHold} tone="amber" />
+            <MiniStat label="Hold" value={top.ticket.expectedHold} tone="amber" className="sm:col-span-2 lg:col-span-5" />
           </div>
-          <div className="mt-3 rounded-sm bg-black/20 p-2 text-xs leading-5 text-cyan-100">
+          <div className="mt-3 rounded-sm bg-black/25 p-3 text-sm leading-6 text-cyan-50">
             Exit rule: {top.ticket.exitRule}
           </div>
           <div className="mt-3 space-y-1">
@@ -5569,10 +5569,12 @@ function MiniStat({
   label,
   value,
   tone,
+  className = "",
 }: {
   label: string;
   value: string;
   tone: "green" | "red" | "amber" | "blue" | "plain";
+  className?: string;
 }) {
   const color =
     tone === "green"
@@ -5586,12 +5588,12 @@ function MiniStat({
             : "text-white";
   const help = statExplanations[label] ?? `${label}: ${value}`;
   return (
-    <div className="min-h-[4.25rem] min-w-0 rounded-sm bg-black/20 p-2" title={help} aria-label={`${label}. ${value}. ${help}`}>
+    <div className={`min-h-[4.25rem] min-w-0 overflow-visible rounded-sm bg-black/20 p-2 ${className}`} title={help} aria-label={`${label}. ${value}. ${help}`}>
       <div className="flex items-start gap-1.5 text-xs font-semibold text-slate-400">
         <span className="min-w-0 break-words">{label}</span>
         <HelpTip text={help} />
       </div>
-      <div className={`mt-1 break-words font-mono text-sm leading-6 tabular-nums ${color}`} title={`${value}. ${help}`}>
+      <div className={`mt-1 whitespace-normal break-words font-mono text-sm leading-6 tabular-nums ${color}`} title={`${value}. ${help}`}>
         {value}
       </div>
     </div>
