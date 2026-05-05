@@ -364,6 +364,30 @@ function buildEngineFinding({
     });
   }
 
+  if (key === "lstmtimeseries") {
+    const coverage = score?.dataCoveragePct ?? qualityScore(quote);
+    const value = average([
+      signalScore(signal),
+      vectorRobustnessScore(backtest),
+      backtestScore(backtest),
+      coverage,
+      signal?.dataFresh ? 70 : 24,
+    ]);
+    return finding({
+      ...base,
+      status,
+      score: value,
+      finding: component?.ready
+        ? "LSTM Time Series worker is available for sequence-window forecasts, walk-forward holdouts, and stale-dependency warnings."
+        : "LSTM Time Series lane is proxy-only until a self-hosted worker returns holdout-tested sequence forecasts and baseline comparisons.",
+      evidence: [
+        `Data coverage: ${Math.round(coverage)}/100`,
+        validationEvidence(backtest),
+        backtestStatus(backtest),
+      ],
+    });
+  }
+
   if (key === "llmtradinglab") {
     const value = average([
       agent ? agentScore(agent) : agreementProxyScore({ signal, score, backtest }),
@@ -724,6 +748,7 @@ function engineKey(engine: EngineCapability) {
   if (engine.repo.includes("TradingAgents-CN")) return "tradingagents-cn";
   if (engine.repo.includes("TradingAgents")) return "tradingagents";
   if (engine.repo.includes("stockpredictionai")) return "stockpredictionai";
+  if (engine.repo.includes("LSTM-Neural-Network")) return "lstmtimeseries";
   if (engine.repo.includes("LLM-Trading-Lab")) return "llmtradinglab";
   if (engine.repo.includes("Stock-Prediction-Models")) return "stockpredictionmodels";
   if (engine.repo.includes("Lean")) return "lean";
@@ -756,6 +781,7 @@ function engineWeight(key: string) {
     akshare: 0.06,
     tradingagents: 0.13,
     stockpredictionai: 0.065,
+    lstmtimeseries: 0.055,
     llmtradinglab: 0.075,
     stockpredictionmodels: 0.06,
     lean: 0.095,

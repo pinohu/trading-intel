@@ -155,6 +155,14 @@ export const referenceReportLessons: ReferenceReportLesson[] = [
     category: "research",
   },
   {
+    key: "lstm-time-series",
+    title: "LSTM Time Series Reference",
+    source: "https://github.com/jaungiers/LSTM-Neural-Network-for-Time-Series-Prediction",
+    lesson: "A narrow LSTM sequence forecast can be useful as a baseline when sequence length, train/test split, walk-forward validation, benchmark comparison, and dependency age are explicit.",
+    systemRule: "LSTM time-series output is research pressure only until holdout proof, slippage/fee costs, freshness labels, benchmark comparison, and risk gates agree; do not copy AGPL source into this app without accepting license obligations.",
+    category: "research",
+  },
+  {
     key: "llm-trading-lab",
     title: "LLM Trading Lab Reference",
     source: "https://github.com/LuckyOne7777/LLM-Trading-Lab",

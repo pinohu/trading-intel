@@ -54,6 +54,7 @@ Set these when you host workers outside Vercel:
 - `LEAN_WORKER_URL`
 - `STOCKSHARP_WORKER_URL`
 - `RQALPHA_WORKER_URL`
+- `LSTM_TIME_SERIES_WORKER_URL`
 - `STOCKPREDICTIONAI_WORKER_URL`
 - `STOCK_PREDICTION_MODELS_WORKER_URL`
 - `BACKTRADER_WORKER_URL`
@@ -171,6 +172,18 @@ Accepted job families:
 The reference GitHub repo did not expose a license file during integration, so this app treats it as an architectural/modeling reference and worker contract only. Do not vendor or redistribute its source from this codebase without legal review or explicit permission.
 
 Worker output must remain research-only and cannot place orders. Fusion Alpha can use it as a forecast pressure lane only after holdout evidence, slippage/fee assumptions, data freshness, and overfit warnings are visible.
+
+## LSTM Time Series Worker
+
+LSTM Time Series is integrated as a self-hosted research forecast worker inspired by `jaungiers/LSTM-Neural-Network-for-Time-Series-Prediction`. Configure `LSTM_TIME_SERIES_WORKER_URL` to expose sequence-window LSTM forecasts through the existing worker bridge.
+
+Accepted job families:
+
+- `forecast`
+- `parameter-sweep`
+- `backtest`
+
+The reference repo is AGPL-3.0 licensed and built around older Keras/TensorFlow dependencies, so this app treats it as a separate worker/reference lane and does not vendor source. Worker output must include train/test split, sequence length, holdout or walk-forward metrics, benchmark comparison, and dependency/version warnings before Fusion Alpha can use it as forecast pressure.
 
 ## LLM Trading Lab Worker
 

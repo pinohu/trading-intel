@@ -62,6 +62,16 @@ describe("external worker catalog", () => {
     expect(validExternalWorkerJob({ jobType: "backtest", symbols: ["000001.XSHE"], strategy: "rqalpha-mod-risk-simulation" })).toBe(true);
   });
 
+  it("registers LSTM Time Series as a research-only forecast worker", () => {
+    const worker = externalWorkerCatalog.find((item) => item.key === "lstmtimeseries");
+
+    expect(worker?.urlEnv).toBe("LSTM_TIME_SERIES_WORKER_URL");
+    expect(worker?.allowedJobs).toContain("forecast");
+    expect(worker?.allowedJobs).toContain("parameter-sweep");
+    expect(validWorkerKey("lstmtimeseries")).toBe(true);
+    expect(validExternalWorkerJob({ jobType: "forecast", symbols: ["AAPL"], strategy: "lstm-sequence-holdout" })).toBe(true);
+  });
+
   it("registers StockPredictionAI as a research-only forecast worker", () => {
     const worker = externalWorkerCatalog.find((item) => item.key === "stockpredictionai");
 

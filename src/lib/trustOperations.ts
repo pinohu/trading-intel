@@ -177,8 +177,8 @@ export const trustOperationGaps: TrustOperationGap[] = [
     status: "Live",
     proofStatus: "Partial",
     evidenceStandard: "Performance should be grouped by strategy, horizon, symbol class, regime, signal quality, and action type.",
-    currentState: "Signal snapshots are persisted, model-performance API summaries outcomes, and the ops strip surfaces the best available proof count.",
-    nextAction: "Add per-strategy false-positive, drawdown, and regime dashboards once enough live samples accumulate.",
+    currentState: "Signal snapshots are persisted, model-performance API summaries outcomes, the ops strip surfaces the best available proof count, and optional forecast workers now include explicit holdout/dependency-risk lanes.",
+    nextAction: "Add per-strategy false-positive, drawdown, regime, and forecast-family dashboards once enough live samples accumulate.",
     acceptanceCriteria: [
       "Performance cannot show green unless outcome sample thresholds are met.",
       "False positives, average return, and drawdown are visible by strategy family.",

@@ -93,11 +93,23 @@ export function buildWorkerReadiness(): WorkerReadiness {
     {
       key: "ai-research-workers",
       label: "AI research workers",
-      ready: Boolean(process.env.LLM_TRADING_LAB_WORKER_URL || process.env.STOCKPREDICTIONAI_WORKER_URL || process.env.STOCK_PREDICTION_MODELS_WORKER_URL || process.env.FINGPT_WORKER_URL || process.env.FINRL_WORKER_URL),
+      ready: Boolean(
+        process.env.LLM_TRADING_LAB_WORKER_URL ||
+          process.env.LSTM_TIME_SERIES_WORKER_URL ||
+          process.env.STOCKPREDICTIONAI_WORKER_URL ||
+          process.env.STOCK_PREDICTION_MODELS_WORKER_URL ||
+          process.env.FINGPT_WORKER_URL ||
+          process.env.FINRL_WORKER_URL,
+      ),
       detail:
-        process.env.LLM_TRADING_LAB_WORKER_URL || process.env.STOCKPREDICTIONAI_WORKER_URL || process.env.STOCK_PREDICTION_MODELS_WORKER_URL || process.env.FINGPT_WORKER_URL || process.env.FINRL_WORKER_URL
+        process.env.LLM_TRADING_LAB_WORKER_URL ||
+        process.env.LSTM_TIME_SERIES_WORKER_URL ||
+        process.env.STOCKPREDICTIONAI_WORKER_URL ||
+        process.env.STOCK_PREDICTION_MODELS_WORKER_URL ||
+        process.env.FINGPT_WORKER_URL ||
+        process.env.FINRL_WORKER_URL
           ? "At least one optional AI research worker URL is configured."
-          : "TradingAgents now runs in-code. Set LLM_TRADING_LAB_WORKER_URL, STOCKPREDICTIONAI_WORKER_URL, STOCK_PREDICTION_MODELS_WORKER_URL, FINGPT_WORKER_URL, or FINRL_WORKER_URL only for optional external AI experiments.",
+          : "TradingAgents now runs in-code. Set LLM_TRADING_LAB_WORKER_URL, LSTM_TIME_SERIES_WORKER_URL, STOCKPREDICTIONAI_WORKER_URL, STOCK_PREDICTION_MODELS_WORKER_URL, FINGPT_WORKER_URL, or FINRL_WORKER_URL only for optional external AI experiments.",
     },
   ];
   const readyCount = components.filter((item) => item.ready).length;
@@ -177,6 +189,12 @@ export function buildWorkerReadiness(): WorkerReadiness {
         purpose: "Run research-only LLM portfolio decision experiments with forward-only logs, stop-loss compliance, hard constraints, and benchmark comparisons.",
         cadence: "on demand / daily research jobs",
         command: "python workers/llm_trading_lab_worker.py",
+      },
+      {
+        name: "lstm-time-series-worker",
+        purpose: "Run research-only LSTM sequence forecasts with walk-forward holdouts, baseline comparisons, and dependency-drift warnings.",
+        cadence: "on demand / nightly research jobs",
+        command: "python workers/lstm_time_series_worker.py",
       },
       {
         name: "stockpredictionai-worker",

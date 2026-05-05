@@ -10,6 +10,7 @@ export type ExternalWorkerKey =
   | "lean"
   | "stocksharp"
   | "rqalpha"
+  | "lstmtimeseries"
   | "stockpredictionai"
   | "stockpredictionmodels"
   | "backtrader"
@@ -108,6 +109,13 @@ export const externalWorkerCatalog: Array<{
     urlEnv: "RQALPHA_WORKER_URL",
     purpose: "Research-only Python event-driven backtests, simulation, risk checks, analyser outputs, transaction-cost modeling, and Mod-style extensibility.",
     allowedJobs: ["backtest", "parameter-sweep", "portfolio"],
+  },
+  {
+    key: "lstmtimeseries",
+    label: "LSTM Time Series",
+    urlEnv: "LSTM_TIME_SERIES_WORKER_URL",
+    purpose: "AGPL-licensed research-only LSTM/Keras sequence-forecast lane for time-series baseline comparisons, walk-forward holdouts, sequence diagnostics, and dependency-drift warnings.",
+    allowedJobs: ["forecast", "parameter-sweep", "backtest"],
   },
   {
     key: "stockpredictionai",

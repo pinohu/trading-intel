@@ -69,6 +69,12 @@ Optional StockPredictionAI worker check:
 - Dispatch a research-only job through `/api/research-workers/run` with `worker: "stockpredictionai"` and `jobType: "forecast"`.
 - Confirm the worker returns holdout metrics, overfit warnings, feature coverage, and no broker-order side effects.
 
+Optional LSTM Time Series worker check:
+
+- Set `LSTM_TIME_SERIES_WORKER_URL` to the self-hosted forecast worker endpoint.
+- Dispatch a research-only job through `/api/research-workers/run` with `worker: "lstmtimeseries"` and `jobType: "forecast"`.
+- Confirm the worker returns sequence-window settings, train/test split, holdout or walk-forward metrics, benchmark comparison, dependency/version warnings, and no broker-order side effects.
+
 Optional LLM Trading Lab worker check:
 
 - Set `LLM_TRADING_LAB_WORKER_URL` to the self-hosted LLM experiment worker endpoint.

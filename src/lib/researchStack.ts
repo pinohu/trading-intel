@@ -239,6 +239,18 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
       docs: "https://github.com/borisbanushev/stockpredictionai",
     },
     {
+      key: "lstmtimeseries",
+      label: "LSTM Time Series forecast worker",
+      category: "ai-research",
+      ready: workerReady("LSTM_TIME_SERIES_WORKER_URL"),
+      mode: workerReady("LSTM_TIME_SERIES_WORKER_URL") ? "worker" : "missing",
+      costProfile: "free-self-hosted",
+      env: ["LSTM_TIME_SERIES_WORKER_URL"],
+      detail: "External AGPL-licensed research worker inspired by jaungiers/LSTM-Neural-Network-for-Time-Series-Prediction for Keras LSTM sequence forecasts, stock time-series samples, holdout diagnostics, and old dependency-risk labeling.",
+      freeAlternative: "Native Fusion Alpha, TradingAgents, Algorithm Council, and cost-aware backtests remain available; self-host this only as a sequence-model baseline and modernization exercise.",
+      docs: "https://github.com/jaungiers/LSTM-Neural-Network-for-Time-Series-Prediction",
+    },
+    {
       key: "llmtradinglab",
       label: "LLM Trading Lab worker",
       category: "ai-research",
@@ -515,6 +527,12 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
         purpose: "Research-only GAN/LSTM/CNN forecasts and feature-importance diagnostics.",
         command: "python workers/stockpredictionai_worker.py",
         urlEnv: "STOCKPREDICTIONAI_WORKER_URL",
+      },
+      {
+        name: "LSTM Time Series worker",
+        purpose: "Research-only Keras LSTM sequence forecasts, walk-forward holdouts, sequence-window checks, and dependency-drift warnings.",
+        command: "python workers/lstm_time_series_worker.py",
+        urlEnv: "LSTM_TIME_SERIES_WORKER_URL",
       },
       {
         name: "LLM Trading Lab worker",
