@@ -46,6 +46,7 @@ It does not place broker orders. Manual paper/live orders still go through the v
 Set these when you host workers outside Vercel:
 
 - `OPENBB_WORKER_URL`
+- `AKSHARE_WORKER_URL`
 - `LEAN_WORKER_URL`
 - `STOCKSHARP_WORKER_URL`
 - `STOCKPREDICTIONAI_WORKER_URL`
@@ -77,6 +78,17 @@ with a payload:
 ```
 
 Use `WORKER_SHARED_SECRET` for worker-to-worker authorization if the external service supports it.
+
+## AKShare Worker
+
+AKShare is integrated as a free/self-hosted Python research data worker. Configure `AKSHARE_WORKER_URL` when you want broader China/Asia, macro, futures, bonds, options, funds, or reference-data coverage through the existing worker bridge.
+
+Accepted job families:
+
+- `market-data`
+- `fundamentals`
+
+AKShare output must stay labeled as research data unless a separate licensed/execution-grade feed confirms trade-critical prices. The worker request includes `safety.researchOnly=true`, `safety.noAutonomousExecution=true`, and `safety.brokerOrdersBlocked=true`.
 
 ## StockSharp Worker
 

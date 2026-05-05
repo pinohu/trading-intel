@@ -156,6 +156,18 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
       docs: "https://docs.openbb.co/",
     },
     {
+      key: "akshare",
+      label: "AKShare data worker",
+      category: "market-data",
+      ready: workerReady("AKSHARE_WORKER_URL"),
+      mode: workerReady("AKSHARE_WORKER_URL") ? "worker" : "missing",
+      costProfile: "free-self-hosted",
+      env: ["AKSHARE_WORKER_URL"],
+      detail: "MIT-licensed Python data worker for China/Asia markets, macro data, funds, futures, bonds, options, and reference datasets.",
+      freeAlternative: "Native public quote stack remains the default; self-host AKShare when broader non-US research data is needed.",
+      docs: "https://github.com/akfamily/akshare",
+    },
+    {
       key: "tradingagents",
       label: "TradingAgents native debate desk",
       category: "ai-research",
@@ -383,6 +395,12 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
         purpose: "Fundamentals, macro, options, and provider-key research.",
         command: "python workers/openbb_worker.py",
         urlEnv: "OPENBB_WORKER_URL",
+      },
+      {
+        name: "AKShare worker",
+        purpose: "Free/self-hosted China/Asia market, macro, futures, bonds, options, funds, and reference-data research.",
+        command: "python workers/akshare_worker.py",
+        urlEnv: "AKSHARE_WORKER_URL",
       },
       {
         name: "LEAN worker",

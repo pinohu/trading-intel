@@ -59,6 +59,14 @@ export const referenceReportLessons: ReferenceReportLesson[] = [
     category: "research",
   },
   {
+    key: "akshare",
+    title: "AKShare Reference",
+    source: "https://github.com/akfamily/akshare",
+    lesson: "AKShare expands free Python research access across China/Asia markets, macro, funds, futures, bonds, options, and reference datasets, with upstream data limitations that must be labeled.",
+    systemRule: "AKShare data can enrich research coverage but must remain labeled research data until freshness, source quality, and execution-grade confirmation pass.",
+    category: "data",
+  },
+  {
     key: "algorithm-council",
     title: "Algorithm Council",
     source: "docs/ALGORITHM_COUNCIL.md",

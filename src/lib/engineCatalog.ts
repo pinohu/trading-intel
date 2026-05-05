@@ -41,6 +41,16 @@ export const engineCapabilities: EngineCapability[] = [
     priority: "Next",
   },
   {
+    repo: "akfamily/akshare",
+    productName: "AKShare Data Worker",
+    lane: "Free financial data",
+    bestUse: "Python research access to China/Asia markets, macro series, futures, bonds, options, funds, and reference datasets.",
+    featureUnlocked: "Broader free/self-hosted non-US data coverage with explicit academic/research-only data-risk labeling.",
+    integrationMode: "Python worker",
+    safety: "Research",
+    priority: "Next",
+  },
+  {
     repo: "QuantConnect/Lean",
     productName: "LEAN Engine Bridge",
     lane: "Institutional backtesting",
@@ -223,7 +233,7 @@ export const engineCapabilities: EngineCapability[] = [
 ];
 
 export const engineWorkflow = [
-  "Collect data with OpenBB-style connectors and current quote/news APIs.",
+  "Collect data with OpenBB/AKShare-style connectors and current quote/news APIs.",
   "Challenge interesting tickers with TradingAgents multi-agent debate before writing a trade thesis.",
   "Use StockPredictionAI-style deep forecasts as research pressure, not as trade authorization.",
   "Run simple first-pass validation in the native Backtest Lab.",

@@ -27,6 +27,12 @@ Then authenticate and check:
 - `/api/research-workers/readiness`
 - `/api/tradingagents/analyze` with an authenticated session; no worker URL is required
 
+Optional AKShare worker check:
+
+- Set `AKSHARE_WORKER_URL` to the self-hosted Python worker endpoint.
+- Dispatch a research-only job through `/api/research-workers/run` with `worker: "akshare"` and `jobType: "market-data"`.
+- Confirm the worker returns source labels, timestamps, coverage, warnings, and no broker-order side effects.
+
 Optional StockSharp worker check:
 
 - Set `STOCKSHARP_WORKER_URL` to the self-hosted C#/.NET worker endpoint.

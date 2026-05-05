@@ -251,6 +251,20 @@ function buildEngineFinding({
     });
   }
 
+  if (key === "akshare") {
+    const coverage = score?.dataCoveragePct ?? qualityScore(quote);
+    const value = average([qualityScore(quote), coverage, signal?.dataFresh ? 70 : 30]);
+    return finding({
+      ...base,
+      status,
+      score: value,
+      finding: component?.ready
+        ? "AKShare worker can enrich non-US market, macro, futures, bond, option, fund, and reference-data research."
+        : "AKShare lane is proxy-only until a self-hosted worker supplies labeled research data.",
+      evidence: [`Quote source: ${quote.source}`, `Quote quality: ${quote.quality}`, `Data coverage: ${Math.round(coverage)}/100`],
+    });
+  }
+
   if (key === "tradingagents") {
     const value = agent ? agentScore(agent) : agreementProxyScore({ signal, score, backtest });
     return finding({
@@ -573,6 +587,7 @@ function finding(input: Omit<FusionEngineFinding, "stance" | "impact">): FusionE
 
 function engineKey(engine: EngineCapability) {
   if (engine.repo.includes("OpenBB")) return "openbb";
+  if (engine.repo.includes("akshare")) return "akshare";
   if (engine.repo.includes("TradingAgents-CN")) return "tradingagents-cn";
   if (engine.repo.includes("TradingAgents")) return "tradingagents";
   if (engine.repo.includes("stockpredictionai")) return "stockpredictionai";
@@ -599,6 +614,7 @@ function engineKey(engine: EngineCapability) {
 function engineWeight(key: string) {
   const weights: Record<string, number> = {
     openbb: 0.075,
+    akshare: 0.06,
     tradingagents: 0.13,
     stockpredictionai: 0.065,
     lean: 0.095,

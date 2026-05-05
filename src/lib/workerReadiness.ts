@@ -57,6 +57,15 @@ export function buildWorkerReadiness(): WorkerReadiness {
           : "AutoResearch needs CRON_SECRET plus DATABASE_URL for unattended, durable research runs.",
     },
     {
+      key: "external-data-workers",
+      label: "External data workers",
+      ready: Boolean(process.env.OPENBB_WORKER_URL || process.env.AKSHARE_WORKER_URL),
+      detail:
+        process.env.OPENBB_WORKER_URL || process.env.AKSHARE_WORKER_URL
+          ? "At least one external research data worker URL is configured."
+          : "Set OPENBB_WORKER_URL or AKSHARE_WORKER_URL for deeper market-data and fundamentals research outside Vercel.",
+    },
+    {
       key: "external-quant-workers",
       label: "External quant workers",
       ready: Boolean(process.env.LEAN_WORKER_URL || process.env.STOCKSHARP_WORKER_URL || process.env.BACKTRADER_WORKER_URL || process.env.VECTORBT_WORKER_URL),
@@ -104,6 +113,12 @@ export function buildWorkerReadiness(): WorkerReadiness {
         purpose: "Run bounded AutoResearch-style strategy experiments and store champions.",
         cadence: "nightly or on demand",
         command: "node scripts/autoresearch-lab.mjs",
+      },
+      {
+        name: "akshare-worker",
+        purpose: "Fetch free/self-hosted AKShare financial, macro, China/Asia market, futures, bonds, options, and reference datasets for research.",
+        cadence: "on demand / scheduled research jobs",
+        command: "python workers/akshare_worker.py",
       },
       {
         name: "external-quant-worker",

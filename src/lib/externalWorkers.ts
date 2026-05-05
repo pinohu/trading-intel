@@ -2,6 +2,7 @@ import { cleanSecret } from "@/lib/security";
 
 export type ExternalWorkerKey =
   | "openbb"
+  | "akshare"
   | "lean"
   | "stocksharp"
   | "stockpredictionai"
@@ -13,13 +14,13 @@ export type ExternalWorkerKey =
   | "jesse";
 
 export type ExternalWorkerJob = {
-  jobType: "fundamentals" | "backtest" | "parameter-sweep" | "forecast" | "nlp" | "rl-research" | "crypto-paper";
+  jobType: "market-data" | "fundamentals" | "backtest" | "parameter-sweep" | "forecast" | "nlp" | "rl-research" | "crypto-paper";
   symbols: string[];
   strategy?: string;
   parameters?: Record<string, unknown>;
 };
 
-const externalWorkerJobTypes = ["fundamentals", "backtest", "parameter-sweep", "forecast", "nlp", "rl-research", "crypto-paper"];
+const externalWorkerJobTypes = ["market-data", "fundamentals", "backtest", "parameter-sweep", "forecast", "nlp", "rl-research", "crypto-paper"];
 
 export const externalWorkerCatalog: Array<{
   key: ExternalWorkerKey;
@@ -34,6 +35,13 @@ export const externalWorkerCatalog: Array<{
     urlEnv: "OPENBB_WORKER_URL",
     purpose: "Fundamentals, macro, options, and provider-key research.",
     allowedJobs: ["fundamentals"],
+  },
+  {
+    key: "akshare",
+    label: "AKShare",
+    urlEnv: "AKSHARE_WORKER_URL",
+    purpose: "Free/self-hosted Python financial data access for China/Asia markets, macro, futures, bonds, options, funds, and reference datasets.",
+    allowedJobs: ["market-data", "fundamentals"],
   },
   {
     key: "lean",

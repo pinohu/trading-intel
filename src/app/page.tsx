@@ -563,9 +563,9 @@ const strategyTemplates = [
 const quantPipelines = [
   {
     title: "Data Terminal",
-    repo: "OpenBB",
+    repo: "OpenBB + AKShare",
     icon: Database,
-    body: "Pull quotes, fundamentals, options, filings, macro series, and research snapshots into one normalized intelligence layer.",
+    body: "Pull quotes, fundamentals, China/Asia datasets, options, filings, macro series, and research snapshots into one normalized intelligence layer.",
   },
   {
     title: "Backtest Ladder",
