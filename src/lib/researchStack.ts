@@ -227,6 +227,18 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
       docs: "https://github.com/borisbanushev/stockpredictionai",
     },
     {
+      key: "llmtradinglab",
+      label: "LLM Trading Lab worker",
+      category: "ai-research",
+      ready: workerReady("LLM_TRADING_LAB_WORKER_URL"),
+      mode: workerReady("LLM_TRADING_LAB_WORKER_URL") ? "worker" : "missing",
+      costProfile: "free-self-hosted",
+      env: ["LLM_TRADING_LAB_WORKER_URL"],
+      detail: "External research-only worker inspired by LuckyOne7777/LLM-Trading-Lab for forward-only LLM trading decisions, hard constraints, stop-loss compliance, portfolio logs, and benchmark metrics.",
+      freeAlternative: "Native TradingAgents debate, control-plane runs, and paper/live gates remain available when this LLM lab worker is absent.",
+      docs: "https://github.com/LuckyOne7777/LLM-Trading-Lab",
+    },
+    {
       key: "stockpredictionmodels",
       label: "Stock Prediction Models worker",
       category: "ai-research",
@@ -467,6 +479,12 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
         purpose: "Research-only GAN/LSTM/CNN forecasts and feature-importance diagnostics.",
         command: "python workers/stockpredictionai_worker.py",
         urlEnv: "STOCKPREDICTIONAI_WORKER_URL",
+      },
+      {
+        name: "LLM Trading Lab worker",
+        purpose: "Research-only LLM decision logs, portfolio experiments, stop-loss compliance, hard constraints, and benchmark comparisons.",
+        command: "python workers/llm_trading_lab_worker.py",
+        urlEnv: "LLM_TRADING_LAB_WORKER_URL",
       },
       {
         name: "Stock Prediction Models worker",

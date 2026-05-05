@@ -52,6 +52,16 @@ describe("external worker catalog", () => {
     expect(validExternalWorkerJob({ jobType: "forecast", symbols: ["GS"], strategy: "gan-lstm-cnn" })).toBe(true);
   });
 
+  it("registers LLM Trading Lab as a bounded agent research worker", () => {
+    const worker = externalWorkerCatalog.find((item) => item.key === "llmtradinglab");
+
+    expect(worker?.urlEnv).toBe("LLM_TRADING_LAB_WORKER_URL");
+    expect(worker?.allowedJobs).toContain("agent-research");
+    expect(worker?.allowedJobs).toContain("portfolio");
+    expect(validWorkerKey("llmtradinglab")).toBe(true);
+    expect(validExternalWorkerJob({ jobType: "agent-research", symbols: ["SPY"], strategy: "forward-only-daily-agent-log" })).toBe(true);
+  });
+
   it("registers Stock Prediction Models as a research-only model-zoo worker", () => {
     const worker = externalWorkerCatalog.find((item) => item.key === "stockpredictionmodels");
 

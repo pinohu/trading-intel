@@ -71,6 +71,16 @@ export const engineCapabilities: EngineCapability[] = [
     priority: "Next",
   },
   {
+    repo: "LuckyOne7777/LLM-Trading-Lab",
+    productName: "LLM Trading Lab",
+    lane: "LLM portfolio experiments",
+    bestUse: "Forward-only LLM trading decision logs, daily portfolio experiments, hard constraints, stop-loss compliance, benchmark comparisons, and risk metrics.",
+    featureUnlocked: "Research lane that pressure-tests LLM decisions against written constraints and portfolio outcomes without touching broker execution.",
+    integrationMode: "Python worker",
+    safety: "Research",
+    priority: "Next",
+  },
+  {
     repo: "huseinzol05/Stock-Prediction-Models",
     productName: "Stock Prediction Models Lab",
     lane: "ML model zoo",
@@ -264,8 +274,8 @@ export const engineCapabilities: EngineCapability[] = [
 
 export const engineWorkflow = [
   "Collect data with OpenBB/OpenStock/Ghostfolio/AKShare-style connectors and current quote/news APIs.",
-  "Challenge interesting tickers with TradingAgents multi-agent debate before writing a trade thesis.",
-  "Use StockPredictionAI and Stock-Prediction-Models-style deep forecasts as research pressure, not as trade authorization.",
+  "Challenge interesting tickers with TradingAgents and LLM-Trading-Lab-style agent logs before writing a trade thesis.",
+  "Use StockPredictionAI, Stock-Prediction-Models, and LLM-Trading-Lab-style outputs as research pressure, not as trade authorization.",
   "Run simple first-pass validation in the native Backtest Lab.",
   "Stress-test parameters with a vectorbt-style sweep before trusting a setup.",
   "Promote only robust ideas to StockPredictionAI, LEAN, StockSharp, or Backtrader for deeper forecast and event-driven simulation.",
@@ -273,5 +283,5 @@ export const engineWorkflow = [
   "Use Vibe-Trading and AutoHedge patterns to orchestrate specialist teams instead of trusting one model.",
   "Use OpenAlice and QuantDinger patterns to demand versioned orders, guard checks, alerts, and operations continuity.",
   "Use TensorTrade, AI-Trader, and Polymarket-agent patterns as RL, collective-signal, and event-probability pressure tests.",
-  "Keep StockPredictionAI, Stock Prediction Models, StockSharp, FinRL, FinRL-Trading, TensorTrade, Nautilus, Jesse, OpenAlice, and all autonomous-agent lanes behind paper/live gates until broker keys, acknowledgement, audit storage, and risk controls exist.",
+  "Keep LLM Trading Lab, StockPredictionAI, Stock Prediction Models, StockSharp, FinRL, FinRL-Trading, TensorTrade, Nautilus, Jesse, OpenAlice, and all autonomous-agent lanes behind paper/live gates until broker keys, acknowledgement, audit storage, and risk controls exist.",
 ];

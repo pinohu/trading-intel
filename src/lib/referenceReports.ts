@@ -147,6 +147,14 @@ export const referenceReportLessons: ReferenceReportLesson[] = [
     category: "research",
   },
   {
+    key: "llm-trading-lab",
+    title: "LLM Trading Lab Reference",
+    source: "https://github.com/LuckyOne7777/LLM-Trading-Lab",
+    lesson: "LLM trading experiments become useful when they keep forward-only daily decision logs, hard constraints, stop-loss compliance, portfolio metrics, and benchmark comparisons visible.",
+    systemRule: "LLM Trading Lab output is research pressure only until audit logs, constraints, paper outcomes, stop-loss behavior, and risk controls agree; do not vendor unlicensed source code without legal review.",
+    category: "research",
+  },
+  {
     key: "stock-prediction-models",
     title: "Stock Prediction Models Reference",
     source: "https://github.com/huseinzol05/Stock-Prediction-Models",

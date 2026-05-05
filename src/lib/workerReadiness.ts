@@ -85,11 +85,11 @@ export function buildWorkerReadiness(): WorkerReadiness {
     {
       key: "ai-research-workers",
       label: "AI research workers",
-      ready: Boolean(process.env.STOCKPREDICTIONAI_WORKER_URL || process.env.STOCK_PREDICTION_MODELS_WORKER_URL || process.env.FINGPT_WORKER_URL || process.env.FINRL_WORKER_URL),
+      ready: Boolean(process.env.LLM_TRADING_LAB_WORKER_URL || process.env.STOCKPREDICTIONAI_WORKER_URL || process.env.STOCK_PREDICTION_MODELS_WORKER_URL || process.env.FINGPT_WORKER_URL || process.env.FINRL_WORKER_URL),
       detail:
-        process.env.STOCKPREDICTIONAI_WORKER_URL || process.env.STOCK_PREDICTION_MODELS_WORKER_URL || process.env.FINGPT_WORKER_URL || process.env.FINRL_WORKER_URL
+        process.env.LLM_TRADING_LAB_WORKER_URL || process.env.STOCKPREDICTIONAI_WORKER_URL || process.env.STOCK_PREDICTION_MODELS_WORKER_URL || process.env.FINGPT_WORKER_URL || process.env.FINRL_WORKER_URL
           ? "At least one optional AI research worker URL is configured."
-          : "TradingAgents now runs in-code. Set STOCKPREDICTIONAI_WORKER_URL, STOCK_PREDICTION_MODELS_WORKER_URL, FINGPT_WORKER_URL, or FINRL_WORKER_URL only for optional external AI experiments.",
+          : "TradingAgents now runs in-code. Set LLM_TRADING_LAB_WORKER_URL, STOCKPREDICTIONAI_WORKER_URL, STOCK_PREDICTION_MODELS_WORKER_URL, FINGPT_WORKER_URL, or FINRL_WORKER_URL only for optional external AI experiments.",
     },
   ];
   const readyCount = components.filter((item) => item.ready).length;
@@ -151,6 +151,12 @@ export function buildWorkerReadiness(): WorkerReadiness {
         purpose: "Run StockSharp C#/.NET connector research, strategy tests, and broker-adapter simulations behind the platform worker API.",
         cadence: "on demand / scheduled research jobs",
         command: "dotnet run --project workers/StockSharpWorker",
+      },
+      {
+        name: "llm-trading-lab-worker",
+        purpose: "Run research-only LLM portfolio decision experiments with forward-only logs, stop-loss compliance, hard constraints, and benchmark comparisons.",
+        cadence: "on demand / daily research jobs",
+        command: "python workers/llm_trading_lab_worker.py",
       },
       {
         name: "stockpredictionai-worker",

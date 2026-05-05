@@ -49,6 +49,7 @@ Set these when you host workers outside Vercel:
 - `OPENSTOCK_WORKER_URL`
 - `GHOSTFOLIO_WORKER_URL`
 - `AKSHARE_WORKER_URL`
+- `LLM_TRADING_LAB_WORKER_URL`
 - `LEAN_WORKER_URL`
 - `STOCKSHARP_WORKER_URL`
 - `STOCKPREDICTIONAI_WORKER_URL`
@@ -142,6 +143,19 @@ Accepted job families:
 The reference GitHub repo did not expose a license file during integration, so this app treats it as an architectural/modeling reference and worker contract only. Do not vendor or redistribute its source from this codebase without legal review or explicit permission.
 
 Worker output must remain research-only and cannot place orders. Fusion Alpha can use it as a forecast pressure lane only after holdout evidence, slippage/fee assumptions, data freshness, and overfit warnings are visible.
+
+## LLM Trading Lab Worker
+
+LLM Trading Lab is integrated as a self-hosted LLM trading experiment worker. Configure `LLM_TRADING_LAB_WORKER_URL` for forward-only daily decisions, portfolio logs, hard-constraint checks, stop-loss compliance, benchmark comparisons, and risk/performance metrics.
+
+Accepted job families:
+
+- `agent-research`
+- `portfolio`
+- `backtest`
+- `forecast`
+
+No root license file was visible during integration, so this app treats the repository as a reference and worker contract only. Worker output must remain research-only and cannot place orders.
 
 ## Stock Prediction Models Worker
 

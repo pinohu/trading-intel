@@ -342,6 +342,29 @@ function buildEngineFinding({
     });
   }
 
+  if (key === "llmtradinglab") {
+    const value = average([
+      agent ? agentScore(agent) : agreementProxyScore({ signal, score, backtest }),
+      signalScore(signal),
+      activeBuy ? 66 : 44,
+      signal?.rewardRisk ? clamp(signal.rewardRisk * 30, 30, 86) : 50,
+      brokerReady ? 60 : 42,
+    ]);
+    return finding({
+      ...base,
+      status,
+      score: value,
+      finding: component?.ready
+        ? "LLM Trading Lab worker is available for forward-only LLM decision logs, hard constraints, stop-loss compliance, and benchmark comparison."
+        : "LLM Trading Lab lane is proxy-only until a self-hosted worker returns auditable decision and portfolio logs.",
+      evidence: [
+        agent ? `Agent decision: ${agent.rating}` : "Native agent decision not available.",
+        activeBuy ? "Trade ticket candidate exists." : "No trade ticket candidate.",
+        signal?.rewardRisk ? `Reward/risk: ${signal.rewardRisk}R` : "Reward/risk unavailable.",
+      ],
+    });
+  }
+
   if (key === "stockpredictionmodels") {
     const value = average([
       signalScore(signal),
@@ -656,6 +679,7 @@ function engineKey(engine: EngineCapability) {
   if (engine.repo.includes("TradingAgents-CN")) return "tradingagents-cn";
   if (engine.repo.includes("TradingAgents")) return "tradingagents";
   if (engine.repo.includes("stockpredictionai")) return "stockpredictionai";
+  if (engine.repo.includes("LLM-Trading-Lab")) return "llmtradinglab";
   if (engine.repo.includes("Stock-Prediction-Models")) return "stockpredictionmodels";
   if (engine.repo.includes("Lean")) return "lean";
   if (engine.repo.includes("StockSharp")) return "stocksharp";
@@ -685,6 +709,7 @@ function engineWeight(key: string) {
     akshare: 0.06,
     tradingagents: 0.13,
     stockpredictionai: 0.065,
+    llmtradinglab: 0.075,
     stockpredictionmodels: 0.06,
     lean: 0.095,
     stocksharp: 0.075,

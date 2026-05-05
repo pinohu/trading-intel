@@ -5,6 +5,7 @@ export type ExternalWorkerKey =
   | "openstock"
   | "ghostfolio"
   | "akshare"
+  | "llmtradinglab"
   | "lean"
   | "stocksharp"
   | "stockpredictionai"
@@ -17,13 +18,13 @@ export type ExternalWorkerKey =
   | "jesse";
 
 export type ExternalWorkerJob = {
-  jobType: "market-data" | "portfolio" | "fundamentals" | "backtest" | "parameter-sweep" | "forecast" | "nlp" | "rl-research" | "crypto-paper";
+  jobType: "market-data" | "portfolio" | "fundamentals" | "backtest" | "parameter-sweep" | "forecast" | "agent-research" | "nlp" | "rl-research" | "crypto-paper";
   symbols: string[];
   strategy?: string;
   parameters?: Record<string, unknown>;
 };
 
-const externalWorkerJobTypes = ["market-data", "portfolio", "fundamentals", "backtest", "parameter-sweep", "forecast", "nlp", "rl-research", "crypto-paper"];
+const externalWorkerJobTypes = ["market-data", "portfolio", "fundamentals", "backtest", "parameter-sweep", "forecast", "agent-research", "nlp", "rl-research", "crypto-paper"];
 
 export const externalWorkerCatalog: Array<{
   key: ExternalWorkerKey;
@@ -59,6 +60,13 @@ export const externalWorkerCatalog: Array<{
     urlEnv: "AKSHARE_WORKER_URL",
     purpose: "Free/self-hosted Python financial data access for China/Asia markets, macro, futures, bonds, options, funds, and reference datasets.",
     allowedJobs: ["market-data", "fundamentals"],
+  },
+  {
+    key: "llmtradinglab",
+    label: "LLM Trading Lab",
+    urlEnv: "LLM_TRADING_LAB_WORKER_URL",
+    purpose: "Research-only LLM portfolio decision experiments with forward-only logs, hard constraints, stop-loss compliance, benchmark comparisons, and risk metrics.",
+    allowedJobs: ["agent-research", "portfolio", "backtest", "forecast"],
   },
   {
     key: "lean",
