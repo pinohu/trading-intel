@@ -57,22 +57,77 @@ export function buildWorkerReadiness(): WorkerReadiness {
           : "AutoResearch needs CRON_SECRET plus DATABASE_URL for unattended, durable research runs.",
     },
     {
+      key: "external-data-workers",
+      label: "External data workers",
+      ready: Boolean(process.env.OPENBB_WORKER_URL || process.env.ALPHA_VANTAGE_WORKER_URL || process.env.OPENSTOCK_WORKER_URL || process.env.AKSHARE_WORKER_URL),
+      detail:
+        process.env.OPENBB_WORKER_URL || process.env.ALPHA_VANTAGE_WORKER_URL || process.env.OPENSTOCK_WORKER_URL || process.env.AKSHARE_WORKER_URL
+          ? "At least one external research data worker URL is configured."
+          : "Set OPENBB_WORKER_URL, ALPHA_VANTAGE_WORKER_URL, OPENSTOCK_WORKER_URL, or AKSHARE_WORKER_URL for deeper market-data and fundamentals research outside Vercel.",
+    },
+    {
+      key: "portfolio-analytics-worker",
+      label: "Portfolio analytics worker",
+      ready: Boolean(process.env.GHOSTFOLIO_WORKER_URL),
+      detail: process.env.GHOSTFOLIO_WORKER_URL
+        ? "Ghostfolio companion worker URL is configured."
+        : "Set GHOSTFOLIO_WORKER_URL for self-hosted portfolio performance, holdings, risk, and transaction analytics.",
+    },
+    {
+      key: "alert-pattern-worker",
+      label: "StreetMerchant-style alert worker",
+      ready: Boolean(process.env.STREETMERCHANT_WORKER_URL),
+      detail: process.env.STREETMERCHANT_WORKER_URL
+        ? "StreetMerchant-style alert-pattern worker URL is configured."
+        : "Set STREETMERCHANT_WORKER_URL only if you want a self-hosted alert loop/cooldown/notification fanout reference lane.",
+    },
+    {
       key: "external-quant-workers",
       label: "External quant workers",
-      ready: Boolean(process.env.LEAN_WORKER_URL || process.env.BACKTRADER_WORKER_URL || process.env.VECTORBT_WORKER_URL),
+      ready: Boolean(
+        process.env.LEAN_WORKER_URL ||
+          process.env.ALPHALENS_WORKER_URL ||
+          process.env.STOCKSHARP_WORKER_URL ||
+          process.env.RQALPHA_WORKER_URL ||
+          process.env.BACKTRADER_WORKER_URL ||
+          process.env.VECTORBT_WORKER_URL ||
+          process.env.FREQTRADE_WORKER_URL ||
+          process.env.HUMMINGBOT_WORKER_URL,
+      ),
       detail:
-        process.env.LEAN_WORKER_URL || process.env.BACKTRADER_WORKER_URL || process.env.VECTORBT_WORKER_URL
+        process.env.LEAN_WORKER_URL ||
+        process.env.ALPHALENS_WORKER_URL ||
+        process.env.STOCKSHARP_WORKER_URL ||
+        process.env.RQALPHA_WORKER_URL ||
+        process.env.BACKTRADER_WORKER_URL ||
+        process.env.VECTORBT_WORKER_URL ||
+        process.env.FREQTRADE_WORKER_URL ||
+        process.env.HUMMINGBOT_WORKER_URL
           ? "At least one heavyweight quant worker URL is configured."
-          : "Set LEAN_WORKER_URL, BACKTRADER_WORKER_URL, or VECTORBT_WORKER_URL to run serious backtests outside Vercel.",
+          : "Set LEAN_WORKER_URL, ALPHALENS_WORKER_URL, STOCKSHARP_WORKER_URL, RQALPHA_WORKER_URL, BACKTRADER_WORKER_URL, VECTORBT_WORKER_URL, FREQTRADE_WORKER_URL, or HUMMINGBOT_WORKER_URL to run serious backtests or crypto liquidity tests outside Vercel.",
     },
     {
       key: "ai-research-workers",
       label: "AI research workers",
-      ready: Boolean(process.env.FINGPT_WORKER_URL || process.env.FINRL_WORKER_URL),
+      ready: Boolean(
+        process.env.LLM_TRADING_LAB_WORKER_URL ||
+          process.env.DEXTER_WORKER_URL ||
+          process.env.LSTM_TIME_SERIES_WORKER_URL ||
+          process.env.STOCKPREDICTIONAI_WORKER_URL ||
+          process.env.STOCK_PREDICTION_MODELS_WORKER_URL ||
+          process.env.FINGPT_WORKER_URL ||
+          process.env.FINRL_WORKER_URL,
+      ),
       detail:
-        process.env.FINGPT_WORKER_URL || process.env.FINRL_WORKER_URL
+        process.env.LLM_TRADING_LAB_WORKER_URL ||
+        process.env.DEXTER_WORKER_URL ||
+        process.env.LSTM_TIME_SERIES_WORKER_URL ||
+        process.env.STOCKPREDICTIONAI_WORKER_URL ||
+        process.env.STOCK_PREDICTION_MODELS_WORKER_URL ||
+        process.env.FINGPT_WORKER_URL ||
+        process.env.FINRL_WORKER_URL
           ? "At least one optional AI research worker URL is configured."
-          : "TradingAgents now runs in-code. Set FINGPT_WORKER_URL or FINRL_WORKER_URL only for optional external AI experiments.",
+          : "TradingAgents now runs in-code. Set LLM_TRADING_LAB_WORKER_URL, DEXTER_WORKER_URL, LSTM_TIME_SERIES_WORKER_URL, STOCKPREDICTIONAI_WORKER_URL, STOCK_PREDICTION_MODELS_WORKER_URL, FINGPT_WORKER_URL, or FINRL_WORKER_URL only for optional external AI experiments.",
     },
   ];
   const readyCount = components.filter((item) => item.ready).length;
@@ -106,10 +161,88 @@ export function buildWorkerReadiness(): WorkerReadiness {
         command: "node scripts/autoresearch-lab.mjs",
       },
       {
+        name: "openstock-worker",
+        purpose: "Bridge self-hosted OpenStock-style search, watchlists, company insights, market/news context, and alert UX patterns for research.",
+        cadence: "on demand / scheduled research jobs",
+        command: "node workers/openstock-worker.mjs",
+      },
+      {
+        name: "alpha-vantage-worker",
+        purpose: "Fetch free-account Alpha Vantage time series, technical indicators, fundamentals, FX, crypto, and provider warnings for research.",
+        cadence: "on demand / scheduled research jobs",
+        command: "python workers/alpha_vantage_worker.py",
+      },
+      {
+        name: "streetmerchant-alert-worker",
+        purpose: "Run StreetMerchant-style alert-loop checks, cooldown audits, notification fanout tests, and dashboard status snapshots without placing orders.",
+        cadence: "persistent loop or on demand",
+        command: "node workers/streetmerchant-alert-worker.mjs",
+      },
+      {
+        name: "ghostfolio-worker",
+        purpose: "Sync self-hosted Ghostfolio portfolio performance, holdings composition, transaction, allocation, and static risk analytics.",
+        cadence: "on demand / scheduled portfolio jobs",
+        command: "node workers/ghostfolio-worker.mjs",
+      },
+      {
+        name: "akshare-worker",
+        purpose: "Fetch free/self-hosted AKShare financial, macro, China/Asia market, futures, bonds, options, and reference datasets for research.",
+        cadence: "on demand / scheduled research jobs",
+        command: "python workers/akshare_worker.py",
+      },
+      {
         name: "external-quant-worker",
-        purpose: "Bridge LEAN, Backtrader, vectorbt, NautilusTrader, FinGPT, FinRL, and Jesse outside Vercel limits.",
+        purpose: "Bridge StockPredictionAI, LEAN, Alphalens, StockSharp, RQAlpha, Backtrader, vectorbt, NautilusTrader, FinGPT, FinRL, Freqtrade, Hummingbot, and Jesse outside Vercel limits.",
         cadence: "on demand / scheduled research jobs",
         command: "python workers/quant_worker.py",
+      },
+      {
+        name: "alphalens-worker",
+        purpose: "Run factor tear sheets, forward-return tests, IC analysis, turnover checks, grouped analysis, and quantile-spread evidence.",
+        cadence: "on demand / scheduled research jobs",
+        command: "python workers/alphalens_worker.py",
+      },
+      {
+        name: "stocksharp-worker",
+        purpose: "Run StockSharp C#/.NET connector research, strategy tests, and broker-adapter simulations behind the platform worker API.",
+        cadence: "on demand / scheduled research jobs",
+        command: "dotnet run --project workers/StockSharpWorker",
+      },
+      {
+        name: "rqalpha-worker",
+        purpose: "Run research-only RQAlpha event-driven backtests, Mod-based risk checks, simulation fills, transaction-cost models, and analyser metrics.",
+        cadence: "on demand / scheduled research jobs",
+        command: "python workers/rqalpha_worker.py",
+      },
+      {
+        name: "llm-trading-lab-worker",
+        purpose: "Run research-only LLM portfolio decision experiments with forward-only logs, stop-loss compliance, hard constraints, and benchmark comparisons.",
+        cadence: "on demand / daily research jobs",
+        command: "python workers/llm_trading_lab_worker.py",
+      },
+      {
+        name: "dexter-worker",
+        purpose: "Run research-only financial agent planning, self-validation, scratchpad logging, fundamentals gathering, and eval evidence.",
+        cadence: "on demand / daily research jobs",
+        command: "bun start",
+      },
+      {
+        name: "lstm-time-series-worker",
+        purpose: "Run research-only LSTM sequence forecasts with walk-forward holdouts, baseline comparisons, and dependency-drift warnings.",
+        cadence: "on demand / nightly research jobs",
+        command: "python workers/lstm_time_series_worker.py",
+      },
+      {
+        name: "stockpredictionai-worker",
+        purpose: "Run research-only GAN/LSTM/CNN stock-movement forecasts with feature and overfit diagnostics.",
+        cadence: "on demand / nightly research jobs",
+        command: "python workers/stockpredictionai_worker.py",
+      },
+      {
+        name: "stock-prediction-models-worker",
+        purpose: "Run research-only ML/DL forecasts, simulations, stacking, and RL-agent experiments with holdout and overfit diagnostics.",
+        cadence: "on demand / nightly research jobs",
+        command: "python workers/stock_prediction_models_worker.py",
       },
     ],
   };

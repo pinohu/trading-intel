@@ -10,10 +10,38 @@ describe("research stack readiness", () => {
     expect(keys).toContain("polygon");
     expect(keys).toContain("twelvedata");
     expect(keys).toContain("sec-edgar");
+    expect(keys).toContain("local-llm");
     expect(keys).toContain("openbb");
+    expect(keys).toContain("alphavantage");
+    expect(keys).toContain("alphalens");
+    expect(keys).toContain("openstock");
+    expect(keys).toContain("stocksight");
+    expect(keys).toContain("streetmerchant");
+    expect(keys).toContain("ghostfolio");
+    expect(keys).toContain("akshare");
     expect(keys).toContain("tradingagents");
+    expect(keys).toContain("systematic-reference-map");
+    expect(keys).toContain("llmtradinglab");
+    expect(keys).toContain("dexter");
+    expect(keys).toContain("lstmtimeseries");
+    expect(keys).toContain("stockpredictionai");
+    expect(keys).toContain("stockpredictionmodels");
     expect(keys).toContain("lean");
+    expect(keys).toContain("stocksharp");
+    expect(keys).toContain("rqalpha");
+    expect(keys).toContain("freqtrade");
+    expect(keys).toContain("hummingbot");
     expect(keys).toContain("jesse");
     expect(keys).toContain("postgres");
+  });
+
+  it("documents applied free replacements for paid or hosted lanes", () => {
+    const readiness = buildResearchStackReadiness();
+    const optionalPaid = readiness.components.filter((component) => component.costProfile === "optional-paid");
+
+    expect(readiness.freeReplacements.length).toBeGreaterThanOrEqual(6);
+    expect(readiness.freeReplacements.every((replacement) => replacement.applied)).toBe(true);
+    expect(readiness.freeReplacements.some((replacement) => replacement.replaces.includes("Paid LLM"))).toBe(true);
+    expect(optionalPaid.every((component) => component.freeAlternative && component.freeAlternative.length > 0)).toBe(true);
   });
 });

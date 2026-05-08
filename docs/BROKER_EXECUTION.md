@@ -23,6 +23,7 @@ References:
 - Configurable max order notional.
 - Configurable max units.
 - Manual live stock/ETF order submission when live Alpaca keys are configured.
+- Operator-armed live agent order submission through `/api/agent-trader/execute?mode=live`.
 - Live mode requires a per-order acknowledgement phrase.
 - Live mode requires `DATABASE_URL` and `database/schema.sql` applied so order requests are auditable.
 
@@ -81,6 +82,17 @@ BROKER_MAX_ORDER_NOTIONAL=5000
 BROKER_MAX_ORDER_UNITS=100
 BROKER_ALLOW_EXTENDED_HOURS=false
 ```
+
+Optional live-agent arm:
+
+```text
+AGENT_LIVE_TRADING_ENABLED=true
+CONTROL_ALLOW_LIVE_AGENT_ORDERS=true
+AGENT_MAX_LIVE_ORDERS_PER_RUN=1
+TRADING_KILL_SWITCH=false
+```
+
+Live agent orders still require a logged-in operator request, matching acknowledgement, audit row, and pre-trade controls. Cron and bearer-secret requests cannot submit live-money agent orders.
 
 ## Smoke Tests
 

@@ -27,8 +27,21 @@ Live broker orders remain locked unless all of these are true:
 
 `ALPACA_LIVE_TRADING_ENABLED=false` can still force-disable live trading during an incident.
 
+Live agent orders add two more gates:
+
+- `AGENT_LIVE_TRADING_ENABLED=true`
+- `CONTROL_ALLOW_LIVE_AGENT_ORDERS=true` or control-plane state `allowLiveAgentOrders=true`
+
+Even when those gates are armed, each live agent submission must come from a logged-in operator session with `confirmLiveAgentTrading=true` and the matching live acknowledgement phrase. Cron and bearer-secret workers cannot submit live-money agent orders.
+
 ## Current Data Policy
 
-Alpaca market data uses `feed=iex` unless `ALPACA_DATA_QUALITY=sip` is intentionally configured. IEX is useful for research and paper trading, while SIP or another licensed feed is still the right path for execution-grade U.S. equity coverage.
+The dashboard's default `auto` data mode is free-first: public composite stock quotes, Binance public crypto, Yahoo public futures aliases, and Stooq delayed fallback run before optional paid providers. Alpaca market data uses `feed=iex` unless `ALPACA_DATA_QUALITY=sip` is intentionally configured. IEX and public feeds are useful for research and paper trading, while SIP or another licensed feed is still the right path for execution-grade U.S. equity coverage.
 
 Commodity futures remain research-only aliases unless a licensed futures broker and feed are added. Alpaca can route commodity ETF proxies, not CME/NYMEX/COMEX futures contracts.
+
+## Current Alert And LLM Policy
+
+Browser notifications are the free alert baseline. Webhook, Twilio, and Resend are optional off-device channels.
+
+Analyst chat tries `LOCAL_LLM_BASE_URL` with `LOCAL_LLM_MODEL` before paid OpenAI cloud models. If neither path is available, it answers from deterministic dashboard context only.

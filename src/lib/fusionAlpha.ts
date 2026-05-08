@@ -251,6 +251,168 @@ function buildEngineFinding({
     });
   }
 
+  if (key === "alphavantage") {
+    const coverage = score?.dataCoveragePct ?? qualityScore(quote);
+    const value = average([qualityScore(quote), coverage, signal?.dataFresh ? 72 : 28, score?.ensembleScore ?? 50]);
+    return finding({
+      ...base,
+      status,
+      score: value,
+      finding: component?.ready
+        ? "Alpha Vantage worker can enrich free-account time series, fundamentals, technical indicators, FX, crypto, and provider warning context."
+        : "Alpha Vantage lane is proxy-only until a self-hosted worker supplies rate-limit-labeled provider evidence.",
+      evidence: [
+        `Quote source: ${quote.source}`,
+        `Quote quality: ${quote.quality}`,
+        `Data coverage: ${Math.round(coverage)}/100`,
+        signal?.dataFresh ? "Fresh signal features available." : "Fresh signal features missing.",
+      ],
+    });
+  }
+
+  if (key === "alphalens") {
+    const value = average([
+      score?.ensembleScore ?? 50,
+      score?.confidence ?? 50,
+      score?.dataCoveragePct ?? qualityScore(quote),
+      signalScore(signal),
+      vectorRobustnessScore(backtest),
+    ]);
+    return finding({
+      ...base,
+      status,
+      score: value,
+      finding: component?.ready
+        ? "Alphalens worker can pressure-test factor ranks with forward returns, IC, turnover, grouped analysis, and quantile spreads."
+        : "Alphalens lane is proxy-only until a self-hosted worker returns factor tear-sheet evidence.",
+      evidence: [
+        score ? `Factor ensemble: ${score.ensembleScore}/100 at ${score.confidence}/100 confidence.` : "Factor ensemble unavailable.",
+        validationEvidence(backtest),
+        signal?.dataFresh ? "Fresh signal features available." : "Fresh signal features missing.",
+      ],
+    });
+  }
+
+  if (key === "systematic-reference-map") {
+    const value = average([
+      qualityScore(quote),
+      signal?.dataFresh ? 78 : 20,
+      score ? score.confidence : 42,
+      backtest ? vectorRobustnessScore(backtest) : 38,
+      agent ? agentScore(agent) : 44,
+      activeBuy || signal?.rewardRisk ? clamp((activeBuy?.rewardRisk ?? signal?.rewardRisk ?? 1) * 28, 28, 86) : 46,
+    ]);
+    return finding({
+      ...base,
+      status,
+      score: value,
+      finding: component?.ready
+        ? "Systematic Trading Reference Map checks whether this idea has data, alpha, analytics, backtest, live-control, architecture, tooling, and AI challenge coverage before it scores as decision-ready."
+        : "Systematic Trading Reference Map is proxy-only until the native readiness checklist is loaded.",
+      evidence: [
+        `Quote source: ${quote.source}; quality ${quote.quality}.`,
+        ...pipelineEvidence({ signal, score, backtest, agent, activeBuy }),
+      ],
+    });
+  }
+
+  if (key === "openstock") {
+    const coverage = score?.dataCoveragePct ?? qualityScore(quote);
+    const value = average([qualityScore(quote), coverage, signal?.dataFresh ? 68 : 32, agent ? agentScore(agent) : 50]);
+    return finding({
+      ...base,
+      status,
+      score: value,
+      finding: component?.ready
+        ? "OpenStock companion lane can cross-check market-app search, watchlist, company-insight, news, and alert context."
+        : "OpenStock lane is proxy-only until a self-hosted companion worker supplies labeled market-app context.",
+      evidence: [
+        `Quote source: ${quote.source}`,
+        `Quote quality: ${quote.quality}`,
+        signal?.dataFresh ? "Fresh dashboard signal exists." : "Fresh dashboard signal missing.",
+      ],
+    });
+  }
+
+  if (key === "stocksight") {
+    const sentiment = sentimentScore(symbolNews);
+    const sourceBreadth = clamp(28 + symbolNews.length * 14 + (component?.ready ? 12 : 0), 20, 88);
+    const value = average([sentiment.score, sourceBreadth, signalScore(signal), score?.ensembleScore ?? 50, signal?.dataFresh ? 72 : 24]);
+    return finding({
+      ...base,
+      status: component?.ready ? "active" : symbolNews.length ? "proxy" : status,
+      score: value,
+      finding: component?.ready
+        ? `StockSight worker can mine Twitter/news sentiment and label catalyst tone as ${sentiment.label}.`
+        : symbolNews.length
+          ? `StockSight lane is proxy-only; current headline text reads as ${sentiment.label}.`
+          : "StockSight lane is neutral until a self-hosted worker or current headline set supplies sentiment evidence.",
+      evidence: [
+        `Sentiment source count: ${symbolNews.length}`,
+        signal?.dataFresh ? "Fresh signal can be challenged by catalyst sentiment." : "Fresh signal missing; sentiment cannot promote action.",
+        ...(symbolNews.length ? symbolNews.slice(0, 2).map((item) => `${item.source ?? "news"}: ${item.title}`) : ["No current headline evidence loaded for this symbol."]),
+      ],
+    });
+  }
+
+  if (key === "streetmerchant") {
+    const value = average([
+      signal?.dataFresh ? 76 : 24,
+      activeBuy ? 72 : signal?.action === "Buy Watch" || signal?.action === "Sell/Exit Watch" ? 62 : 45,
+      signal?.confidence ?? 50,
+      component?.ready ? 70 : 46,
+    ]);
+    return finding({
+      ...base,
+      status,
+      score: value,
+      finding: component?.ready
+        ? "StreetMerchant-style alert worker can pressure-test watch loops, channel fanout, cooldowns, and manual-action guardrails."
+        : "StreetMerchant lane is proxy-only; it contributes alert-operations discipline, not equity quote data or trade authorization.",
+      evidence: [
+        signal?.dataFresh ? "Fresh signal can drive alert state." : "Fresh signal is missing; alert should not fire.",
+        activeBuy ? "Actionable ticket candidate exists." : "No actionable ticket candidate.",
+        "StreetMerchant monitors retail inventory stock; this app uses only its alert-loop pattern.",
+      ],
+    });
+  }
+
+  if (key === "ghostfolio") {
+    const exposureScore = average([
+      activeBuy ? 68 : 48,
+      brokerReady ? 64 : 42,
+      signal?.action === "Buy Watch" ? 62 : signal?.action === "Sell/Exit Watch" ? 35 : 50,
+      signal?.rewardRisk ? clamp(signal.rewardRisk * 28, 30, 82) : 50,
+    ]);
+    return finding({
+      ...base,
+      status,
+      score: exposureScore,
+      finding: component?.ready
+        ? "Ghostfolio companion lane can cross-check portfolio performance, allocation, holdings concentration, transactions, and static risk context."
+        : "Ghostfolio lane is proxy-only until a self-hosted portfolio worker supplies account-level analytics.",
+      evidence: [
+        activeBuy ? "Trade ticket candidate exists." : "No trade ticket candidate.",
+        brokerReady ? "Broker/portfolio route is available." : "Broker/portfolio route is locked.",
+        signal?.rewardRisk ? `Reward/risk: ${signal.rewardRisk}R` : "Reward/risk unavailable.",
+      ],
+    });
+  }
+
+  if (key === "akshare") {
+    const coverage = score?.dataCoveragePct ?? qualityScore(quote);
+    const value = average([qualityScore(quote), coverage, signal?.dataFresh ? 70 : 30]);
+    return finding({
+      ...base,
+      status,
+      score: value,
+      finding: component?.ready
+        ? "AKShare worker can enrich non-US market, macro, futures, bond, option, fund, and reference-data research."
+        : "AKShare lane is proxy-only until a self-hosted worker supplies labeled research data.",
+      evidence: [`Quote source: ${quote.source}`, `Quote quality: ${quote.quality}`, `Data coverage: ${Math.round(coverage)}/100`],
+    });
+  }
+
   if (key === "tradingagents") {
     const value = agent ? agentScore(agent) : agreementProxyScore({ signal, score, backtest });
     return finding({
@@ -264,16 +426,181 @@ function buildEngineFinding({
     });
   }
 
+  if (key === "stockpredictionai") {
+    const coverage = score?.dataCoveragePct ?? qualityScore(quote);
+    const value = average([
+      signalScore(signal),
+      vectorRobustnessScore(backtest),
+      coverage,
+      agent ? agentScore(agent) : 50,
+      signal?.dataFresh ? 72 : 28,
+    ]);
+    return finding({
+      ...base,
+      status,
+      score: value,
+      finding: component?.ready
+        ? "StockPredictionAI forecast worker is available for GAN/LSTM/CNN research pressure and feature diagnostics."
+        : "StockPredictionAI forecast lane is proxy-only until a self-hosted worker returns holdout-tested forecasts.",
+      evidence: [
+        `Data coverage: ${Math.round(coverage)}/100`,
+        validationEvidence(backtest),
+        signal?.dataFresh ? "Fresh signal features available." : "Fresh signal features missing.",
+      ],
+    });
+  }
+
+  if (key === "lstmtimeseries") {
+    const coverage = score?.dataCoveragePct ?? qualityScore(quote);
+    const value = average([
+      signalScore(signal),
+      vectorRobustnessScore(backtest),
+      backtestScore(backtest),
+      coverage,
+      signal?.dataFresh ? 70 : 24,
+    ]);
+    return finding({
+      ...base,
+      status,
+      score: value,
+      finding: component?.ready
+        ? "LSTM Time Series worker is available for sequence-window forecasts, walk-forward holdouts, and stale-dependency warnings."
+        : "LSTM Time Series lane is proxy-only until a self-hosted worker returns holdout-tested sequence forecasts and baseline comparisons.",
+      evidence: [
+        `Data coverage: ${Math.round(coverage)}/100`,
+        validationEvidence(backtest),
+        backtestStatus(backtest),
+      ],
+    });
+  }
+
+  if (key === "llmtradinglab") {
+    const value = average([
+      agent ? agentScore(agent) : agreementProxyScore({ signal, score, backtest }),
+      signalScore(signal),
+      activeBuy ? 66 : 44,
+      signal?.rewardRisk ? clamp(signal.rewardRisk * 30, 30, 86) : 50,
+      brokerReady ? 60 : 42,
+    ]);
+    return finding({
+      ...base,
+      status,
+      score: value,
+      finding: component?.ready
+        ? "LLM Trading Lab worker is available for forward-only LLM decision logs, hard constraints, stop-loss compliance, and benchmark comparison."
+        : "LLM Trading Lab lane is proxy-only until a self-hosted worker returns auditable decision and portfolio logs.",
+      evidence: [
+        agent ? `Agent decision: ${agent.rating}` : "Native agent decision not available.",
+        activeBuy ? "Trade ticket candidate exists." : "No trade ticket candidate.",
+        signal?.rewardRisk ? `Reward/risk: ${signal.rewardRisk}R` : "Reward/risk unavailable.",
+      ],
+    });
+  }
+
+  if (key === "dexter") {
+    const value = average([
+      agent ? agentScore(agent) : agreementProxyScore({ signal, score, backtest }),
+      qualityScore(quote),
+      signalScore(signal),
+      score?.dataCoveragePct ?? 50,
+      symbolNews.length ? sentimentScore(symbolNews).score : 50,
+      component?.ready ? 72 : 48,
+    ]);
+    return finding({
+      ...base,
+      status,
+      score: value,
+      finding: component?.ready
+        ? "Dexter worker can decompose financial questions into research plans, gather labeled evidence, self-validate, and return scratchpad/eval artifacts."
+        : "Dexter lane is proxy-only until a self-hosted research agent returns task-plan, tool-call, self-check, and scratchpad evidence.",
+      evidence: [
+        agent ? `Native agent decision: ${agent.rating}` : "Native agent decision unavailable.",
+        score ? `Data coverage: ${score.dataCoveragePct}/100.` : "Algorithm Council coverage unavailable.",
+        symbolNews.length ? `${symbolNews.length} headline(s) available for catalyst research.` : "No headline set loaded for this symbol.",
+        "Dexter output can support a thesis only; it cannot authorize broker orders.",
+      ],
+    });
+  }
+
+  if (key === "stockpredictionmodels") {
+    const value = average([
+      signalScore(signal),
+      backtestScore(backtest),
+      vectorRobustnessScore(backtest),
+      agent ? agentScore(agent) : 50,
+      signal?.dataFresh ? 70 : 25,
+    ]);
+    return finding({
+      ...base,
+      status,
+      score: value,
+      finding: component?.ready
+        ? "Stock Prediction Models worker is available for ML/DL model-zoo comparison, simulations, stacking, and RL-agent research."
+        : "Stock Prediction Models lane is proxy-only until a self-hosted worker returns holdout-tested model comparisons.",
+      evidence: [
+        backtestStatus(backtest),
+        validationEvidence(backtest),
+        signal?.dataFresh ? "Fresh feature set available." : "Fresh feature set missing.",
+      ],
+    });
+  }
+
   if (key === "lean") {
     const value = leanGateScore(backtest, signal);
     return finding({
       ...base,
       status,
       score: value,
-      finding: backtest
-        ? `LEAN-style promotion gate reviews ${backtest.trades} historical trade(s), ${pct(backtest.totalReturnPct)} return, ${pct(backtest.maxDrawdownPct)} max drawdown.`
-        : "LEAN-style promotion gate is neutral until historical bars or an external LEAN worker supplies proof.",
-      evidence: [backtestStatus(backtest), signal ? `Signal: ${signal.action}` : "Signal unavailable"],
+      finding: component?.ready
+        ? "LEAN worker can supply event-driven backtests, optimizer-style sweeps, fill models, and multi-asset promotion evidence."
+        : backtest
+          ? `LEAN-style promotion gate reviews ${backtest.trades} historical trade(s), ${pct(backtest.totalReturnPct)} return, ${pct(backtest.maxDrawdownPct)} max drawdown.`
+          : "LEAN-style promotion gate is neutral until historical bars or an external LEAN worker supplies proof.",
+      evidence: [
+        backtestStatus(backtest),
+        validationEvidence(backtest),
+        signal ? `Signal: ${signal.action}` : "Signal unavailable",
+        "LEAN worker output cannot place live orders through this app.",
+      ],
+    });
+  }
+
+  if (key === "stocksharp") {
+    const value = average([eventSimulationScore(backtest, activeBuy), brokerReady ? 68 : 44, signal?.dataFresh ? 72 : 36]);
+    return finding({
+      ...base,
+      status,
+      score: value,
+      finding: component?.ready
+        ? "StockSharp C# worker is available for connector research, strategy simulation, and broker-adapter cross-checks."
+        : "StockSharp C# worker is not connected; Fusion uses a proxy score from native backtests, broker readiness, and signal freshness.",
+      evidence: [
+        backtestStatus(backtest),
+        brokerReady ? "Broker readiness gate is available." : "Broker readiness gate is locked.",
+        activeBuy ? "Buy-now ticket exists." : "No executable buy-now ticket.",
+      ],
+    });
+  }
+
+  if (key === "rqalpha") {
+    const value = average([
+      eventSimulationScore(backtest, activeBuy),
+      vectorRobustnessScore(backtest),
+      signal?.rewardRisk ? clamp(signal.rewardRisk * 26, 28, 84) : 50,
+      signal?.dataFresh ? 70 : 30,
+    ]);
+    return finding({
+      ...base,
+      status,
+      score: value,
+      finding: component?.ready
+        ? "RQAlpha worker is available for event-driven simulation, Mod risk checks, analyser metrics, and transaction-cost pressure."
+        : "RQAlpha lane is proxy-only until a self-hosted worker returns simulated order, holding, portfolio, risk, and transaction-cost evidence.",
+      evidence: [
+        backtestStatus(backtest),
+        validationEvidence(backtest),
+        signal?.rewardRisk ? `Reward/risk: ${signal.rewardRisk}R` : "Reward/risk unavailable.",
+      ],
     });
   }
 
@@ -380,6 +707,75 @@ function buildEngineFinding({
       score: value,
       finding: "Jesse-style crypto lane applies exchange-aware separation before any crypto paper workflow.",
       evidence: [`Crypto symbol: ${quote.symbol}`, signal ? `Signal: ${signal.action}` : "Signal unavailable"],
+    });
+  }
+
+  if (key === "freqtrade") {
+    if (!isCryptoSymbol(quote.symbol)) {
+      return finding({
+        ...base,
+        status: "not-applicable",
+        score: 50,
+        weight: 0.01,
+        finding: "Freqtrade crypto strategy lane is intentionally separated from stock/ETF predictions.",
+        evidence: ["Non-crypto symbol."],
+      });
+    }
+    const value = average([
+      qualityScore(quote),
+      backtestScore(backtest),
+      vectorRobustnessScore(backtest),
+      signal?.dataFresh ? 72 : 24,
+      activeBuy ? 68 : signal?.action === "Buy Watch" ? 58 : 44,
+    ]);
+    return finding({
+      ...base,
+      status,
+      score: value,
+      finding: component?.ready
+        ? "Freqtrade worker can pressure-test crypto setups with dry-run, backtest, strategy, and hyperopt-style evidence."
+        : "Freqtrade lane is proxy-only until a self-hosted crypto worker returns dry-run/backtest evidence.",
+      evidence: [
+        `Crypto symbol: ${quote.symbol}`,
+        backtestStatus(backtest),
+        validationEvidence(backtest),
+        activeBuy ? "Paper ticket candidate exists." : "No paper ticket candidate.",
+      ],
+    });
+  }
+
+  if (key === "hummingbot") {
+    if (!isCryptoSymbol(quote.symbol)) {
+      return finding({
+        ...base,
+        status: "not-applicable",
+        score: 50,
+        weight: 0.01,
+        finding: "Hummingbot liquidity lane is intentionally separated from stock/ETF predictions.",
+        evidence: ["Non-crypto symbol."],
+      });
+    }
+    const value = average([
+      qualityScore(quote),
+      signal?.dataFresh ? 72 : 24,
+      backtestScore(backtest),
+      vectorRobustnessScore(backtest),
+      activeBuy ? 62 : signal?.action === "Buy Watch" ? 55 : 48,
+    ]);
+    return finding({
+      ...base,
+      status,
+      score: value,
+      finding: component?.ready
+        ? "Hummingbot worker can pressure-test crypto liquidity setups with connector readiness, dry-run market-making, inventory skew, spread, fee, and venue evidence."
+        : "Hummingbot lane is proxy-only until a self-hosted liquidity worker returns connector and dry-run evidence.",
+      evidence: [
+        `Crypto symbol: ${quote.symbol}`,
+        backtestStatus(backtest),
+        validationEvidence(backtest),
+        signal?.dataFresh ? "Fresh crypto signal available." : "Fresh crypto signal missing.",
+        "Hummingbot worker output cannot place live exchange orders through this app.",
+      ],
     });
   }
 
@@ -504,6 +900,7 @@ function buildAlgorithmFindings(score: AlgorithmCouncilScore | undefined, signal
     algorithmFinding("piotroski", "Piotroski F-score", averageFactor(score, ["Quality", "Profitability"])),
     algorithmFinding("beneish-sloan", "Beneish/Sloan accounting risk", averageFactor(score, ["Accounting Risk"])),
     algorithmFinding("value-momentum-everywhere", "Value + momentum everywhere", average([averageFactor(score, ["Value"]), averageFactor(score, ["Momentum / Tape"], signalScore(signal))])),
+    algorithmFinding("legendary-strategy-minds", "Legendary strategy minds", signal?.strategyMindset.score ?? 50),
     algorithmFinding("risk-first-portfolio", "Risk-first portfolio construction", average([averageFactor(score, ["Data Quality / Risk Gate"], signal?.dataFresh ? 75 : 25), signal?.rewardRisk ? clamp(signal.rewardRisk * 30, 20, 90) : 50])),
   ];
 }
@@ -531,9 +928,24 @@ function finding(input: Omit<FusionEngineFinding, "stance" | "impact">): FusionE
 
 function engineKey(engine: EngineCapability) {
   if (engine.repo.includes("OpenBB")) return "openbb";
+  if (engine.repo.includes("alpha_vantage")) return "alphavantage";
+  if (engine.repo.includes("alphalens")) return "alphalens";
+  if (engine.repo.includes("awesome-systematic-trading")) return "systematic-reference-map";
+  if (engine.repo.includes("OpenStock")) return "openstock";
+  if (engine.repo.includes("stocksight")) return "stocksight";
+  if (engine.repo.includes("streetmerchant")) return "streetmerchant";
+  if (engine.repo.includes("ghostfolio")) return "ghostfolio";
+  if (engine.repo.includes("akshare")) return "akshare";
   if (engine.repo.includes("TradingAgents-CN")) return "tradingagents-cn";
   if (engine.repo.includes("TradingAgents")) return "tradingagents";
+  if (engine.repo.includes("stockpredictionai")) return "stockpredictionai";
+  if (engine.repo.includes("LSTM-Neural-Network")) return "lstmtimeseries";
+  if (engine.repo.includes("LLM-Trading-Lab")) return "llmtradinglab";
+  if (engine.repo.includes("virattt/dexter")) return "dexter";
+  if (engine.repo.includes("Stock-Prediction-Models")) return "stockpredictionmodels";
   if (engine.repo.includes("Lean")) return "lean";
+  if (engine.repo.includes("StockSharp")) return "stocksharp";
+  if (engine.repo.includes("rqalpha")) return "rqalpha";
   if (engine.repo.includes("backtesting.py")) return "backtesting-py";
   if (engine.repo.includes("vectorbt")) return "vectorbt";
   if (engine.repo.includes("backtrader")) return "backtrader";
@@ -541,6 +953,8 @@ function engineKey(engine: EngineCapability) {
   if (engine.repo.endsWith("/FinRL")) return "finrl";
   if (engine.repo.includes("FinRL-Trading")) return "finrl-trading";
   if (engine.repo.includes("FinGPT")) return "fingpt";
+  if (engine.repo.includes("freqtrade")) return "freqtrade";
+  if (engine.repo.includes("hummingbot")) return "hummingbot";
   if (engine.repo.includes("jesse")) return "jesse";
   if (engine.repo.includes("Vibe-Trading")) return "vibe-trading";
   if (engine.repo.includes("AI-Trader")) return "ai-trader";
@@ -555,8 +969,23 @@ function engineKey(engine: EngineCapability) {
 function engineWeight(key: string) {
   const weights: Record<string, number> = {
     openbb: 0.075,
+    alphavantage: 0.06,
+    alphalens: 0.075,
+    "systematic-reference-map": 0.05,
+    openstock: 0.055,
+    stocksight: 0.055,
+    streetmerchant: 0.045,
+    ghostfolio: 0.07,
+    akshare: 0.06,
     tradingagents: 0.13,
+    stockpredictionai: 0.065,
+    lstmtimeseries: 0.055,
+    llmtradinglab: 0.075,
+    dexter: 0.07,
+    stockpredictionmodels: 0.06,
     lean: 0.095,
+    stocksharp: 0.075,
+    rqalpha: 0.07,
     "backtesting-py": 0.105,
     vectorbt: 0.085,
     backtrader: 0.065,
@@ -564,6 +993,8 @@ function engineWeight(key: string) {
     finrl: 0.075,
     "finrl-trading": 0.06,
     fingpt: 0.07,
+    freqtrade: 0.055,
+    hummingbot: 0.05,
     jesse: 0.035,
     "vibe-trading": 0.075,
     "ai-trader": 0.06,

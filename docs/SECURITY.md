@@ -35,7 +35,7 @@
 
 Required production secrets:
 
-- `TRADING_ACCESS_CODE`
+- `ACCESS_CODE` (`TRADING_ACCESS_CODE` is still accepted as a legacy fallback)
 - `TRADING_ACCESS_TOKEN`
 - `CRON_SECRET`
 

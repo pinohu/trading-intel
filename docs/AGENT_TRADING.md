@@ -6,9 +6,9 @@ The platform supports supervised agent trading:
 - create trade proposals,
 - draft bracket limit orders,
 - auto-submit paper orders when Alpaca paper execution is ready,
-- block live-money autonomous execution.
+- submit live-money orders only when an operator explicitly arms the live-agent gates and acknowledges the order.
 
-Live orders must still go through the human-approved broker execution rail.
+Live orders still go through the logged-in, acknowledged, audited broker execution rail.
 
 ## Endpoints
 
@@ -19,7 +19,7 @@ POST /api/agent-trader/execute?mode=paper
 POST /api/agent-trader/execute?mode=live
 ```
 
-`mode=live` always returns a blocked/manual-approval response. It includes the order draft so a human can review it, but it does not place the order.
+`mode=live` places a real-money order only when all live-agent gates pass. Otherwise it returns a blocked/manual-approval response with the draft and missing gates.
 
 ## Paper Automation
 
@@ -65,12 +65,34 @@ AGENT_PAPER_SYMBOLS=SPY,QQQ,NVDA,TSLA,AAPL,MSFT,AMD,COIN
 
 The worker calls `/api/agent-trader/execute?mode=paper`. If no candidate passes the strict buy-now gate, it records the block and waits for the next poll.
 
+## Enable Live Agent Trading
+
+Live agent trading is off by default. To make it available whenever you choose to arm it, configure the live broker rail and then set the live-agent controls:
+
+```bash
+BROKER_EXECUTION_ENABLED=true
+ALPACA_LIVE_TRADING_ENABLED=true
+ALPACA_LIVE_API_KEY_ID=...
+ALPACA_LIVE_API_SECRET_KEY=...
+BROKER_LIVE_EXECUTION_ACK=...
+DATABASE_URL=...
+AGENT_LIVE_TRADING_ENABLED=true
+CONTROL_ALLOW_LIVE_ORDERS=true
+CONTROL_ALLOW_LIVE_AGENT_ORDERS=true
+TRADING_KILL_SWITCH=false
+AGENT_MAX_LIVE_ORDERS_PER_RUN=1
+```
+
+You can also arm or disarm live-agent trading through `POST /api/control-plane` with `allowLiveAgentOrders`. Each live request must still come from a logged-in user session, set `confirmLiveAgentTrading=true`, include the matching `liveAcknowledgement`, pass broker readiness, create an audit row, and pass pre-trade controls.
+
+Cron, bearer, and worker requests cannot submit live-money agent orders.
+
 ## Guardrails
 
-- No autonomous live-money trading.
+- Live-money agent trading is locked until explicitly armed.
 - No market orders.
 - No futures research aliases.
 - No cron-triggered live orders.
-- Paper automation still passes broker readiness, strict buy-now gates, bracket order validation, and pre-trade controls.
+- Paper and live automation still pass broker readiness, strict buy-now gates, bracket order validation, and pre-trade controls.
 
-This keeps the agent useful as an execution assistant without letting it take irreversible financial action on its own.
+This keeps the agent useful as an execution assistant while giving you an explicit, auditable way to enable or disable real-money agent trading.

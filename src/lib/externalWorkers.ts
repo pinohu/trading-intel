@@ -2,22 +2,50 @@ import { cleanSecret } from "@/lib/security";
 
 export type ExternalWorkerKey =
   | "openbb"
+  | "alphavantage"
+  | "alphalens"
+  | "openstock"
+  | "stocksight"
+  | "streetmerchant"
+  | "ghostfolio"
+  | "akshare"
+  | "llmtradinglab"
+  | "dexter"
   | "lean"
+  | "stocksharp"
+  | "rqalpha"
+  | "lstmtimeseries"
+  | "stockpredictionai"
+  | "stockpredictionmodels"
   | "backtrader"
   | "vectorbt"
   | "nautilus"
   | "fingpt"
   | "finrl"
+  | "freqtrade"
+  | "hummingbot"
   | "jesse";
 
 export type ExternalWorkerJob = {
-  jobType: "fundamentals" | "backtest" | "parameter-sweep" | "nlp" | "rl-research" | "crypto-paper";
+  jobType:
+    | "market-data"
+    | "portfolio"
+    | "fundamentals"
+    | "backtest"
+    | "parameter-sweep"
+    | "forecast"
+    | "agent-research"
+    | "factor-analysis"
+    | "alert-monitor"
+    | "nlp"
+    | "rl-research"
+    | "crypto-paper";
   symbols: string[];
   strategy?: string;
   parameters?: Record<string, unknown>;
 };
 
-const externalWorkerJobTypes = ["fundamentals", "backtest", "parameter-sweep", "nlp", "rl-research", "crypto-paper"];
+const externalWorkerJobTypes = ["market-data", "portfolio", "fundamentals", "backtest", "parameter-sweep", "forecast", "agent-research", "factor-analysis", "alert-monitor", "nlp", "rl-research", "crypto-paper"];
 
 export const externalWorkerCatalog: Array<{
   key: ExternalWorkerKey;
@@ -34,11 +62,109 @@ export const externalWorkerCatalog: Array<{
     allowedJobs: ["fundamentals"],
   },
   {
+    key: "alphavantage",
+    label: "Alpha Vantage",
+    urlEnv: "ALPHA_VANTAGE_WORKER_URL",
+    purpose: "MIT-licensed Python Alpha Vantage wrapper lane for free-account time series, technical indicators, fundamentals, FX, crypto, and rate-limit-labeled data enrichment.",
+    allowedJobs: ["market-data", "fundamentals", "forecast"],
+  },
+  {
+    key: "alphalens",
+    label: "Alphalens",
+    urlEnv: "ALPHALENS_WORKER_URL",
+    purpose: "Apache-2.0 factor performance analysis lane for forward returns, information coefficient, turnover, grouped analysis, quantile spreads, and tear-sheet evidence.",
+    allowedJobs: ["factor-analysis", "backtest", "parameter-sweep"],
+  },
+  {
+    key: "openstock",
+    label: "OpenStock",
+    urlEnv: "OPENSTOCK_WORKER_URL",
+    purpose: "AGPL-licensed companion market app lane for search, watchlists, company insights, market/news context, alerts, and UI/UX pattern comparison.",
+    allowedJobs: ["market-data", "fundamentals", "nlp"],
+  },
+  {
+    key: "stocksight",
+    label: "StockSight",
+    urlEnv: "STOCKSIGHT_WORKER_URL",
+    purpose: "Apache-2.0 Python sentiment lane for Elasticsearch-backed Twitter/news headline mining, TextBlob/VADER/NLTK polarity, subjectivity, and source-labeled catalyst pressure.",
+    allowedJobs: ["nlp"],
+  },
+  {
+    key: "streetmerchant",
+    label: "StreetMerchant",
+    urlEnv: "STREETMERCHANT_WORKER_URL",
+    purpose: "MIT-licensed alert-operations reference for 24/7 watch loops, dashboard status matrices, cooldowns, notification fanout, and manual-action guardrails; not a financial market-data source.",
+    allowedJobs: ["alert-monitor"],
+  },
+  {
+    key: "ghostfolio",
+    label: "Ghostfolio",
+    urlEnv: "GHOSTFOLIO_WORKER_URL",
+    purpose: "AGPL-licensed companion wealth-management lane for portfolio performance, holdings composition, static risk analysis, transactions, imports/exports, and multi-account context.",
+    allowedJobs: ["portfolio", "market-data", "fundamentals"],
+  },
+  {
+    key: "akshare",
+    label: "AKShare",
+    urlEnv: "AKSHARE_WORKER_URL",
+    purpose: "Free/self-hosted Python financial data access for China/Asia markets, macro, futures, bonds, options, funds, and reference datasets.",
+    allowedJobs: ["market-data", "fundamentals"],
+  },
+  {
+    key: "llmtradinglab",
+    label: "LLM Trading Lab",
+    urlEnv: "LLM_TRADING_LAB_WORKER_URL",
+    purpose: "Research-only LLM portfolio decision experiments with forward-only logs, hard constraints, stop-loss compliance, benchmark comparisons, and risk metrics.",
+    allowedJobs: ["agent-research", "portfolio", "backtest", "forecast"],
+  },
+  {
+    key: "dexter",
+    label: "Dexter",
+    urlEnv: "DEXTER_WORKER_URL",
+    purpose: "MIT-licensed autonomous financial research agent for task planning, self-validation, fundamental data gathering, tool-call scratchpads, eval evidence, and chat/gateway research workflows.",
+    allowedJobs: ["agent-research", "fundamentals", "nlp"],
+  },
+  {
     key: "lean",
     label: "QuantConnect LEAN",
     urlEnv: "LEAN_WORKER_URL",
-    purpose: "Event-driven historical backtests and paper/live promotion trials.",
-    allowedJobs: ["backtest"],
+    purpose: "Apache-2.0 event-driven algorithm engine for self-hosted backtests, optimization-style parameter sweeps, multi-asset research reports, and paper/live promotion evidence with live execution disabled in this bridge.",
+    allowedJobs: ["backtest", "parameter-sweep"],
+  },
+  {
+    key: "stocksharp",
+    label: "StockSharp",
+    urlEnv: "STOCKSHARP_WORKER_URL",
+    purpose: "C#/.NET connector research, multi-market strategy tests, and broker-adapter simulations behind platform safety gates.",
+    allowedJobs: ["backtest", "parameter-sweep", "crypto-paper"],
+  },
+  {
+    key: "rqalpha",
+    label: "RQAlpha",
+    urlEnv: "RQALPHA_WORKER_URL",
+    purpose: "Research-only Python event-driven backtests, simulation, risk checks, analyser outputs, transaction-cost modeling, and Mod-style extensibility.",
+    allowedJobs: ["backtest", "parameter-sweep", "portfolio"],
+  },
+  {
+    key: "lstmtimeseries",
+    label: "LSTM Time Series",
+    urlEnv: "LSTM_TIME_SERIES_WORKER_URL",
+    purpose: "AGPL-licensed research-only LSTM/Keras sequence-forecast lane for time-series baseline comparisons, walk-forward holdouts, sequence diagnostics, and dependency-drift warnings.",
+    allowedJobs: ["forecast", "parameter-sweep", "backtest"],
+  },
+  {
+    key: "stockpredictionai",
+    label: "StockPredictionAI",
+    urlEnv: "STOCKPREDICTIONAI_WORKER_URL",
+    purpose: "Research-only GAN/LSTM/CNN stock-movement forecasts with technical, sentiment, Fourier, ARIMA, XGBoost, and autoencoder-style features.",
+    allowedJobs: ["forecast", "parameter-sweep", "nlp"],
+  },
+  {
+    key: "stockpredictionmodels",
+    label: "Stock Prediction Models",
+    urlEnv: "STOCK_PREDICTION_MODELS_WORKER_URL",
+    purpose: "Research-only ML/DL forecast, stacking, simulation, and reinforcement-learning agent experiments inspired by huseinzol05/Stock-Prediction-Models.",
+    allowedJobs: ["forecast", "backtest", "parameter-sweep", "rl-research", "crypto-paper"],
   },
   {
     key: "backtrader",
@@ -74,6 +200,20 @@ export const externalWorkerCatalog: Array<{
     urlEnv: "FINRL_WORKER_URL",
     purpose: "Research-only reinforcement-learning experiments.",
     allowedJobs: ["rl-research"],
+  },
+  {
+    key: "freqtrade",
+    label: "Freqtrade",
+    urlEnv: "FREQTRADE_WORKER_URL",
+    purpose: "GPL-3.0 self-hosted crypto strategy worker for dry-run/paper trading, backtests, hyperopt-style parameter sweeps, strategy reports, and exchange-aware risk evidence.",
+    allowedJobs: ["crypto-paper", "backtest", "parameter-sweep"],
+  },
+  {
+    key: "hummingbot",
+    label: "Hummingbot",
+    urlEnv: "HUMMINGBOT_WORKER_URL",
+    purpose: "Apache-2.0 self-hosted crypto market-making and liquidity worker for connector readiness, CEX/DEX/AMM venue checks, dry-run/paper strategies, spread and inventory risk, fee/slippage assumptions, and parameter-sweep evidence.",
+    allowedJobs: ["crypto-paper", "backtest", "parameter-sweep"],
   },
   {
     key: "jesse",

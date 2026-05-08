@@ -1,5 +1,6 @@
 import { buildBuyTradeTicket, type TradeTicket } from "@/lib/tradeTicket";
 import { generateBuyLeads, type BuyLead, type SignalQuote } from "@/lib/signalEngine";
+import type { TradingMindConsensus } from "@/lib/tradingMinds";
 
 export type BuyNowSignal = {
   symbol: string;
@@ -7,12 +8,19 @@ export type BuyNowSignal = {
   rank: number;
   action: "Buy Now Candidate";
   price: number;
+  trigger: number;
   entry: number;
+  entrySignalNeeded: string;
   stop: number;
   target: number;
   units: number;
   maxLoss: number;
   rewardRisk: number;
+  riskRewardRatio: number;
+  potentialUnits: number;
+  potentialNotional: number;
+  positionSize: string;
+  suggestedPositionSize: string;
   holdingPeriod: TradeTicket["holdingPeriod"];
   expectedHold: string;
   maxHold: string;
@@ -24,6 +32,7 @@ export type BuyNowSignal = {
   marketStatus?: string;
   reasons: string[];
   warnings: string[];
+  strategyMindset: TradingMindConsensus;
   ticket: TradeTicket;
   generatedAt: string;
 };
@@ -34,13 +43,21 @@ export type BlockedBuyNowSignal = {
   rank: number;
   price: number;
   trigger: number;
+  entrySignalNeeded: string;
+  stop: number;
+  target: number;
   confidence: number;
   rewardRisk: number;
+  potentialUnits: number;
+  potentialNotional: number;
+  positionSize: string;
+  suggestedPositionSize: string;
   holdingPeriod: TradeTicket["holdingPeriod"];
   expectedHold: string;
   dataQuality: SignalQuote["quality"];
   blockers: string[];
   reasons: string[];
+  strategyMindset: TradingMindConsensus;
 };
 
 export type BuyNowResult = {
@@ -97,12 +114,19 @@ export function generateBuyNowSignals({
         rank: promoted.length + 1,
         action: "Buy Now Candidate",
         price: lead.price,
+        trigger: ticket.trigger,
         entry: ticket.entry,
+        entrySignalNeeded: ticket.entrySignalNeeded,
         stop: ticket.stop,
         target: ticket.target,
         units: ticket.units,
         maxLoss: ticket.maxLoss,
         rewardRisk: ticket.rewardRisk,
+        riskRewardRatio: ticket.riskRewardRatio,
+        potentialUnits: ticket.potentialUnits,
+        potentialNotional: ticket.potentialNotional,
+        positionSize: ticket.positionSize,
+        suggestedPositionSize: ticket.suggestedPositionSize,
         holdingPeriod: ticket.holdingPeriod,
         expectedHold: ticket.expectedHold,
         maxHold: ticket.maxHold,
@@ -118,6 +142,7 @@ export function generateBuyNowSignals({
           `The planned loss is capped near ${money(ticket.maxLoss)} before any trade is considered.`,
         ],
         warnings: lead.warnings,
+        strategyMindset: lead.strategyMindset,
         ticket,
         generatedAt,
       });
@@ -130,13 +155,21 @@ export function generateBuyNowSignals({
       rank: index + 1,
       price: lead.price,
       trigger: lead.trigger,
+      entrySignalNeeded: ticket.entrySignalNeeded,
+      stop: ticket.stop,
+      target: ticket.target,
       confidence: lead.confidence,
       rewardRisk: lead.rewardRisk,
+      potentialUnits: ticket.potentialUnits,
+      potentialNotional: ticket.potentialNotional,
+      positionSize: ticket.positionSize,
+      suggestedPositionSize: ticket.suggestedPositionSize,
       holdingPeriod: lead.holdingPeriod.label,
       expectedHold: lead.holdingPeriod.expectedHold,
       dataQuality: quote.quality,
       blockers,
       reasons: lead.simpleWhy.slice(0, 2),
+      strategyMindset: lead.strategyMindset,
     });
   });
 

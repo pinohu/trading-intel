@@ -27,6 +27,78 @@ Then authenticate and check:
 - `/api/research-workers/readiness`
 - `/api/tradingagents/analyze` with an authenticated session; no worker URL is required
 
+Optional Alpha Vantage worker check:
+
+- Set `ALPHA_VANTAGE_WORKER_URL` to the self-hosted Python worker endpoint and `ALPHAVANTAGE_API_KEY` in the worker environment.
+- Dispatch a research-only job through `/api/research-workers/run` with `worker: "alphavantage"` and `jobType: "market-data"`.
+- Confirm the worker returns source function, timestamp, provider warning/rate-limit status, adjusted/delayed labels, and no broker-order side effects.
+
+Optional Alphalens worker check:
+
+- Set `ALPHALENS_WORKER_URL` to the self-hosted Python worker endpoint.
+- Dispatch a research-only job through `/api/research-workers/run` with `worker: "alphalens"` and `jobType: "factor-analysis"`.
+- Confirm the worker returns forward returns, IC, turnover, quantile/group analysis, cost assumptions, missing-data warnings, and no broker-order side effects.
+
+Optional OpenStock companion check:
+
+- Set `OPENSTOCK_WORKER_URL` to the self-hosted companion worker endpoint.
+- Dispatch a research-only job through `/api/research-workers/run` with `worker: "openstock"` and `jobType: "market-data"`.
+- Confirm the worker returns search/watchlist/company/news/alert context and no broker-order side effects.
+
+Optional StreetMerchant alert-pattern check:
+
+- Set `STREETMERCHANT_WORKER_URL` to the self-hosted alert worker endpoint.
+- Dispatch a research-only job through `/api/research-workers/run` with `worker: "streetmerchant"` and `jobType: "alert-monitor"`.
+- Confirm the worker returns watch-loop state, channel fanout status, cooldown/retry evidence, and no market-data or broker-order side effects.
+
+Optional Ghostfolio portfolio check:
+
+- Set `GHOSTFOLIO_WORKER_URL` to the self-hosted portfolio worker endpoint.
+- Dispatch a research-only job through `/api/research-workers/run` with `worker: "ghostfolio"` and `jobType: "portfolio"`.
+- Confirm the worker returns portfolio exposure, allocation, holdings, transaction, and static risk context with no broker-order side effects.
+
+Optional AKShare worker check:
+
+- Set `AKSHARE_WORKER_URL` to the self-hosted Python worker endpoint.
+- Dispatch a research-only job through `/api/research-workers/run` with `worker: "akshare"` and `jobType: "market-data"`.
+- Confirm the worker returns source labels, timestamps, coverage, warnings, and no broker-order side effects.
+
+Optional StockSharp worker check:
+
+- Set `STOCKSHARP_WORKER_URL` to the self-hosted C#/.NET worker endpoint.
+- Dispatch a research-only job through `/api/research-workers/run` with `worker: "stocksharp"` and `jobType: "backtest"`.
+- Confirm the worker returns metrics without placing broker orders.
+
+Optional RQAlpha worker check:
+
+- Set `RQALPHA_WORKER_URL` to the self-hosted Python worker endpoint.
+- Dispatch a research-only job through `/api/research-workers/run` with `worker: "rqalpha"` and `jobType: "backtest"`.
+- Confirm the worker returns event-driven simulation metrics, transaction-cost assumptions, holdings/portfolio reports, risk/analyser output, and no broker-order side effects.
+
+Optional StockPredictionAI worker check:
+
+- Set `STOCKPREDICTIONAI_WORKER_URL` to the self-hosted forecast worker endpoint.
+- Dispatch a research-only job through `/api/research-workers/run` with `worker: "stockpredictionai"` and `jobType: "forecast"`.
+- Confirm the worker returns holdout metrics, overfit warnings, feature coverage, and no broker-order side effects.
+
+Optional LSTM Time Series worker check:
+
+- Set `LSTM_TIME_SERIES_WORKER_URL` to the self-hosted forecast worker endpoint.
+- Dispatch a research-only job through `/api/research-workers/run` with `worker: "lstmtimeseries"` and `jobType: "forecast"`.
+- Confirm the worker returns sequence-window settings, train/test split, holdout or walk-forward metrics, benchmark comparison, dependency/version warnings, and no broker-order side effects.
+
+Optional LLM Trading Lab worker check:
+
+- Set `LLM_TRADING_LAB_WORKER_URL` to the self-hosted LLM experiment worker endpoint.
+- Dispatch a research-only job through `/api/research-workers/run` with `worker: "llmtradinglab"` and `jobType: "agent-research"`.
+- Confirm the worker returns forward-only decisions, hard-constraint checks, stop-loss compliance, benchmark comparisons, and no broker-order side effects.
+
+Optional Stock Prediction Models worker check:
+
+- Set `STOCK_PREDICTION_MODELS_WORKER_URL` to the self-hosted ML model worker endpoint.
+- Dispatch a research-only job through `/api/research-workers/run` with `worker: "stockpredictionmodels"` and `jobType: "forecast"`.
+- Confirm the worker returns model comparison metrics, holdout/walk-forward evidence, overfit warnings, and no broker-order side effects.
+
 ## Persistence Setup
 
 1. Create a Postgres-compatible database.
@@ -83,7 +155,7 @@ Symptoms:
 
 Response:
 
-1. Confirm `TRADING_ACCESS_CODE` and `TRADING_ACCESS_TOKEN` are set in Vercel production.
+1. Confirm `ACCESS_CODE` or `TRADING_ACCESS_CODE`, plus `TRADING_ACCESS_TOKEN`, are set in Vercel production.
 2. Rotate both secrets if leakage is suspected.
 3. Redeploy after secret changes.
 4. Never reintroduce hardcoded fallback access codes.

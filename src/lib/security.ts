@@ -11,8 +11,12 @@ export function cleanSecret(value: string | undefined | null) {
   return value?.replace(/^\uFEFF/, "").trim().replace(/^["']|["']$/g, "");
 }
 
+export function configuredAccessCode() {
+  return cleanSecret(process.env.ACCESS_CODE) || cleanSecret(process.env.TRADING_ACCESS_CODE);
+}
+
 export function productionSecretsConfigured() {
-  return Boolean(cleanSecret(process.env.TRADING_ACCESS_CODE) && cleanSecret(process.env.TRADING_ACCESS_TOKEN));
+  return Boolean(configuredAccessCode() && cleanSecret(process.env.TRADING_ACCESS_TOKEN));
 }
 
 export function rateLimit({

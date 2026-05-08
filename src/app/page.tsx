@@ -11,6 +11,7 @@ import {
   Calculator,
   CalendarDays,
   CheckCircle2,
+  CircleHelp,
   ClipboardList,
   Database,
   Download,
@@ -21,9 +22,11 @@ import {
   Layers,
   LineChart,
   ListOrdered,
+  MessageSquare,
   Newspaper,
   Plus,
   RefreshCcw,
+  Send,
   ServerCog,
   ShieldCheck,
   Smartphone,
@@ -36,22 +39,32 @@ import {
   Zap,
 } from "lucide-react";
 import dynamic from "next/dynamic";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { engineCapabilities, engineWorkflow, type EngineCapability } from "@/lib/engineCatalog";
 import { buildFusionAlphaPredictions, type FusionEngineFinding, type FusionPrediction } from "@/lib/fusionAlpha";
 import { generateBuyLeads, generateSignals, scoreQuote, type BuyLead, type TradeSignal } from "@/lib/signalEngine";
 import { dayTradingBestPractices, dayTradingRules } from "@/lib/dayTradingPlaybook";
 import { calculatePositionSize } from "@/lib/positionSizing";
 import { marketEvents } from "@/lib/events";
-import { trustBuildOrder, trustOperationGaps, trustSummary, type TrustStatus } from "@/lib/trustOperations";
+import { criticalUnresolvedTrustGaps, sortedTrustGaps, trustBuildOrder, trustOperationGaps, trustSummary, type TrustOperationGap, type TrustPriority, type TrustStatus } from "@/lib/trustOperations";
 import { buildBuyTradeTicket, type TradeTicket } from "@/lib/tradeTicket";
 import { generateBuyNowSignals, type BlockedBuyNowSignal, type BuyNowSignal } from "@/lib/buyNowEngine";
 import { optimizeTradeBasketFromLeads, type IsingBasketResult } from "@/lib/isingOptimizer";
+import type { OrchestrationRun } from "@/lib/orchestration";
+import { referenceReportLessons, referenceReportSummary } from "@/lib/referenceReports";
+import type { TradingAssistantDashboardContext } from "@/lib/tradingAssistant";
 
 const PriceChart = dynamic(() => import("@/components/PriceChart"), {
   ssr: false,
   loading: () => <div className="h-full rounded-md border border-white/10 bg-black/20" />,
 });
+
+type SparkPoint = {
+  label: string;
+  value: number;
+};
+
+const QuoteHistoryContext = createContext<Record<string, SparkPoint[]>>({});
 
 type Quote = {
   symbol: string;
@@ -158,6 +171,7 @@ type OpsStatus = {
     alpacaConfigured: boolean;
     alpacaDataQuality: string;
     licensedSip: boolean;
+    freeFirstDefault?: boolean;
     publicFallbacks: boolean;
   };
   alerts?: Record<string, boolean>;
@@ -268,6 +282,7 @@ type InstitutionalReadinessApi = {
     killSwitch: boolean;
     allowPaperOrders: boolean;
     allowLiveOrders: boolean;
+    allowLiveAgentOrders: boolean;
     maxOpenOrders: number;
     maxOpenOrdersPerSymbol: number;
     maxDailySubmittedNotional: number;
@@ -295,9 +310,16 @@ type ResearchStackApi = {
     category: string;
     ready: boolean;
     mode: "credentialed" | "free-fallback" | "worker" | "native" | "missing";
+    costProfile: "free-default" | "free-public" | "free-self-hosted" | "free-account" | "optional-paid";
     detail: string;
     freeAlternative?: string;
     env: string[];
+  }>;
+  freeReplacements: Array<{
+    replaces: string;
+    freePath: string;
+    applied: boolean;
+    limitation: string;
   }>;
   workerCommands: Array<{ name: string; purpose: string; command: string; urlEnv: string }>;
   missingExternalEntitlements: string[];
@@ -376,11 +398,14 @@ type AgentTraderApi = {
     enabled: boolean;
     paperAutomationEnabled: boolean;
     paperAutomationReady: boolean;
-    liveAutonomyAllowed: false;
+    liveAutomationEnabled: boolean;
+    liveAutomationReady: boolean;
+    liveAutonomyAllowed: boolean;
     liveRequiresManualApproval: true;
     minConfidence: number;
     maxProposals: number;
     maxPaperOrdersPerRun: number;
+    maxLiveOrdersPerRun: number;
     missing: string[];
     restrictions: string[];
   };
@@ -388,7 +413,7 @@ type AgentTraderApi = {
     id: string;
     symbol: string;
     mode: BrokerMode;
-    status: "paper-ready" | "approval-required" | "blocked";
+    status: "paper-ready" | "live-ready" | "approval-required" | "blocked";
     confidence: number;
     orderDraft: {
       symbol: string;
@@ -407,6 +432,40 @@ type AgentTraderApi = {
   blocked?: BlockedBuyNowSignal[];
   advisory?: string;
   error?: string;
+};
+
+type ControlPlaneRunsApi = {
+  ok: boolean;
+  source?: "control-plane-v1" | string;
+  latest?: OrchestrationRun | null;
+  runs?: OrchestrationRun[];
+  advisory?: string;
+  error?: string;
+};
+
+type AssistantChatMessage = {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  createdAt: string;
+  model?: string;
+  source?: string;
+  advisory?: string;
+};
+
+type AssistantChatApiResponse = {
+  ok: boolean;
+  answer?: string;
+  model?: string;
+  source?: string;
+  advisory?: string;
+  error?: string;
+  configuredModels?: {
+    local: string;
+    primary: string;
+    fallback: string;
+    fast: string;
+  };
 };
 
 type ResearchNote = {
@@ -504,27 +563,39 @@ const strategyTemplates = [
 const quantPipelines = [
   {
     title: "Data Terminal",
-    repo: "OpenBB",
+    repo: "OpenBB + Alpha Vantage + OpenStock + Ghostfolio + AKShare",
     icon: Database,
-    body: "Pull quotes, fundamentals, options, filings, macro series, and research snapshots into one normalized intelligence layer.",
+    body: "Pull quotes, fundamentals, indicators, companion watchlist context, portfolio exposure, China/Asia datasets, options, filings, macro series, and research snapshots into one normalized intelligence layer.",
+  },
+  {
+    title: "Systematic Map",
+    repo: "awesome-systematic-trading + native readiness",
+    icon: ListOrdered,
+    body: "Classify every idea across data, alpha, analytics, backtesting, live-control, architecture, tooling, resources, and AI/LLM challenge lanes before it earns decision-ready status.",
   },
   {
     title: "Backtest Ladder",
-    repo: "backtesting.py -> vectorbt -> LEAN",
+    repo: "Alphalens -> backtesting.py -> vectorbt -> RQAlpha -> LEAN -> StockSharp",
     icon: GitBranch,
-    body: "Validate simple logic first, sweep parameters second, then promote robust candidates to event-driven simulation.",
+    body: "Check factor tear sheets first, validate simple logic, sweep parameters, then promote robust candidates to Python or C#/.NET event-driven simulation.",
   },
   {
     title: "AI Research",
-    repo: "FinGPT + FinRL",
+    repo: "StockSight + LSTM Time Series + LLM Trading Lab + StockPredictionAI + Stock Prediction Models + FinGPT + FinRL",
     icon: Brain,
-    body: "Summarize catalysts, score sentiment, flag contradictions, and keep reinforcement-learning work paper-only.",
+    body: "Pressure-test forecasts, mine source-labeled news/social sentiment, summarize catalysts, flag contradictions, and keep ML/RL work research-only.",
   },
   {
     title: "Execution Gate",
-    repo: "Nautilus + Jesse",
+    repo: "Nautilus + StockSharp + Freqtrade + Hummingbot + Jesse",
     icon: ShieldCheck,
-    body: "Prepare professional trading rails and crypto lanes without enabling real-money execution by default.",
+    body: "Prepare professional trading rails plus crypto dry-run, liquidity, and market-making lanes without enabling real-money execution by default.",
+  },
+  {
+    title: "Alert Ops",
+    repo: "StreetMerchant + native monitor",
+    icon: BellRing,
+    body: "Keep watch loops, channel status, cooldowns, trigger alerts, and manual-action guardrails visible without treating alerts as orders.",
   },
 ];
 
@@ -563,6 +634,24 @@ function boolField(record: Record<string, unknown> | null | undefined, key: stri
   return record?.[key] === true;
 }
 
+const integratedReferenceSummary = referenceReportSummary();
+
+const assistantWelcomeMessage: AssistantChatMessage = {
+  id: "assistant-welcome",
+  role: "assistant",
+  content: "Ready for questions from the current cockpit context.",
+  createdAt: "session",
+  model: "local-free-or-gpt-5.2",
+  source: "configured",
+};
+
+const assistantQuickQuestions = [
+  "What risk is not obvious here?",
+  "Why is the top buy blocked or actionable?",
+  "What must happen before live execution?",
+  "How did the reference reports change this setup?",
+];
+
 function makeSpark(symbol: string, price: number) {
   const seed = symbol.split("").reduce((sum, char) => sum + char.charCodeAt(0), 0);
   return Array.from({ length: 18 }, (_, index) => {
@@ -573,6 +662,176 @@ function makeSpark(symbol: string, price: number) {
       value: Number((price * (1 + wave + pulse + index * 0.0015)).toFixed(2)),
     };
   });
+}
+
+function normalizeStoredAssistantMessage(value: unknown): AssistantChatMessage | null {
+  if (!value || typeof value !== "object") return null;
+  const item = value as Partial<AssistantChatMessage>;
+  const role = item.role === "user" || item.role === "assistant" ? item.role : null;
+  const content = typeof item.content === "string" ? item.content.trim() : "";
+  if (!role || !content) return null;
+  return {
+    id: typeof item.id === "string" && item.id ? item.id : messageId(role),
+    role,
+    content: content.slice(0, 4000),
+    createdAt: typeof item.createdAt === "string" ? item.createdAt : "session",
+    model: typeof item.model === "string" ? item.model : undefined,
+    source: typeof item.source === "string" ? item.source : undefined,
+    advisory: typeof item.advisory === "string" ? item.advisory : undefined,
+  };
+}
+
+function messageId(role: AssistantChatMessage["role"]) {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `${role}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function predictionBrief(prediction: FusionPrediction | undefined) {
+  if (!prediction) return null;
+  return {
+    symbol: prediction.symbol,
+    name: prediction.name,
+    action: prediction.action,
+    direction: prediction.direction,
+    score: prediction.score,
+    confidence: prediction.confidence,
+    thesis: prediction.thesis,
+    entry: prediction.entry,
+    stop: prediction.stop,
+    target: prediction.target,
+    rewardRisk: prediction.rewardRisk,
+    expectedHold: prediction.expectedHold,
+    maxHold: prediction.maxHold,
+    operatorAction: prediction.operatorAction,
+    blockers: prediction.blockers.slice(0, 5),
+    topSupports: prediction.topSupports.slice(0, 3).map((finding) => ({
+      label: finding.label,
+      score: finding.score,
+    })),
+    topChallenges: prediction.topChallenges.slice(0, 3).map((finding) => ({
+      label: finding.label,
+      score: finding.score,
+    })),
+  };
+}
+
+function tradeTicketBrief(ticket: TradeTicket | null) {
+  if (!ticket) return null;
+  return {
+    symbol: ticket.symbol,
+    side: ticket.side,
+    status: ticket.status,
+    trigger: ticket.trigger,
+    entry: ticket.entry,
+    entrySignalNeeded: ticket.entrySignalNeeded,
+    stop: ticket.stop,
+    target: ticket.target,
+    units: ticket.units,
+    notional: ticket.notional,
+    potentialUnits: ticket.potentialUnits,
+    potentialNotional: ticket.potentialNotional,
+    maxLoss: ticket.maxLoss,
+    rewardRisk: ticket.rewardRisk,
+    riskRewardRatio: ticket.riskRewardRatio,
+    positionSize: ticket.positionSize,
+    suggestedPositionSize: ticket.suggestedPositionSize,
+    tradeable: ticket.tradeable,
+    reason: ticket.reason,
+    mustConfirm: ticket.mustConfirm.slice(0, 5),
+    doNotTradeIf: ticket.doNotTradeIf.slice(0, 5),
+  };
+}
+
+function buyNowBrief(signal: BuyNowSignal) {
+  return {
+    symbol: signal.symbol,
+    price: signal.price,
+    trigger: signal.trigger,
+    stop: signal.stop,
+    target: signal.target,
+    confidence: signal.confidence,
+    riskRewardRatio: signal.riskRewardRatio,
+    potentialUnits: signal.potentialUnits,
+    potentialNotional: signal.potentialNotional,
+    positionSize: signal.positionSize,
+    suggestedPositionSize: signal.suggestedPositionSize,
+    entrySignalNeeded: signal.entrySignalNeeded,
+    strategyMindset: {
+      stance: signal.strategyMindset.stance,
+      score: signal.strategyMindset.score,
+      summary: signal.strategyMindset.summary,
+      topVotes: signal.strategyMindset.votes.slice(0, 3).map((vote) => `${vote.name}: ${vote.stance}`),
+    },
+    reasons: signal.reasons.slice(0, 4),
+    warnings: signal.warnings.slice(0, 4),
+  };
+}
+
+function blockedBuyNowBrief(signal: BlockedBuyNowSignal) {
+  return {
+    symbol: signal.symbol,
+    price: signal.price,
+    trigger: signal.trigger,
+    stop: signal.stop,
+    target: signal.target,
+    confidence: signal.confidence,
+    rewardRisk: signal.rewardRisk,
+    entrySignalNeeded: signal.entrySignalNeeded,
+    positionSize: signal.positionSize,
+    suggestedPositionSize: signal.suggestedPositionSize,
+    strategyMindset: {
+      stance: signal.strategyMindset.stance,
+      score: signal.strategyMindset.score,
+      summary: signal.strategyMindset.summary,
+      topVotes: signal.strategyMindset.votes.slice(0, 3).map((vote) => `${vote.name}: ${vote.stance}`),
+    },
+    blockers: signal.blockers.slice(0, 5),
+    reasons: signal.reasons.slice(0, 4),
+  };
+}
+
+function buyLeadBrief(lead: BuyLead) {
+  return {
+    symbol: lead.symbol,
+    status: lead.status,
+    score: lead.score,
+    confidence: lead.confidence,
+    price: lead.price,
+    trigger: lead.trigger,
+    stop: lead.stop,
+    target: lead.target,
+    rewardRisk: lead.rewardRisk,
+    expectedHold: lead.holdingPeriod.expectedHold,
+    maxHold: lead.holdingPeriod.maxHold,
+    reason: lead.reason,
+    strategyMindset: {
+      stance: lead.strategyMindset.stance,
+      score: lead.strategyMindset.score,
+      summary: lead.strategyMindset.summary,
+      topVotes: lead.strategyMindset.votes.slice(0, 3).map((vote) => `${vote.name}: ${vote.stance}`),
+    },
+    warnings: lead.warnings.slice(0, 4),
+    dataFresh: lead.dataFresh,
+  };
+}
+
+function appendQuoteHistory(current: Record<string, SparkPoint[]>, quotes: Quote[]) {
+  if (quotes.length === 0) return current;
+  const label = new Date().toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+  const next = { ...current };
+  for (const quote of quotes) {
+    if (!Number.isFinite(quote.price) || quote.price <= 0) continue;
+    const existing = next[quote.symbol]?.length ? next[quote.symbol] : makeSpark(quote.symbol, quote.price).slice(-14);
+    const point = { label, value: Number(quote.price.toFixed(2)) };
+    next[quote.symbol] = [...existing, point].slice(-36);
+  }
+  return next;
 }
 
 function simulateStrategies(symbol: string, price: number, lookback: number, risk: number): StrategyProfile[] {
@@ -589,10 +848,144 @@ function simulateStrategies(symbol: string, price: number, lookback: number, ris
       1,
       Math.min(100, Math.round(58 + expectedReturn * 4 - maxDrawdown * 1.4 + winRate * 0.35)),
     );
-    const repo = index === 0 ? "backtesting.py" : index === 1 ? "vectorbt" : index === 2 ? "Backtrader" : index === 3 ? "LEAN" : "FinGPT filter";
+    const repo = index === 0 ? "backtesting.py" : index === 1 ? "vectorbt" : index === 2 ? "Backtrader" : index === 3 ? "RQAlpha / LEAN / StockSharp" : "FinGPT filter";
     return { name, repo, description: `${symbol} @ ${formatUsd(price)} with ${lookback}D lookback`, expectedReturn, maxDrawdown, winRate, trades, robustness };
   });
 }
+
+const dashboardSections = [
+  { id: "overview", label: "Overview" },
+  { id: "actions", label: "Actions" },
+  { id: "intelligence", label: "Intelligence" },
+  { id: "analyst-chat", label: "Chat" },
+  { id: "leads", label: "Leads" },
+  { id: "operations", label: "Ops" },
+  { id: "risk", label: "Risk" },
+  { id: "journal", label: "Journal" },
+];
+
+const sectionExplanations: Record<string, string> = {
+  "Fusion Alpha Command": "The combined model view. It ranks buy, sell, hold, and data-review decisions from all available engines.",
+  "AI Agent Trading": "Shows supervised agent proposals. Paper actions are allowed only when policy and broker readiness pass.",
+  "Algorithm Council": "Scores fundamentals, quality, valuation, profitability, and momentum so signals are not based on price alone.",
+  "Institutional Gates": "Checks whether proof, controls, workers, and compliance boundaries are strong enough to trust the platform operationally.",
+  "Research Stack": "Shows which free paths, optional paid providers, and research workers are actually available right now.",
+  "Ising Basket Optimizer": "Chooses a limited basket of buy leads while respecting budget, risk, and overlap constraints.",
+  "Live Buy Leads": "Ranks symbols closest to a buy setup. These are candidates to watch, not automatic orders.",
+  "Live Buy / Sell Leaderboard": "Compares the strongest buy leads against sell or exit watches using confidence, risk, and urgency.",
+  "Always-On Trading OS": "Operational controls for monitoring, broker readiness, position sizing, and paper-trade analytics.",
+  "Trust Matrix": "The proof matrix. It shows every issue as live-tracked while keeping proof readiness separate from tracking status.",
+  "Market Signal Monitor": "Rule-based market scan that flags buy-watch and sell-watch setups from fresh quote data.",
+  "Day Trading Playbook": "The rules used to judge whether a setup is actionable or should be avoided.",
+  "Data Feed Control": "Controls the quote provider and shows which feeds are active, public, unofficial, delayed, or licensed.",
+  "Market Radar": "The watchlist. Select a symbol here to update the chart, ticket, journal, and analysis panels.",
+  "Quant Lab": "Runs backtests, research experiments, debates, and fusion analysis before ideas are promoted.",
+  "Engine Fusion Map": "Shows how each research engine contributed evidence or blockers for the selected symbol.",
+  "Paper Trade Journal": "Stores the written thesis, invalidation, confidence, and risk for auditability.",
+  "Paper Tickets": "Saved simulated trade plans. They are evidence records, not live brokerage orders.",
+  "Build Order": "The recommended implementation order for making the platform safer and more complete.",
+  "Event Risk Calendar": "Scheduled market events that can invalidate signals or raise execution risk.",
+  "Best Practices": "Plain risk rules that should constrain every trade decision.",
+  "Research Pipeline": "The data and research flow from raw signal to validated trade idea.",
+  "Repo Features Added": "Major capabilities that were added to this codebase and what each one contributes.",
+  "Intelligence Brief": "High-level market and system context for the current dashboard state.",
+  Headlines: "External news linked to watchlist symbols. Use these as context, not confirmation.",
+  "Agent Desk": "Background agent roles and what each one is responsible for.",
+  "Risk Constitution": "Hard trading constraints that prevent impulsive or under-specified execution.",
+};
+
+const metricExplanations: Record<string, string> = {
+  Feed: "Current quote and data-provider condition. If degraded or stale, decisions should be treated as blocked or research-only.",
+  "Market Scan": "How many watchlist symbols are positive and how many are moving enough to deserve attention.",
+  "Proof Coverage": "Share of trust systems with live or partial evidence. Higher means signals have more supporting infrastructure.",
+  Signals: "Count of immediate buy-now signals and slower buy leads. Buy-now is stricter than buy-lead.",
+  "Fusion Alpha": "Top combined model score after engines, rules, catalysts, and risk checks are merged.",
+  "Algorithm Council": "Top fundamental and quantitative council score for the current watchlist.",
+  "Institutional Gates": "Whether required proof and control checks are ready or still gated.",
+  "Research Stack": "How many configured research providers are available and what readiness grade they currently have.",
+  "Control Plane": "Latest orchestration chain status across research, thesis, backtest, risk review, paper gate, and live gate.",
+};
+
+const statExplanations: Record<string, string> = {
+  "Model Score": "Derived score from the fusion model. This is not a market fact, exchange indicator, or trading recommendation.",
+  "Evidence Confidence": "Derived confidence based on available evidence, data freshness, agreement, and blockers. This is not an audited factual indicator.",
+  Fusion: "Combined score from the fusion model. It is a ranking input, not permission to trade.",
+  Trust: "Confidence in the available evidence behind the decision.",
+  Timeframe: "The expected trading window for this setup.",
+  "Expected Hold": "How long the system expects the position or watch to remain relevant.",
+  "Max Hold": "The longest acceptable holding window before the setup should be reviewed again.",
+  "Forecast P/L": "Projected profit or loss from the current modeled setup.",
+  "Avoided downside": "Estimated loss avoided by not taking or by exiting the setup.",
+  Move: "Expected or observed price move in percent.",
+  "Max Loss": "Worst modeled loss for this plan under the current stop or risk assumptions.",
+  Entry: "The price level where the plan would begin, usually a limit or trigger.",
+  Stop: "The invalidation price. If reached, the thesis is wrong or risk must be cut.",
+  Target: "The planned price objective for taking profit or reassessing.",
+  "Units / Notional": "Estimated quantity and dollar exposure for the trade plan.",
+  Trigger: "The price that must be reached before a watch becomes actionable.",
+  Score: "Setup quality score. Use it to rank candidates, not as a standalone trading signal.",
+  Horizon: "The intended time horizon for the setup.",
+  Hold: "Plain-English hold guidance for the setup.",
+  "Buy now": "Signals that passed immediate-entry checks.",
+  "Buy leads": "Candidates near a buy setup but not necessarily ready for execution.",
+  "Sell watch": "Symbols with sell, avoid, or exit risk conditions.",
+  Now: "Current market price from the selected feed.",
+  Price: "Latest quoted price.",
+  Quality: "Signal grade and confidence from the scoring engine.",
+  Invalidation: "The level where this signal should no longer be trusted.",
+  "R/R": "Reward-to-risk ratio. Higher means more expected reward per unit of loss risk.",
+  "Risk/Reward": "Reward-to-risk ratio for the displayed entry. Higher means more expected reward per unit of loss risk.",
+  Shares: "Estimated share count from account size, risk, entry, and stop.",
+  "Risk $": "Dollar amount at risk if the stop is hit.",
+  Notional: "Total dollar exposure of the position.",
+  "Potential Size": "The maximum modeled unit count and notional exposure before final tradeability gates.",
+  "Position Size": "The current unit count and notional exposure after account, risk, stop, and daily-loss caps.",
+  "Suggested Size": "Plain-English size recommendation derived from the current risk budget and stop distance.",
+  "Entry Signal Needed": "The exact condition required before the setup can be treated as an entry candidate.",
+  "Entry Signal": "The exact condition required before the setup can be treated as an entry candidate.",
+  "Strategy Minds": "Consensus score from strategy archetypes inspired by notable traders and investors. It is evidence, not a standalone order.",
+  Reports: "Reference reports currently summarized into the system rules.",
+  Research: "Reference-report lessons categorized as research evidence.",
+  Gates: "Reference-report lessons categorized as execution or risk gates.",
+  "Issue Status": "How many Trust Matrix rows are actively tracked live.",
+  "Open Proof": "Trust capabilities that are live-tracked but not fully proven yet.",
+  "Open Issues": "Trust capabilities that are live-tracked but not fully proven yet.",
+  "Critical Open": "Critical proof, data, risk, or execution issues that still need work.",
+  "Proof Ready": "Trust capabilities whose proof state is live.",
+  Resolved: "Trust capabilities whose proof state is live and should remain monitored.",
+  "Proof Coverage": "Weighted share of trust systems that have live or partial evidence.",
+  "Max Day Loss": "Maximum daily dollar loss allowed by the current risk settings.",
+  Notes: "Saved journal note count.",
+  "Avg Conf": "Average confidence across saved journal entries.",
+  "Avg Risk": "Average risk percent across saved journal entries.",
+  Mode: "Current execution context for saved analytics.",
+};
+
+const statusExplanations: Record<string, string> = {
+  System: "Overall dashboard health from the latest refresh.",
+  Selected: "The symbol currently driving charts, tickets, notes, and analysis panels.",
+  Feed: "Quote feed quality and freshness. Stale feeds should block execution decisions.",
+  Broker: "Broker order rail readiness. Locked means orders cannot be placed from this screen.",
+  Refresh: "When the dashboard last completed a data refresh.",
+  "Trade ticket": "Whether the app can construct an auditable trade ticket.",
+  "Proof systems": "How many trust systems are proven live or still partial.",
+  "Critical issues": "Critical trust issues that still need implementation or enough proof.",
+  "Broker rail": "Current broker execution readiness.",
+  "AITable mirror": "Whether external table mirroring is configured and reachable.",
+  "Production core": "Whether the platform's required production capabilities are ready.",
+  Capabilities: "Configured operational capabilities that are active right now.",
+  "Broker risk": "Number of current risk flags from broker/account data.",
+  "Signal proof": "Outcome evidence currently available for generated signals.",
+  "Data license": "Whether market data is free-first research data, paid/licensed, public, or fallback-only.",
+  "Control Plane": "Latest research-to-execution orchestration run and whether paper/live gates are blocked, pending review, or ready.",
+};
+
+const provenanceExplanations: Record<string, string> = {
+  live: "Live or near-live data from an external provider or broker API.",
+  derived: "Calculated by this app from quotes, rules, risk settings, and available evidence.",
+  proxy: "Approximation used when a named external worker or institutional-grade data source is not connected.",
+  blocked: "Not available for action because data, broker, or risk requirements are missing.",
+};
 
 export default function Home() {
   const importInputRef = useRef<HTMLInputElement>(null);
@@ -611,6 +1004,7 @@ export default function Home() {
     }
   });
   const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [quoteHistory, setQuoteHistory] = useState<Record<string, SparkPoint[]>>({});
   const [news, setNews] = useState<NewsItem[]>([]);
   const [selected, setSelected] = useState("NVDA");
   const [newSymbol, setNewSymbol] = useState("");
@@ -640,11 +1034,13 @@ export default function Home() {
   const [tradingAgents, setTradingAgents] = useState<TradingAgentsApi | null>(null);
   const [fusionAlpha, setFusionAlpha] = useState<FusionAlphaApi | null>(null);
   const [agentTrader, setAgentTrader] = useState<AgentTraderApi | null>(null);
+  const [orchestration, setOrchestration] = useState<ControlPlaneRunsApi | null>(null);
   const [researchNotes, setResearchNotes] = useState<ResearchNote[]>([]);
   const [backtestRunning, setBacktestRunning] = useState(false);
   const [autoResearchRunning, setAutoResearchRunning] = useState(false);
   const [tradingAgentsRunning, setTradingAgentsRunning] = useState(false);
   const [fusionRunning, setFusionRunning] = useState(false);
+  const [orchestrationRunning, setOrchestrationRunning] = useState(false);
   const [quantMessage, setQuantMessage] = useState("Choose a lab action to run evidence before paper promotion.");
   const [agentExecuting, setAgentExecuting] = useState(false);
   const [brokerMessage, setBrokerMessage] = useState("Checking broker rail");
@@ -681,6 +1077,26 @@ export default function Home() {
     confidence: 62,
     risk: 1,
   });
+  const [assistantMessages, setAssistantMessages] = useState<AssistantChatMessage[]>(() => {
+    if (typeof window === "undefined") return [assistantWelcomeMessage];
+    const saved = window.localStorage.getItem("ti_assistant_chat");
+    if (!saved) return [assistantWelcomeMessage];
+    try {
+      const parsed = JSON.parse(saved);
+      if (!Array.isArray(parsed)) return [assistantWelcomeMessage];
+      const messages = parsed
+        .map((item) => normalizeStoredAssistantMessage(item))
+        .filter((item): item is AssistantChatMessage => Boolean(item))
+        .slice(-20);
+      return messages.length ? messages : [assistantWelcomeMessage];
+    } catch {
+      return [assistantWelcomeMessage];
+    }
+  });
+  const [assistantDraft, setAssistantDraft] = useState("");
+  const [assistantLoading, setAssistantLoading] = useState(false);
+  const [assistantError, setAssistantError] = useState("");
+  const [assistantModelLabel, setAssistantModelLabel] = useState("local-free-or-gpt-5.2");
 
   useEffect(() => {
     window.localStorage.setItem("ti_watchlist", JSON.stringify(watchlist));
@@ -693,6 +1109,10 @@ export default function Home() {
   useEffect(() => {
     window.localStorage.setItem("ti_paper_trades", JSON.stringify(paperTrades));
   }, [paperTrades]);
+
+  useEffect(() => {
+    window.localStorage.setItem("ti_assistant_chat", JSON.stringify(assistantMessages.slice(-20)));
+  }, [assistantMessages]);
 
   async function refresh() {
     setLoading(true);
@@ -713,6 +1133,7 @@ export default function Home() {
         autoResearchResponse,
         agentTraderResponse,
         researchNotesResponse,
+        orchestrationResponse,
       ] = await Promise.all([
         fetch(`/api/market?symbols=${encodeURIComponent(symbolParam)}&provider=${encodeURIComponent(provider)}`),
         fetch(`/api/news?symbols=${encodeURIComponent(watchlist.slice(0, 6).join(","))}`),
@@ -727,6 +1148,7 @@ export default function Home() {
         fetch("/api/autoresearch/lab?limit=5"),
         fetch(`/api/agent-trader/proposals?mode=${brokerMode}&symbols=${encodeURIComponent(symbolParam)}&provider=${encodeURIComponent(provider)}&accountSize=${accountSize}&riskPct=${draft.risk}&maxDailyLossPct=${maxDailyLossPct}`),
         fetch("/api/research-notes?limit=20"),
+        fetch("/api/control-plane/runs?limit=3"),
       ]);
       const marketData = await marketResponse.json();
       const newsData = await newsResponse.json();
@@ -741,7 +1163,10 @@ export default function Home() {
       const autoResearchData = await autoResearchResponse.json();
       const agentTraderData = await agentTraderResponse.json();
       const researchNotesData = await researchNotesResponse.json().catch(() => ({ ok: false }));
-      setQuotes(marketData.quotes ?? []);
+      const orchestrationData = await orchestrationResponse.json().catch(() => ({ ok: false }));
+      const freshQuotes = marketData.quotes ?? [];
+      setQuotes(freshQuotes);
+      setQuoteHistory((current) => appendQuoteHistory(current, freshQuotes));
       setNews(newsData.items ?? []);
       setAitableStatus(aitableData.ok ? aitableData : null);
       setOpsStatus(opsData.ok ? opsData : null);
@@ -753,6 +1178,7 @@ export default function Home() {
       setAutoResearch(autoResearchData.ok ? autoResearchData : null);
       setAgentTrader(agentTraderData.ok || agentTraderData.policy ? agentTraderData : null);
       setResearchNotes(researchNotesData.ok ? researchNotesData.notes ?? [] : []);
+      setOrchestration(orchestrationData.ok ? orchestrationData : null);
       const nextBrokerStatus = brokerData.ok ? brokerData.readiness : brokerData.readiness ?? null;
       setBrokerStatus(nextBrokerStatus);
       setBrokerOverview(brokerData.ok ? brokerData : null);
@@ -884,6 +1310,49 @@ export default function Home() {
     }
   }
 
+  async function runControlPlane() {
+    setOrchestrationRunning(true);
+    setQuantMessage("Running control-plane chain: research, thesis, backtest, risk review, paper gate, and live gate.");
+    try {
+      const symbols = [selected, ...watchlist]
+        .filter(Boolean)
+        .slice(0, 8);
+      const response = await fetch(`/api/control-plane/runs?mode=${brokerMode}`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          symbols: Array.from(new Set(symbols)).join(","),
+          provider,
+          accountSize,
+          riskPct: draft.risk,
+          maxDailyLossPct,
+          lookbackDays: Math.max(60, lookback * 3),
+        }),
+      });
+      const payload = await response.json();
+      if (payload.run) {
+        setOrchestration((current) => ({
+          ok: Boolean(payload.ok),
+          source: payload.source,
+          latest: payload.run,
+          runs: [payload.run, ...(current?.runs ?? []).filter((run) => run.id !== payload.run.id)].slice(0, 3),
+          advisory: payload.advisory,
+          error: payload.error,
+        }));
+      }
+      setQuantMessage(
+        payload.run
+          ? `Control-plane run ${payload.run.status}: ${payload.run.decision.nextAction}`
+          : (payload.error ?? "Control-plane run could not start."),
+      );
+    } catch {
+      setOrchestration({ ok: false, error: "Control-plane run request failed.", latest: null, runs: [] });
+      setQuantMessage("Control-plane run request failed.");
+    } finally {
+      setOrchestrationRunning(false);
+    }
+  }
+
   async function runPaperAgent(symbol?: string) {
     setAgentExecuting(true);
     setAgentMessage("Asking the agent to submit a paper-only order.");
@@ -919,6 +1388,62 @@ export default function Home() {
       void refresh();
     } catch {
       setAgentMessage("Agent paper execution request failed.");
+    } finally {
+      setAgentExecuting(false);
+    }
+  }
+
+  async function runLiveAgent(symbol?: string) {
+    const acknowledgement = window.prompt(
+      "This submits a real-money live broker order if all agent, broker, audit, and pre-trade gates pass. Enter the live execution acknowledgement phrase to continue.",
+    );
+    if (!acknowledgement) {
+      setAgentMessage("Live agent submission canceled before acknowledgement.");
+      return;
+    }
+
+    const confirmed = window.confirm("Submit this live-money agent order now?");
+    if (!confirmed) {
+      setAgentMessage("Live agent submission canceled before order request.");
+      return;
+    }
+
+    setAgentExecuting(true);
+    setAgentMessage("Submitting live-money agent order through armed controls.");
+    try {
+      const response = await fetch(`/api/agent-trader/execute?mode=live`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          symbol,
+          symbols: watchlist.join(","),
+          provider,
+          accountSize,
+          riskPct: draft.risk,
+          maxDailyLossPct,
+          liveAcknowledgement: acknowledgement,
+          confirmLiveAgentTrading: true,
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok || !payload.ok) {
+        setAgentMessage(payload.error ?? "Live agent execution did not run.");
+        if (payload.policy || payload.proposal) {
+          setAgentTrader((current) => ({
+            ok: false,
+            mode: "live",
+            policy: payload.policy ?? current?.policy,
+            proposals: payload.proposal ? [payload.proposal] : current?.proposals,
+            blocked: payload.blocked ?? current?.blocked,
+            error: payload.error,
+          }));
+        }
+        return;
+      }
+      setAgentMessage(`LIVE agent submitted ${payload.proposal?.symbol ?? "the selected"} bracket limit order. Broker id: ${payload.brokerOrder?.id ?? "pending"}`);
+      void refresh();
+    } catch {
+      setAgentMessage("Live agent execution request failed.");
     } finally {
       setAgentExecuting(false);
     }
@@ -1072,6 +1597,7 @@ export default function Home() {
     fusionPredictions.find((prediction) => prediction.direction === "review" && prediction.symbol !== buyDecision?.symbol) ??
     fusionPredictions.find((prediction) => prediction.symbol !== buyDecision?.symbol) ??
     topFusionPrediction;
+  const latestOrchestrationRun = orchestration?.latest ?? orchestration?.runs?.[0] ?? null;
   const topAlgorithmScore = algorithmScores[0];
   const institutionalGrade = institutionalReadiness?.productionInstitutionalReady
     ? "Ready"
@@ -1137,19 +1663,39 @@ export default function Home() {
     }
 
     const tradeable = prediction.direction === "buy" && prediction.action !== "Data Review" && prediction.forecast.units > 0;
+    const riskBudgetDollars = Number(Math.min(accountSize * (draft.risk / 100), accountSize * (maxDailyLossPct / 100)).toFixed(2));
+    const dailyLossCapDollars = Number((accountSize * (maxDailyLossPct / 100)).toFixed(2));
+    const unitRisk = Number(Math.abs(prediction.entry - prediction.stop).toFixed(2));
+    const positionSize =
+      prediction.forecast.units > 0
+        ? `${prediction.forecast.units} units / ${formatUsd(prediction.forecast.notional)} notional`
+        : "0 units / no position";
     return {
       symbol: prediction.symbol,
       name: prediction.name,
       side: "Buy",
       status: tradeable ? "Ready to Watch" : "Blocked",
+      trigger: prediction.entry,
       entry: prediction.entry,
+      entrySignalNeeded: `Fresh ${prediction.symbol} quote remains at or above ${formatUsd(prediction.entry)} while Fusion Alpha stays buy-rated.`,
       stop: prediction.stop,
       target: prediction.target,
       units: prediction.forecast.units,
       notional: prediction.forecast.notional,
+      potentialUnits: prediction.forecast.units,
+      potentialNotional: prediction.forecast.notional,
       maxLoss: prediction.forecast.maxLoss,
       rewardRisk: prediction.rewardRisk ?? 0,
+      riskRewardRatio: prediction.rewardRisk ?? 0,
       riskPct: draft.risk,
+      riskBudgetDollars,
+      dailyLossCapDollars,
+      unitRisk,
+      positionSize,
+      suggestedPositionSize:
+        prediction.forecast.units > 0
+          ? `${positionSize}, risking about ${formatUsd(prediction.forecast.maxLoss)} against a ${formatUsd(riskBudgetDollars)} active risk budget.`
+          : "No suggested size until the forecast has a valid unit count.",
       holdingPeriod: prediction.horizon,
       expectedHold: prediction.expectedHold,
       maxHold: prediction.maxHold,
@@ -1196,8 +1742,9 @@ export default function Home() {
   const topSell = sellLeaders[0];
   const staleStocks = signals.filter((signal) => !signal.dataFresh && signal.market === "Stock/ETF");
   const operationsSummary = trustSummary();
-  const criticalGaps = trustOperationGaps.filter((gap) => gap.priority === "Critical");
-  const proofCoveragePct = Math.round(((operationsSummary.live + operationsSummary.partial * 0.5) / operationsSummary.total) * 100);
+  const criticalGaps = criticalUnresolvedTrustGaps();
+  const sortedTrustMatrix = sortedTrustGaps(trustOperationGaps);
+  const proofCoveragePct = operationsSummary.proofCoveragePct;
   const sizing = selectedQuote
     ? calculatePositionSize({
         accountSize,
@@ -1221,6 +1768,7 @@ export default function Home() {
   const green = quotes.filter((quote) => quote.changePct >= 0).length;
   const feedQuality = selectedQuote?.quality ?? quotes[0]?.quality ?? "Offline";
   const secondsAgo = lastRefreshAt ? Math.max(0, Math.round((clockNow - lastRefreshAt.getTime()) / 1000)) : null;
+  const staleCount = signals.filter((signal) => !signal.dataFresh).length;
 
   useEffect(() => {
     if (!notificationsOn || !topSignal || topSignal.action === "Hold/No Trade") return;
@@ -1366,11 +1914,152 @@ export default function Home() {
     setNotificationsOn(permission === "granted");
   }
 
+  const assistantContext: TradingAssistantDashboardContext = {
+    asOf: new Date().toISOString(),
+    selectedSymbol: selectedQuote?.symbol,
+    provider,
+    brokerMode,
+    feedQuality,
+    secondsAgo,
+    topBuyDecision: predictionBrief(buyDecision),
+    topSellDecision: predictionBrief(sellDecision),
+    tradeTicket: tradeTicketBrief(ticketForFusionPrediction(buyDecision) ?? tradeTicket),
+    buyNow: buyNowSignals.slice(0, 5).map(buyNowBrief),
+    blockedBuyNow: blockedBuyNowSignals.slice(0, 5).map(blockedBuyNowBrief),
+    buyLeads: visibleBuyLeads.slice(0, 5).map(buyLeadBrief),
+    risk: riskStatus?.report
+      ? {
+          equity: riskStatus.report.equity,
+          dailyPnl: riskStatus.report.dailyPnl,
+          dailyPnlPct: riskStatus.report.dailyPnlPct,
+          grossExposure: riskStatus.report.grossExposure,
+          netExposure: riskStatus.report.netExposure,
+          openOrdersNotional: riskStatus.report.openOrdersNotional,
+          riskFlags: riskStatus.report.riskFlags,
+        }
+      : null,
+    broker: brokerStatus
+      ? {
+          mode: brokerStatus.mode,
+          orderPlacementReady: brokerStatus.orderPlacementReady,
+          credentialsConfigured: brokerStatus.credentialsConfigured,
+          liveTradingEnabled: brokerStatus.liveTradingEnabled,
+          liveAckConfigured: brokerStatus.liveAckConfigured,
+          missing: brokerStatus.missing,
+          restrictions: brokerStatus.restrictions,
+        }
+      : null,
+    modelPerformance: modelPerformance?.summary
+      ? {
+          summary: modelPerformance.summary,
+          outcomes: modelPerformance.outcomes?.slice(0, 4) ?? [],
+        }
+      : null,
+    orchestration: latestOrchestrationRun
+      ? {
+          status: latestOrchestrationRun.status,
+          symbol: latestOrchestrationRun.decision.symbol,
+          nextAction: latestOrchestrationRun.decision.nextAction,
+          paperGate: latestOrchestrationRun.decision.paper.status,
+          liveGate: latestOrchestrationRun.decision.live.status,
+          riskApproved: latestOrchestrationRun.decision.live.riskApproved,
+          blockers: latestOrchestrationRun.stages
+            .filter((stage) => stage.status === "blocked" || stage.status === "warning")
+            .map((stage) => stage.summary)
+            .slice(0, 5),
+          referenceChecklist: latestOrchestrationRun.governance.referenceChecklist,
+        }
+      : null,
+    referenceReports: {
+      total: integratedReferenceSummary.total,
+      categories: integratedReferenceSummary.categories,
+      appliedRules: integratedReferenceSummary.appliedRules.slice(0, 8),
+    },
+    news: news.slice(0, 6).map((item) => ({
+      symbol: item.symbol,
+      title: item.title,
+      source: item.source,
+      publishedAt: item.publishedAt,
+    })),
+  };
+
+  async function askAssistant(questionOverride?: string) {
+    const question = (questionOverride ?? assistantDraft).trim();
+    if (!question || assistantLoading) return;
+    const userMessage: AssistantChatMessage = {
+      id: messageId("user"),
+      role: "user",
+      content: question.slice(0, 1600),
+      createdAt: new Date().toISOString(),
+    };
+    const nextMessages = [...assistantMessages, userMessage].slice(-12);
+    setAssistantMessages(nextMessages);
+    setAssistantDraft("");
+    setAssistantError("");
+    setAssistantLoading(true);
+    try {
+      const response = await fetch("/api/assistant/chat", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          messages: nextMessages.map((message) => ({
+            role: message.role,
+            content: message.content,
+          })),
+          context: assistantContext,
+        }),
+      });
+      const payload = await response.json().catch(() => null) as AssistantChatApiResponse | null;
+      if (!response.ok || !payload?.ok) {
+        throw new Error(payload?.error ?? "Analyst chat did not return an answer.");
+      }
+      const assistantMessage: AssistantChatMessage = {
+        id: messageId("assistant"),
+        role: "assistant",
+        content: payload.answer ?? "No answer returned.",
+        createdAt: new Date().toISOString(),
+        model: payload.model ?? payload.configuredModels?.local ?? payload.configuredModels?.primary ?? "local-free-or-gpt-5.2",
+        source: payload.source,
+        advisory: payload.advisory,
+      };
+      setAssistantMessages([...nextMessages, assistantMessage].slice(-20));
+      setAssistantModelLabel(assistantMessage.model ?? "local-free-or-gpt-5.2");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Analyst chat request failed.";
+      setAssistantError(message);
+      const failureMessage: AssistantChatMessage = {
+        id: messageId("assistant"),
+        role: "assistant",
+        content: "I could not reach the analyst chat route. The dashboard data is still intact; retry after the API check clears.",
+        createdAt: new Date().toISOString(),
+        model: "unavailable",
+        source: "client-error",
+        advisory: message,
+      };
+      setAssistantMessages([...nextMessages, failureMessage].slice(-20));
+    } finally {
+      setAssistantLoading(false);
+    }
+  }
+
+  function clearAssistantChat() {
+    setAssistantMessages([assistantWelcomeMessage]);
+    setAssistantDraft("");
+    setAssistantError("");
+  }
+
   return (
-    <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
+    <QuoteHistoryContext.Provider value={quoteHistory}>
+      <main className="min-h-screen overflow-x-hidden bg-[var(--background)] text-[var(--foreground)]">
+      <a
+        href="#overview"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-cyan-300 focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-slate-950"
+      >
+        Skip to dashboard
+      </a>
       <LiveTickerTape quotes={quotes} signals={signals} buyLeads={buyLeads} buyNow={buyNowSignals} secondsAgo={secondsAgo} />
-      <section className="border-b border-[var(--border)] bg-[var(--surface)]">
-        <div className="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8">
+      <section id="overview" className="scroll-mt-14 border-b border-[var(--border)] bg-[var(--surface)]">
+        <div className="mx-auto flex max-w-[1800px] flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <div className="flex items-center gap-2 text-sm text-[var(--info)]">
@@ -1383,17 +2072,19 @@ export default function Home() {
               <h1 className="mt-2 text-3xl font-semibold tracking-normal text-white sm:text-4xl">
                 Live Trading Cockpit
               </h1>
-              <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--text-secondary)]">
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--text-secondary)]" role="status" aria-live="polite">
                 {secondsAgo === null ? "Waiting for quote refresh" : `Quotes ${secondsAgo}s old`} | {feedQuality} | limit orders only.
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={refresh}
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-md border border-[var(--border-strong)] bg-white px-4 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-cyan-100"
+                disabled={loading}
+                aria-busy={loading}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-md border border-[var(--border-strong)] bg-white px-4 text-sm font-semibold text-slate-950 shadow-sm transition hover:bg-cyan-100 disabled:cursor-wait disabled:bg-slate-300 disabled:text-slate-700"
               >
                 <RefreshCcw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-                Refresh
+                {loading ? "Refreshing" : "Refresh"}
               </button>
               <button
                 onClick={exportWorkspace}
@@ -1418,6 +2109,23 @@ export default function Home() {
               />
             </div>
           </div>
+          <DashboardJumpNav sections={dashboardSections} />
+          <CommandStatusRail
+            status={status}
+            lastRefreshAt={lastRefreshAt}
+            selected={selected}
+            feedQuality={feedQuality}
+            staleCount={staleCount}
+            brokerStatus={brokerStatus}
+            brokerMessage={brokerMessage}
+          />
+          <InvestmentGradeTruthPanel
+            selectedQuote={selectedQuote}
+            brokerStatus={brokerStatus}
+            brokerOverview={brokerOverview}
+            opsStatus={opsStatus}
+            secondsAgo={secondsAgo}
+          />
           <DecisionCockpitHero
             buyDecision={buyDecision}
             sellDecision={sellDecision}
@@ -1430,11 +2138,15 @@ export default function Home() {
             paperTradesCount={paperTrades.length}
             agentExecuting={agentExecuting}
             placingOrder={placingOrder}
+            buyTicket={ticketForFusionPrediction(buyDecision) ?? tradeTicket}
+            orchestrationRun={latestOrchestrationRun}
+            orchestrationRunning={orchestrationRunning}
             onSelect={selectFusionDecision}
             onPaperDecision={(prediction) => void handleFusionPaperDecision(prediction)}
             onLiveDecision={(prediction) => void handleFusionLiveDecision(prediction)}
+            onRunOrchestration={() => void runControlPlane()}
           />
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
+          <div className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
             <Metric icon={Activity} label="Feed" value={status} />
             <Metric icon={TrendingUp} label="Market Scan" value={`${green}/${quotes.length || watchlist.length} green, ${movers} movers`} />
             <Metric icon={Gauge} label="Proof Coverage" value={`${proofCoveragePct}% live/partial`} />
@@ -1443,15 +2155,16 @@ export default function Home() {
             <Metric icon={Brain} label="Algorithm Council" value={topAlgorithmScore ? `${topAlgorithmScore.symbol} ${topAlgorithmScore.ensembleScore}/100` : "Loading"} />
             <Metric icon={ShieldCheck} label="Institutional Gates" value={institutionalGrade} />
             <Metric icon={ServerCog} label="Research Stack" value={researchStack ? `${researchStack.configured}/${researchStack.total} ${researchStack.grade}` : "Checking"} />
+            <Metric icon={GitBranch} label="Control Plane" value={latestOrchestrationRun ? orchestrationStatusLabel(latestOrchestrationRun.status) : "No run"} />
           </div>
           <TrustReadinessStrip summary={operationsSummary} brokerStatus={brokerStatus} aitableStatus={aitableStatus} />
           <ProductionOpsStrip ops={opsStatus} risk={riskStatus} performance={modelPerformance} />
         </div>
       </section>
 
-      <section className="border-b border-[var(--border)] bg-[#090d12]">
-        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(20rem,0.85fr)]">
+      <section id="actions" className="scroll-mt-14 border-b border-[var(--border)] bg-[#090d12]">
+        <div className="mx-auto max-w-[1800px] px-4 py-4 sm:px-6 lg:px-8">
+          <div className="grid min-w-0 items-start gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(20rem,0.85fr)]">
             <FastActionQueue
               buyNow={buyNowSignals}
               buyLead={topBuyLead}
@@ -1485,9 +2198,9 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="mx-auto grid max-w-7xl gap-4 px-4 py-5 sm:px-6 lg:grid-cols-[1.5fr_0.9fr] lg:px-8">
-        <div className="space-y-4">
-          <Panel>
+      <section className="mx-auto grid max-w-[1800px] items-start gap-4 px-4 py-5 sm:px-6 lg:px-8">
+        <div className="grid min-w-0 gap-4">
+          <Panel id="intelligence" className="order-5">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <SectionTitle icon={Sparkles} title="Fusion Alpha Command" />
@@ -1511,16 +2224,16 @@ export default function Home() {
             />
           </Panel>
 
-          <Panel>
+          <Panel className="order-6">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <SectionTitle icon={Bot} title="AI Agent Trading" />
                 <p className="mt-1 text-sm leading-6 text-slate-400">
-                  Agents can submit paper orders when Alpaca paper execution is ready. Manual live orders go through the Broker Execution Rail.
+                  Agents can submit paper orders when Alpaca paper execution is ready. Live-money agent orders require explicit arming and per-order acknowledgement.
                 </p>
               </div>
               <div className="rounded-md border border-white/10 bg-black/20 px-3 py-2 text-xs text-slate-400">
-                {agentTrader?.policy?.liveAutonomyAllowed ? "Live agent autonomy on" : "Manual live orders only"}
+                {agentTrader?.policy?.liveAutonomyAllowed ? "Live agent armed" : "Live agent locked"}
               </div>
             </div>
             <AgentTradingPanel
@@ -1528,10 +2241,11 @@ export default function Home() {
               message={agentMessage}
               executing={agentExecuting}
               onRunPaperAgent={(symbol) => void runPaperAgent(symbol)}
+              onRunLiveAgent={(symbol) => void runLiveAgent(symbol)}
             />
           </Panel>
 
-          <Panel>
+          <Panel className="order-7">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <SectionTitle icon={Brain} title="Algorithm Council" />
@@ -1546,7 +2260,7 @@ export default function Home() {
             <AlgorithmCouncilPanel council={algorithmCouncil} />
           </Panel>
 
-          <Panel>
+          <Panel className="order-8">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <SectionTitle icon={ShieldCheck} title="Institutional Gates" />
@@ -1561,12 +2275,12 @@ export default function Home() {
             <InstitutionalReadinessPanel readiness={institutionalReadiness} />
           </Panel>
 
-          <Panel>
+          <Panel className="order-9">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <SectionTitle icon={ServerCog} title="Research Stack" />
                 <p className="mt-1 text-sm leading-6 text-slate-400">
-                  Paid providers turn on when credentials exist; public fallbacks and external worker hooks stay visible so missing licenses are not confused with live proof.
+                  Free alternatives run first; paid providers turn on only when selected or credentialed, and missing licenses stay separate from research proof.
                 </p>
               </div>
               <div className="rounded-md border border-white/10 bg-black/20 px-3 py-2 text-xs text-slate-400">
@@ -1576,7 +2290,7 @@ export default function Home() {
             <ResearchStackPanel stack={researchStack} autoResearch={autoResearch} />
           </Panel>
 
-          <Panel>
+          <Panel className="order-10">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <SectionTitle icon={Brain} title="Ising Basket Optimizer" />
@@ -1591,7 +2305,20 @@ export default function Home() {
             <IsingBasketPanel basket={isingBasket} />
           </Panel>
 
-          <Panel>
+          <Panel id="analyst-chat" className="order-11">
+            <AssistantChatPanel
+              messages={assistantMessages}
+              draft={assistantDraft}
+              loading={assistantLoading}
+              error={assistantError}
+              modelLabel={assistantModelLabel}
+              onDraftChange={setAssistantDraft}
+              onAsk={(question) => void askAssistant(question)}
+              onClear={clearAssistantChat}
+            />
+          </Panel>
+
+          <Panel id="leads" className="order-1">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <SectionTitle icon={TrendingUp} title="Live Buy Leads" />
@@ -1603,14 +2330,14 @@ export default function Home() {
                 {activeBuyLeads.length} active leads
               </div>
             </div>
-            <div className="mt-4 grid gap-3 lg:grid-cols-5">
+            <div className="mt-4 grid gap-3">
               {visibleBuyLeads.map((lead, index) => (
                 <BuyLeadCard key={lead.symbol} lead={lead} rank={index + 1} />
               ))}
             </div>
           </Panel>
 
-          <Panel>
+          <Panel className="order-2">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <SectionTitle icon={ListOrdered} title="Live Buy / Sell Leaderboard" />
@@ -1628,7 +2355,7 @@ export default function Home() {
             </div>
           </Panel>
 
-          <Panel>
+          <Panel id="operations" className="order-3">
             <SectionTitle icon={ServerCog} title="Always-On Trading OS" />
             <div className="mt-4 grid gap-3 lg:grid-cols-3">
               <div className="rounded-md border border-white/10 bg-white/[0.03] p-3">
@@ -1688,7 +2415,7 @@ export default function Home() {
             </div>
           </Panel>
 
-          <Panel>
+          <Panel id="risk" className="order-4">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <SectionTitle icon={ShieldCheck} title="Trust Matrix" />
@@ -1697,10 +2424,17 @@ export default function Home() {
                 </p>
               </div>
               <span className="rounded-sm border border-amber-300/25 bg-amber-300/10 px-3 py-2 text-xs font-semibold text-amber-100">
-                {criticalGaps.length} critical systems tracked
+                {criticalGaps.length} critical issue{criticalGaps.length === 1 ? "" : "s"} open
               </span>
             </div>
-            <TrustOperationsTable gaps={trustOperationGaps} />
+            <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+              <MiniStat label="Issue Status" value={`${operationsSummary.live}/${operationsSummary.total} live`} tone="green" />
+              <MiniStat label="Open Proof" value={`${operationsSummary.unresolved}`} tone={operationsSummary.unresolved ? "amber" : "green"} />
+              <MiniStat label="Critical Open" value={`${operationsSummary.criticalUnresolved}`} tone={operationsSummary.criticalUnresolved ? "red" : "green"} />
+              <MiniStat label="Proof Ready" value={`${operationsSummary.proven}/${operationsSummary.total}`} tone={operationsSummary.proven === operationsSummary.total ? "green" : "blue"} />
+              <MiniStat label="Proof Coverage" value={`${operationsSummary.proofCoveragePct}%`} tone={operationsSummary.proofCoveragePct >= 70 ? "green" : "amber"} />
+            </div>
+            <TrustOperationsTable gaps={sortedTrustMatrix} />
           </Panel>
 
           <Panel>
@@ -1770,8 +2504,11 @@ export default function Home() {
                 onChange={(event) => setProvider(event.target.value)}
                 className="h-10 rounded-md border border-white/10 bg-black/30 px-3 text-sm text-white outline-none focus:ring-2 focus:ring-cyan-400"
               >
-                <option value="auto">Auto best available</option>
+                <option value="auto">Auto free-first public</option>
+                <option value="paid">Paid/entitled first</option>
                 <option value="alpaca">Alpaca if keys exist</option>
+                <option value="polygon">Polygon if key exists</option>
+                <option value="twelvedata">Twelve Data if key exists</option>
                 <option value="nasdaq">Nasdaq public quote</option>
                 <option value="cnbc">CNBC public quote</option>
                 <option value="yahoo">Yahoo unofficial</option>
@@ -1779,9 +2516,9 @@ export default function Home() {
               </select>
             </div>
             <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <QualityBadge label="Alpaca" value="Partial or SIP" ready={provider === "alpaca"} />
-              <QualityBadge label="Nasdaq" value="Public real-time flag" ready={provider === "nasdaq" || provider === "auto"} />
-              <QualityBadge label="CNBC" value="Public timestamped" ready={provider === "cnbc" || provider === "auto"} />
+              <QualityBadge label="Free-first" value="Default no paid keys" ready={provider === "auto" || provider === "free"} />
+              <QualityBadge label="Alpaca" value="IEX/free or SIP" ready={provider === "alpaca" || provider === "paid"} />
+              <QualityBadge label="Nasdaq/CNBC" value="Public timestamped" ready={provider === "nasdaq" || provider === "cnbc" || provider === "auto"} />
               <QualityBadge label="Yahoo" value="Unofficial pre/post" ready={provider === "yahoo" || provider === "auto"} />
               <QualityBadge label="Stooq" value="Delayed fallback" ready />
             </div>
@@ -1835,7 +2572,7 @@ export default function Home() {
                         <div className="text-base font-semibold text-white">{quote.symbol}</div>
                         <div className="truncate text-xs text-slate-400">{quote.name}</div>
                       </div>
-                      <span className={`rounded-sm px-2 py-1 text-[10px] font-bold uppercase tracking-wide ${cardAction.className}`}>
+                      <span className={`rounded-sm px-2 py-1 text-xs font-bold uppercase ${cardAction.className}`}>
                         {cardAction.label}
                       </span>
                     </div>
@@ -1856,6 +2593,7 @@ export default function Home() {
                     <div className="mt-3 rounded-sm bg-black/20 px-2 py-1 text-xs text-slate-300">
                       {quote.quality} | {quote.source}
                     </div>
+                    <SymbolSparkline symbol={quote.symbol} price={quote.price} changePct={quote.changePct} compact />
                   </button>
                 );
               })}
@@ -1929,6 +2667,14 @@ export default function Home() {
                   <Sparkles className={`h-4 w-4 ${fusionRunning ? "animate-spin" : ""}`} />
                   Run Fusion Alpha
                 </button>
+                <button
+                  onClick={() => void runControlPlane()}
+                  disabled={orchestrationRunning}
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-md border border-violet-300/40 bg-violet-300 px-3 text-sm font-semibold text-slate-950 transition hover:bg-violet-200 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400 sm:col-span-2"
+                >
+                  <GitBranch className={`h-4 w-4 ${orchestrationRunning ? "animate-spin" : ""}`} />
+                  Run Control Plane
+                </button>
               </div>
             </div>
             <div className="mt-4 rounded-md border border-white/10 bg-black/25 p-3 text-sm leading-6 text-slate-300" role="status">
@@ -1962,7 +2708,7 @@ export default function Home() {
             </div>
           </Panel>
 
-          <Panel>
+          <Panel id="journal">
             <SectionTitle icon={ClipboardList} title="Paper Trade Journal" />
             <div className="mt-4 grid gap-3 lg:grid-cols-2">
               <div className="space-y-3">
@@ -2077,7 +2823,7 @@ export default function Home() {
           </Panel>
         </div>
 
-        <aside className="space-y-4">
+        <aside className="grid min-w-0 gap-4 lg:grid-cols-2 xl:grid-cols-3">
           <Panel>
             <SectionTitle icon={ListOrdered} title="Build Order" />
             <div className="mt-4 space-y-3">
@@ -2159,6 +2905,11 @@ export default function Home() {
           </Panel>
 
           <Panel>
+            <SectionTitle icon={FileText} title="Reference Reports Applied" />
+            <ReferenceReportsPanel />
+          </Panel>
+
+          <Panel>
             <SectionTitle icon={Brain} title="Intelligence Brief" />
             <div className="mt-4 grid gap-3">
               {macroSignals.map((signal) => (
@@ -2223,12 +2974,351 @@ export default function Home() {
           </Panel>
         </aside>
       </section>
-    </main>
+      </main>
+    </QuoteHistoryContext.Provider>
   );
 }
 
-function Panel({ children }: { children: React.ReactNode }) {
-  return <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm shadow-black/20">{children}</div>;
+function Panel({ children, id, className = "order-[20]" }: { children: React.ReactNode; id?: string; className?: string }) {
+  return (
+    <div id={id} className={`${className} min-w-0 scroll-mt-16 overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm shadow-black/20`}>
+      {children}
+    </div>
+  );
+}
+
+function AssistantChatPanel({
+  messages,
+  draft,
+  loading,
+  error,
+  modelLabel,
+  onDraftChange,
+  onAsk,
+  onClear,
+}: {
+  messages: AssistantChatMessage[];
+  draft: string;
+  loading: boolean;
+  error: string;
+  modelLabel: string;
+  onDraftChange: (value: string) => void;
+  onAsk: (question?: string) => void;
+  onClear: () => void;
+}) {
+  const canAsk = draft.trim().length > 0 && !loading;
+  const help = "Ask questions that are not already surfaced in the dashboard. The assistant answers from current cockpit context, live ticket fields, risk state, orchestration runs, reference reports, and visible market data.";
+  return (
+    <div title={help} aria-label={help}>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <SectionTitle icon={MessageSquare} title="Analyst Chat" />
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+            <span>Model: {modelLabel}</span>
+            <HelpTip text={help} />
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onClear}
+          className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-white/10 bg-white/[0.03] text-slate-400 transition hover:border-rose-300/40 hover:text-rose-100"
+          title="Clear chat"
+          aria-label="Clear analyst chat"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
+      </div>
+      <div className="mt-4 max-h-96 space-y-3 overflow-auto pr-1">
+        {messages.map((message) => (
+          <div
+            key={message.id}
+            className={`rounded-md border p-3 ${
+              message.role === "user"
+                ? "border-cyan-300/20 bg-cyan-300/10"
+                : "border-white/10 bg-white/[0.03]"
+            }`}
+          >
+            <div className="mb-2 flex items-center justify-between gap-2 text-xs">
+              <span className={message.role === "user" ? "font-semibold text-cyan-100" : "font-semibold text-emerald-100"}>
+                {message.role === "user" ? "You" : "Analyst"}
+              </span>
+              {message.role === "assistant" && message.model && (
+                <span className="rounded-sm bg-black/25 px-2 py-1 font-mono text-xs text-slate-300">{message.model}</span>
+              )}
+            </div>
+            <div className="whitespace-pre-wrap break-words text-sm leading-6 text-slate-200">{message.content}</div>
+            {message.advisory && <div className="mt-2 text-xs leading-5 text-amber-200">{message.advisory}</div>}
+          </div>
+        ))}
+        {loading && (
+          <div className="rounded-md border border-white/10 bg-white/[0.03] p-3 text-sm text-slate-400">
+            Thinking through the current cockpit state...
+          </div>
+        )}
+      </div>
+      {error && <div className="mt-3 rounded-md border border-rose-300/20 bg-rose-300/10 p-3 text-sm text-rose-100">{error}</div>}
+      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+        {assistantQuickQuestions.map((question) => (
+          <button
+            key={question}
+            type="button"
+            disabled={loading}
+            onClick={() => onAsk(question)}
+            className="rounded-md border border-white/10 bg-white/[0.03] px-3 py-2 text-left text-xs leading-5 text-slate-300 transition hover:border-cyan-300/50 hover:text-white disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-white"
+          >
+            {question}
+          </button>
+        ))}
+      </div>
+      <form
+        className="mt-4 grid gap-2"
+        onSubmit={(event) => {
+          event.preventDefault();
+          onAsk();
+        }}
+      >
+        <textarea
+          value={draft}
+          onChange={(event) => onDraftChange(event.target.value)}
+          maxLength={1600}
+          placeholder="Ask about risk, evidence, blockers, sizing, broker gates, or a symbol."
+          className="min-h-24 w-full resize-none rounded-md border border-white/10 bg-black/30 p-3 text-sm leading-6 text-white outline-none transition focus:border-cyan-300/60 focus:ring-2 focus:ring-cyan-300/20"
+        />
+        <button
+          type="submit"
+          disabled={!canAsk}
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-cyan-300 px-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
+        >
+          <Send className="h-4 w-4" />
+          Ask
+        </button>
+      </form>
+    </div>
+  );
+}
+
+function ReferenceReportsPanel() {
+  return (
+    <div className="mt-4 space-y-3">
+      <div className="grid grid-cols-3 gap-2 text-xs">
+        <MiniStat label="Reports" value={`${integratedReferenceSummary.total}`} tone="blue" />
+        <MiniStat label="Research" value={`${integratedReferenceSummary.categories.research}`} tone="green" />
+        <MiniStat label="Gates" value={`${integratedReferenceSummary.categories.execution + integratedReferenceSummary.categories.risk}`} tone="amber" />
+      </div>
+      <div className="max-h-80 divide-y divide-white/10 overflow-auto rounded-md border border-white/10">
+        {referenceReportLessons.map((lesson) => (
+          <div key={lesson.key} className="p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="font-semibold text-white">{lesson.title}</div>
+              <span className="rounded-sm bg-black/30 px-2 py-1 text-xs uppercase text-cyan-200">{lesson.category}</span>
+            </div>
+            <div className="mt-1 text-xs text-slate-500">{lesson.source}</div>
+            <p className="mt-2 text-sm leading-6 text-slate-300">{lesson.systemRule}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DashboardJumpNav({ sections }: { sections: typeof dashboardSections }) {
+  return (
+    <nav aria-label="Dashboard sections" className="sticky top-11 z-30 -mx-4 border-y border-white/10 bg-[var(--surface)]/95 px-4 py-2 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        {sections.map((section) => (
+          <a
+            key={section.id}
+            href={`#${section.id}`}
+            title={`Jump to the ${section.label} section.`}
+            aria-label={`Jump to the ${section.label} section.`}
+            className="inline-flex h-9 shrink-0 items-center rounded-md border border-white/10 bg-white/[0.03] px-3 text-sm font-semibold text-slate-200 transition hover:border-cyan-300/60 hover:text-white"
+          >
+            {section.label}
+          </a>
+        ))}
+      </div>
+    </nav>
+  );
+}
+
+function HelpTip({ text }: { text: string }) {
+  return (
+    <span className="group relative inline-flex shrink-0 items-center">
+      <span
+        role="note"
+        aria-label={text}
+        title={text}
+        className="inline-flex h-5 w-5 items-center justify-center rounded-sm border border-white/10 bg-white/[0.03] text-slate-400 transition hover:border-cyan-300/60 hover:text-cyan-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-300"
+      >
+        <CircleHelp className="h-3.5 w-3.5" aria-hidden="true" />
+      </span>
+      <span className="pointer-events-none absolute left-1/2 top-7 z-50 hidden w-72 -translate-x-1/2 rounded-md border border-white/10 bg-slate-950 p-3 text-xs leading-5 text-slate-200 shadow-xl shadow-black/50 group-hover:block group-focus-within:block">
+        {text}
+      </span>
+    </span>
+  );
+}
+
+function ProvenanceBadge({ kind, label }: { kind: "live" | "derived" | "proxy" | "blocked"; label: string }) {
+  const classes =
+    kind === "live"
+      ? "border-emerald-300/25 bg-emerald-300/10 text-emerald-100"
+      : kind === "derived"
+        ? "border-cyan-300/25 bg-cyan-300/10 text-cyan-100"
+        : kind === "proxy"
+          ? "border-amber-300/25 bg-amber-300/10 text-amber-100"
+          : "border-rose-300/25 bg-rose-300/10 text-rose-100";
+  const help = provenanceExplanations[kind];
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-sm border px-2 py-1 font-semibold ${classes}`} title={`${label}. ${help}`} aria-label={`${label}. ${help}`}>
+      <span className="uppercase">{kind}</span>
+      <span className="text-slate-300">{label}</span>
+      <HelpTip text={help} />
+    </span>
+  );
+}
+
+function CommandStatusRail({
+  status,
+  lastRefreshAt,
+  selected,
+  feedQuality,
+  staleCount,
+  brokerStatus,
+  brokerMessage,
+}: {
+  status: string;
+  lastRefreshAt: Date | null;
+  selected: string;
+  feedQuality: string;
+  staleCount: number;
+  brokerStatus: BrokerStatus | null;
+  brokerMessage: string;
+}) {
+  const brokerReady = Boolean(brokerStatus?.orderPlacementReady);
+  return (
+    <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-raised)] p-3" role="status" aria-live="polite">
+      <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-slate-400">
+        <ProvenanceBadge kind="live" label="Quotes / broker / refresh are factual feeds" />
+        <ProvenanceBadge kind="derived" label="Scores are app-derived research signals" />
+        <ProvenanceBadge kind="proxy" label="Proxy means external proof is not connected" />
+      </div>
+      <div className="grid gap-2 text-sm md:grid-cols-2 xl:grid-cols-5">
+        <StatusLine label="System" value={status} ready={!status.toLowerCase().includes("issue") && !status.toLowerCase().includes("unavailable")} />
+        <StatusLine label="Selected" value={selected} ready />
+        <StatusLine label="Feed" value={`${feedQuality}${staleCount ? ` / ${staleCount} stale` : ""}`} ready={staleCount === 0} />
+        <StatusLine label="Broker" value={brokerReady ? `${brokerStatus?.mode.toUpperCase()} armed` : "Locked"} ready={brokerReady} />
+        <StatusLine label="Refresh" value={lastRefreshAt ? lastRefreshAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" }) : "Pending"} ready={Boolean(lastRefreshAt)} />
+      </div>
+      {!brokerReady && (
+        <div className="mt-2 rounded-sm border border-amber-300/20 bg-amber-300/10 px-3 py-2 text-xs leading-5 text-amber-100">
+          {brokerMessage}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function InvestmentGradeTruthPanel({
+  selectedQuote,
+  brokerStatus,
+  brokerOverview,
+  opsStatus,
+  secondsAgo,
+}: {
+  selectedQuote: Quote | undefined;
+  brokerStatus: BrokerStatus | null;
+  brokerOverview: BrokerOverview | null;
+  opsStatus: OpsStatus | null;
+  secondsAgo: number | null;
+}) {
+  const quoteInvestmentGrade = Boolean(
+    selectedQuote &&
+      selectedQuote.quality === "Execution Grade" &&
+      selectedQuote.source !== "Offline fallback" &&
+      secondsAgo !== null &&
+      secondsAgo <= 2,
+  );
+  const brokerFactReady = Boolean(brokerStatus?.credentialsConfigured && brokerOverview?.ok);
+  const licensedData = Boolean(opsStatus?.liveData?.licensedSip);
+  const admittedFacts = [
+    selectedQuote
+      ? {
+          label: "Selected quote",
+          value: `${selectedQuote.symbol} ${formatUsd(selectedQuote.price)}`,
+          source: selectedQuote.source,
+          grade: quoteInvestmentGrade ? "admitted" : "rejected",
+          reason: quoteInvestmentGrade
+            ? "Execution-grade quote, fresh timestamp, provider source present."
+            : `Not admitted: ${selectedQuote.quality}; investment grade requires licensed SIP/Polygon/Execution Grade and <=2s freshness.`,
+        }
+      : {
+          label: "Selected quote",
+          value: "Unavailable",
+          source: "No current quote",
+          grade: "rejected",
+          reason: "No price can be investment-grade without a current sourced quote.",
+        },
+    {
+      label: "Market-data entitlement",
+      value: licensedData ? "Licensed" : "Not licensed",
+      source: "Ops status",
+      grade: licensedData ? "admitted" : "rejected",
+      reason: licensedData
+        ? "Ops reports SIP or equivalent licensed market-data entitlement."
+        : "Public, IEX-only, delayed, unofficial, or fallback feeds are research-only.",
+    },
+    {
+      label: "Broker rail",
+      value: brokerFactReady ? `${brokerStatus?.mode.toUpperCase()} verified` : "Not verified",
+      source: "Broker API readiness",
+      grade: brokerFactReady ? "admitted" : "rejected",
+      reason: brokerFactReady
+        ? "Broker API responded and credentials are configured."
+        : "Broker facts require a successful authenticated broker API response.",
+    },
+  ] satisfies Array<{ label: string; value: string; source: string; grade: "admitted" | "rejected"; reason: string }>;
+  const admittedCount = admittedFacts.filter((fact) => fact.grade === "admitted").length;
+
+  return (
+    <div className="rounded-lg border border-amber-300/25 bg-amber-300/10 p-3">
+      <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="h-5 w-5 text-amber-200" />
+            <h2 className="text-lg font-semibold text-white">Investment-Grade Truth Gate</h2>
+            <HelpTip text="Only externally sourced, timestamped, licensed or official facts are admitted here. Model scores, proxy lanes, forecasts, and generated recommendations are excluded from investment-grade truth." />
+          </div>
+          <p className="mt-1 max-w-4xl text-sm leading-6 text-amber-50">
+            {admittedCount}/3 facts admitted. Trading signals remain research-only unless every relevant fact is sourced, fresh, licensed or official, and independently verifiable.
+          </p>
+        </div>
+        <span className="rounded-sm border border-amber-200/30 bg-black/25 px-3 py-2 text-xs font-semibold uppercase text-amber-100">
+          Ultra-truth mode
+        </span>
+      </div>
+      <div className="mt-3 grid gap-2 lg:grid-cols-3">
+        {admittedFacts.map((fact) => (
+          <div key={fact.label} className="rounded-md border border-white/10 bg-black/20 p-3" title={fact.reason} aria-label={`${fact.label}. ${fact.value}. ${fact.reason}`}>
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-2 text-sm font-semibold text-white">
+                <span className="truncate">{fact.label}</span>
+                <HelpTip text={fact.reason} />
+              </div>
+              <span className={`shrink-0 rounded-sm px-2 py-1 text-xs font-bold uppercase ${fact.grade === "admitted" ? "bg-emerald-300 text-slate-950" : "bg-rose-300/20 text-rose-100"}`}>
+                {fact.grade}
+              </span>
+            </div>
+            <div className="mt-2 truncate font-mono text-base text-white">{fact.value}</div>
+            <div className="mt-1 truncate text-xs text-slate-400">Source: {fact.source}</div>
+          </div>
+        ))}
+      </div>
+      <div className="mt-3 rounded-sm border border-white/10 bg-black/20 px-3 py-2 text-xs leading-5 text-slate-300">
+        Excluded from investment-grade truth: Fusion score, Evidence Confidence, buy/sell decisions, forecasts, proxy engine lanes, public quote composites, unofficial feeds, and any value without source provenance.
+      </div>
+    </div>
+  );
 }
 
 function DecisionCockpitHero({
@@ -2243,9 +3333,13 @@ function DecisionCockpitHero({
   paperTradesCount,
   agentExecuting,
   placingOrder,
+  buyTicket,
+  orchestrationRun,
+  orchestrationRunning,
   onSelect,
   onPaperDecision,
   onLiveDecision,
+  onRunOrchestration,
 }: {
   buyDecision: FusionPrediction | undefined;
   sellDecision: FusionPrediction | undefined;
@@ -2258,21 +3352,35 @@ function DecisionCockpitHero({
   paperTradesCount: number;
   agentExecuting: boolean;
   placingOrder: boolean;
+  buyTicket: TradeTicket | null;
+  orchestrationRun: OrchestrationRun | null;
+  orchestrationRunning: boolean;
   onSelect: (prediction: FusionPrediction | undefined) => void;
   onPaperDecision: (prediction: FusionPrediction | undefined) => void;
   onLiveDecision: (prediction: FusionPrediction | undefined) => void;
+  onRunOrchestration: () => void;
 }) {
   const canBuy = Boolean(buyDecision && buyDecision.direction === "buy" && buyDecision.action !== "Data Review");
   const paperReady = Boolean(agentTrader?.policy?.paperAutomationReady || (brokerStatus?.mode === "paper" && brokerStatus.orderPlacementReady));
   const liveConfigured = Boolean(brokerStatus?.credentialsConfigured && brokerStatus.liveTradingEnabled && brokerStatus.liveAckConfigured);
   const liveReady = Boolean(brokerMode === "live" ? brokerStatus?.orderPlacementReady : liveConfigured);
   const quoteAge = secondsAgo === null ? "Waiting" : `${secondsAgo}s`;
+  const orchestrationTone = orchestrationRun
+    ? orchestrationRun.status === "ready-for-paper"
+      ? "green"
+      : orchestrationRun.status === "blocked"
+        ? "red"
+        : orchestrationRun.status === "no-action"
+          ? "plain"
+          : "amber"
+    : "amber";
 
   return (
-    <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(20rem,0.85fr)]">
+    <div className="grid min-w-0 items-stretch gap-4 xl:grid-cols-2">
       <HeroDecisionCard
         intent="buy"
         prediction={buyDecision}
+        ticket={buyTicket}
         primary
         footer={
           <div className="grid gap-2 sm:grid-cols-2">
@@ -2296,48 +3404,73 @@ function DecisionCockpitHero({
         }
       />
 
-      <div className="grid gap-4">
-        <HeroDecisionCard
-          intent="sell"
-          prediction={sellDecision}
-          footer={
-            <button
-              onClick={() => onSelect(sellDecision)}
-              disabled={!sellDecision}
-              className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md border border-rose-300/35 bg-rose-300/10 px-3 text-sm font-semibold text-rose-100 transition hover:border-rose-200 disabled:cursor-not-allowed disabled:border-slate-700 disabled:text-slate-500"
-            >
-              <TrendingDown className="h-4 w-4" />
-              Review Sell / Avoid
-            </button>
-          }
-        />
+      <HeroDecisionCard
+        intent="sell"
+        prediction={sellDecision}
+        footer={
+          <button
+            onClick={() => onSelect(sellDecision)}
+            disabled={!sellDecision}
+            className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-md border border-rose-300/35 bg-rose-300/10 px-3 text-sm font-semibold text-rose-100 transition hover:border-rose-200 disabled:cursor-not-allowed disabled:border-slate-700 disabled:text-slate-500"
+          >
+            <TrendingDown className="h-4 w-4" />
+            Review Sell / Avoid
+          </button>
+        }
+      />
 
-        <div className="rounded-md border border-white/10 bg-black/20 p-3">
-          <div className="grid gap-2 sm:grid-cols-2">
+      <div className="min-w-0 rounded-md border border-white/10 bg-black/20 p-3 xl:col-span-2">
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+          <ReadinessCell
+            label="Paper"
+            value={paperReady ? "Ready" : "Gated"}
+            detail={`${paperTradesCount} saved watches`}
+            tone={paperReady ? "green" : "amber"}
+          />
+          <ReadinessCell
+            label="Live"
+            value={liveReady ? "Ready" : "Gated"}
+            detail={`${brokerMode.toUpperCase()} rail`}
+            tone={liveReady ? "green" : "red"}
+          />
+          <ReadinessCell
+            label="Feed"
+            value={feedQuality}
+            detail={`Age ${quoteAge}`}
+            tone={feedQuality === "Execution Grade" || feedQuality === "Public Real-Time" ? "green" : "amber"}
+          />
+          <ReadinessCell
+            label="Exposure"
+            value={`${brokerOverview?.positions?.length ?? 0} positions`}
+            detail={`${brokerOverview?.orders?.length ?? 0} open orders`}
+            tone={(brokerOverview?.positions?.length ?? 0) > 0 ? "blue" : "plain"}
+          />
+        </div>
+        <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto] sm:items-center">
+          <div className="grid gap-1 text-xs text-slate-300 sm:grid-cols-3">
+            {(orchestrationRun?.stages ?? []).slice(0, 6).map((stage) => (
+              <div key={stage.key} className="flex min-w-0 items-center gap-2 rounded-sm bg-white/[0.03] px-2 py-1">
+                <span className={`h-2 w-2 shrink-0 rounded-full ${stageDotClass(stage.status)}`} />
+                <span className="truncate">{stage.label}</span>
+              </div>
+            ))}
+            {!orchestrationRun && <div className="rounded-sm bg-white/[0.03] px-2 py-1 text-slate-400">No chain run yet</div>}
+          </div>
+          <div className="flex flex-col gap-2 sm:items-end">
             <ReadinessCell
-              label="Paper"
-              value={paperReady ? "Ready" : "Gated"}
-              detail={`${paperTradesCount} saved watches`}
-              tone={paperReady ? "green" : "amber"}
+              label="Control Plane"
+              value={orchestrationRun ? orchestrationStatusLabel(orchestrationRun.status) : "No run"}
+              detail={orchestrationRun ? `${orchestrationRun.decision.symbol ?? "watchlist"} / live ${gateLabel(orchestrationRun.decision.live.status)}` : "watchlist"}
+              tone={orchestrationTone}
             />
-            <ReadinessCell
-              label="Live"
-              value={liveReady ? "Ready" : "Gated"}
-              detail={`${brokerMode.toUpperCase()} rail`}
-              tone={liveReady ? "green" : "red"}
-            />
-            <ReadinessCell
-              label="Feed"
-              value={feedQuality}
-              detail={`Age ${quoteAge}`}
-              tone={feedQuality === "Execution Grade" || feedQuality === "Public Real-Time" ? "green" : "amber"}
-            />
-            <ReadinessCell
-              label="Exposure"
-              value={`${brokerOverview?.positions?.length ?? 0} positions`}
-              detail={`${brokerOverview?.orders?.length ?? 0} open orders`}
-              tone={(brokerOverview?.positions?.length ?? 0) > 0 ? "blue" : "plain"}
-            />
+            <button
+              onClick={onRunOrchestration}
+              disabled={orchestrationRunning}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-violet-300/35 bg-violet-300/10 px-3 text-sm font-semibold text-violet-100 transition hover:border-violet-200 disabled:cursor-not-allowed disabled:border-slate-700 disabled:text-slate-500"
+            >
+              <GitBranch className={`h-4 w-4 ${orchestrationRunning ? "animate-spin" : ""}`} />
+              {orchestrationRunning ? "Running" : "Run Chain"}
+            </button>
           </div>
         </div>
       </div>
@@ -2348,11 +3481,13 @@ function DecisionCockpitHero({
 function HeroDecisionCard({
   intent,
   prediction,
+  ticket = null,
   primary = false,
   footer,
 }: {
   intent: "buy" | "sell";
   prediction: FusionPrediction | undefined;
+  ticket?: TradeTicket | null;
   primary?: boolean;
   footer: React.ReactNode;
 }) {
@@ -2380,9 +3515,10 @@ function HeroDecisionCard({
     intent === "buy"
       ? "border-emerald-300/25 bg-[linear-gradient(135deg,rgba(45,212,163,0.13),rgba(18,24,32,0.94))]"
       : "border-rose-300/25 bg-[linear-gradient(135deg,rgba(255,92,122,0.12),rgba(18,24,32,0.94))]";
+  const chartPrice = ticket?.entry || prediction.entry || prediction.target || prediction.stop || 0;
 
   return (
-    <div className={`rounded-md border p-4 shadow-sm shadow-black/30 ${shell}`}>
+    <div className={`flex h-full min-w-0 flex-col rounded-md border p-4 shadow-sm shadow-black/30 ${shell}`}>
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
           <div className="mb-2 text-xs font-bold uppercase text-slate-500">{intentLabel}</div>
@@ -2397,15 +3533,23 @@ function HeroDecisionCard({
           <p className={`mt-3 text-sm leading-6 ${primary ? "max-w-4xl text-slate-200" : "text-slate-300"}`}>{prediction.thesis}</p>
         </div>
 
-        <div className="grid min-w-56 grid-cols-2 gap-2 text-xs">
-          <MiniStat label="Fusion" value={`${prediction.score}/100`} tone={prediction.score >= 65 ? "green" : prediction.score <= 44 ? "red" : "amber"} />
-          <MiniStat label="Trust" value={`${prediction.confidence}/100`} tone={prediction.confidence >= 70 ? "green" : "blue"} />
+        <div className="grid w-full min-w-0 grid-cols-2 gap-2 text-xs sm:w-64 sm:shrink-0">
+          <MiniStat label="Model Score" value={`${prediction.score}/100`} tone={prediction.score >= 65 ? "green" : prediction.score <= 44 ? "red" : "amber"} />
+          <MiniStat label="Evidence Confidence" value={`${prediction.confidence}/100`} tone={prediction.confidence >= 70 ? "green" : "blue"} />
         </div>
       </div>
 
+      <div className="mt-3 flex flex-wrap gap-2 text-xs">
+        <ProvenanceBadge kind="derived" label="Fusion output" />
+        {prediction.engineFindings.some((finding) => finding.status === "proxy") && <ProvenanceBadge kind="proxy" label="Some engine lanes are approximations" />}
+        {prediction.blockers.length > 0 && <ProvenanceBadge kind="blocked" label="Action blocked by risk/data checks" />}
+      </div>
+
+      <SymbolSparkline symbol={prediction.symbol} price={chartPrice} compact={!primary} />
+
       {primary && <div className="mt-4">{footer}</div>}
 
-      <div className={`mt-4 grid grid-cols-2 gap-2 text-xs ${primary ? "sm:grid-cols-3 xl:grid-cols-6" : "sm:grid-cols-2"}`}>
+      <div className={`mt-4 grid grid-cols-2 gap-2 text-xs ${primary ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
         <MiniStat label="Timeframe" value={decisionWindowLabel(prediction)} tone="amber" />
         <MiniStat label="Expected Hold" value={prediction.expectedHold} tone="blue" />
         <MiniStat label="Max Hold" value={prediction.maxHold} tone="plain" />
@@ -2416,12 +3560,14 @@ function HeroDecisionCard({
 
       {primary && (
         <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
-          <MiniStat label="Entry" value={prediction.entry ? formatUsd(prediction.entry) : "No entry"} tone="green" />
-          <MiniStat label="Stop" value={prediction.stop ? formatUsd(prediction.stop) : "No stop"} tone="amber" />
-          <MiniStat label="Target" value={prediction.target ? formatUsd(prediction.target) : "No target"} tone="blue" />
-          <MiniStat label="Units / Notional" value={prediction.forecast.units > 0 ? `${prediction.forecast.units} / ${formatUsd(prediction.forecast.notional)}` : "N/A"} tone="plain" />
+          <MiniStat label="Trigger" value={ticket ? formatUsd(ticket.trigger) : prediction.entry ? formatUsd(prediction.entry) : "No trigger"} tone="green" />
+          <MiniStat label="Stop" value={ticket ? formatUsd(ticket.stop) : prediction.stop ? formatUsd(prediction.stop) : "No stop"} tone="amber" />
+          <MiniStat label="Target" value={ticket ? formatUsd(ticket.target) : prediction.target ? formatUsd(prediction.target) : "No target"} tone="blue" />
+          <MiniStat label="Position Size" value={ticket?.positionSize ?? (prediction.forecast.units > 0 ? `${prediction.forecast.units} / ${formatUsd(prediction.forecast.notional)}` : "N/A")} tone="plain" />
         </div>
       )}
+
+      {primary && <LiveTradeBrief ticket={ticket} prediction={prediction} />}
 
       <div className="mt-4 grid gap-3 lg:grid-cols-2">
         <div className="rounded-sm bg-black/20 p-3">
@@ -2442,7 +3588,27 @@ function HeroDecisionCard({
         </div>
       </div>
 
-      {!primary && <div className="mt-4">{footer}</div>}
+      {!primary && <div className="mt-auto pt-4">{footer}</div>}
+    </div>
+  );
+}
+
+function LiveTradeBrief({
+  ticket,
+  prediction,
+}: {
+  ticket: TradeTicket | null;
+  prediction: FusionPrediction;
+}) {
+  const entrySignal = ticket?.entrySignalNeeded ?? prediction.operatorAction;
+  return (
+    <div className="mt-3 rounded-md border border-white/10 bg-black/25 p-3">
+      <div className="grid gap-2 text-xs sm:grid-cols-2 xl:grid-cols-4">
+        <MiniStat label="Entry Signal Needed" value={entrySignal} tone={prediction.direction === "buy" ? "green" : "amber"} />
+        <MiniStat label="Risk/Reward" value={`${ticket?.riskRewardRatio ?? prediction.rewardRisk ?? 0}R`} tone={(ticket?.riskRewardRatio ?? prediction.rewardRisk ?? 0) >= 1.5 ? "green" : "red"} />
+        <MiniStat label="Potential Size" value={ticket ? `${ticket.potentialUnits} units / ${formatUsd(ticket.potentialNotional)}` : "N/A"} tone="blue" />
+        <MiniStat label="Suggested Size" value={ticket?.suggestedPositionSize ?? "No suggested size until ticket is valid."} tone={ticket?.tradeable ? "green" : "amber"} />
+      </div>
     </div>
   );
 }
@@ -2468,9 +3634,13 @@ function ReadinessCell({
           : tone === "blue"
             ? "text-cyan-300"
             : "text-white";
+  const help = statusExplanations[label] ?? statExplanations[label] ?? `${label}: ${value}. ${detail}`;
   return (
-    <div className="rounded-sm bg-white/[0.03] p-3">
-      <div className="text-xs uppercase text-slate-500">{label}</div>
+    <div className="rounded-sm bg-white/[0.03] p-3" title={help} aria-label={`${label}. ${value}. ${detail}. ${help}`}>
+      <div className="flex items-center gap-2 text-xs uppercase text-slate-500">
+        {label}
+        <HelpTip text={help} />
+      </div>
       <div className={`mt-1 font-mono text-lg font-semibold ${color}`}>{value}</div>
       <div className="mt-1 text-xs text-slate-400">{detail}</div>
     </div>
@@ -2495,6 +3665,27 @@ function decisionWindowLabel(prediction: FusionPrediction) {
   return prediction.horizon;
 }
 
+function orchestrationStatusLabel(status: OrchestrationRun["status"]) {
+  if (status === "ready-for-paper") return "Paper ready";
+  if (status === "needs-review") return "Needs review";
+  if (status === "no-action") return "No action";
+  return "Blocked";
+}
+
+function gateLabel(status: OrchestrationRun["decision"]["live"]["status"]) {
+  if (status === "ready") return "Ready";
+  if (status === "approval-required") return "Manual";
+  if (status === "skipped") return "Skipped";
+  return "Blocked";
+}
+
+function stageDotClass(status: OrchestrationRun["stages"][number]["status"]) {
+  if (status === "passed") return "bg-emerald-300";
+  if (status === "warning") return "bg-amber-300";
+  if (status === "skipped") return "bg-slate-500";
+  return "bg-rose-300";
+}
+
 function TrustReadinessStrip({
   summary,
   brokerStatus,
@@ -2505,10 +3696,10 @@ function TrustReadinessStrip({
   aitableStatus: AitableStatus | null;
 }) {
   return (
-    <div className="grid gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface-raised)] p-3 text-sm sm:grid-cols-5">
+    <div className="grid min-w-0 gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface-raised)] p-3 text-sm sm:grid-cols-5">
       <StatusLine label="Trade ticket" value="Live" ready />
-      <StatusLine label="Proof systems" value={`${summary.live} live / ${summary.partial} partial`} ready={summary.live > 0} />
-      <StatusLine label="Critical gaps" value={`${summary.critical} tracked`} />
+      <StatusLine label="Proof systems" value={`${summary.proven} proven / ${summary.partial} partial`} ready={summary.proven > 0} />
+      <StatusLine label="Critical issues" value={`${summary.criticalUnresolved} open`} ready={summary.criticalUnresolved === 0} />
       <StatusLine
         label="Broker rail"
         value={brokerStatus?.orderPlacementReady ? `${brokerStatus.mode.toUpperCase()} armed` : "Locked"}
@@ -2535,7 +3726,7 @@ function ProductionOpsStrip({
   const riskFlags = risk?.report?.riskFlags ?? [];
 
   return (
-    <div className="grid gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface-raised)] p-3 text-sm md:grid-cols-2 xl:grid-cols-5">
+    <div className="grid min-w-0 gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface-raised)] p-3 text-sm md:grid-cols-2 xl:grid-cols-5">
       <StatusLine
         label="Production core"
         value={ops?.productionReadyCore ? "Ready" : ops ? "Partial" : "Checking"}
@@ -2554,7 +3745,7 @@ function ProductionOpsStrip({
       />
       <StatusLine
         label="Data license"
-        value={ops?.liveData?.licensedSip ? "SIP/paid" : ops?.liveData?.alpacaConfigured ? "IEX/public" : "Public only"}
+        value={ops?.liveData?.licensedSip ? "SIP/paid" : ops?.liveData?.freeFirstDefault ? "Free-first" : ops?.liveData?.alpacaConfigured ? "IEX/public" : "Public only"}
         ready={Boolean(ops?.liveData?.licensedSip)}
       />
     </div>
@@ -2582,7 +3773,7 @@ function FastActionQueue({
   const primaryBlocked = blocked.slice(0, 3);
 
   return (
-    <div className="h-full rounded-md border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm shadow-black/20">
+    <div className="min-w-0 rounded-md border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm shadow-black/20">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <SectionTitle icon={Zap} title="Action Queue" />
@@ -2608,11 +3799,17 @@ function FastActionQueue({
               </div>
               <span className="font-mono text-sm text-emerald-200">Trust {primaryBuyNow.confidence}</span>
             </div>
-            <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-5">
+            <SymbolSparkline symbol={primaryBuyNow.symbol} price={primaryBuyNow.price} compact />
+            <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-3 xl:grid-cols-5">
               <MiniStat label="Now" value={formatUsd(primaryBuyNow.price)} tone="plain" />
-              <MiniStat label="Entry" value={formatUsd(primaryBuyNow.entry)} tone="green" />
+              <MiniStat label="Trigger" value={formatUsd(primaryBuyNow.trigger)} tone="green" />
               <MiniStat label="Stop" value={formatUsd(primaryBuyNow.stop)} tone="amber" />
               <MiniStat label="Target" value={formatUsd(primaryBuyNow.target)} tone="blue" />
+              <MiniStat label="R/R" value={`${primaryBuyNow.riskRewardRatio}R`} tone={primaryBuyNow.riskRewardRatio >= 1.5 ? "green" : "red"} />
+              <MiniStat label="Potential Size" value={`${primaryBuyNow.potentialUnits} / ${formatUsd(primaryBuyNow.potentialNotional)}`} tone="blue" />
+              <MiniStat label="Position Size" value={primaryBuyNow.positionSize} tone="plain" />
+              <MiniStat label="Strategy Minds" value={mindsetLabel(primaryBuyNow.strategyMindset)} tone={mindsetTone(primaryBuyNow.strategyMindset.stance)} />
+              <MiniStat label="Entry Signal" value={primaryBuyNow.entrySignalNeeded} tone="green" />
               <MiniStat label="Hold" value={primaryBuyNow.expectedHold} tone="amber" />
             </div>
           </button>
@@ -2632,11 +3829,15 @@ function FastActionQueue({
             {buyLead ? (
               <>
                 <p className="mt-2 line-clamp-2 text-sm leading-6 text-cyan-100">{buyLead.reason}</p>
-                <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-5">
+                <SymbolSparkline symbol={buyLead.symbol} price={buyLead.price} changePct={buyLead.moveFromOpenPct} compact />
+                <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-3 xl:grid-cols-5">
                   <MiniStat label="Now" value={formatUsd(buyLead.price)} tone="plain" />
                   <MiniStat label="Trigger" value={formatUsd(buyLead.trigger)} tone="green" />
                   <MiniStat label="Stop" value={formatUsd(buyLead.stop)} tone="amber" />
+                  <MiniStat label="Target" value={formatUsd(buyLead.target)} tone="blue" />
+                  <MiniStat label="R/R" value={`${buyLead.rewardRisk}R`} tone={buyLead.rewardRisk >= 1.5 ? "green" : "red"} />
                   <MiniStat label="Score" value={`${buyLead.confidence}`} tone={buyLead.confidence >= 60 ? "green" : "blue"} />
+                  <MiniStat label="Strategy Minds" value={mindsetLabel(buyLead.strategyMindset)} tone={mindsetTone(buyLead.strategyMindset.stance)} />
                   <MiniStat label="Hold" value={buyLead.holdingPeriod.expectedHold} tone="amber" />
                 </div>
               </>
@@ -2661,6 +3862,7 @@ function FastActionQueue({
           <p className="mt-2 line-clamp-2 text-sm leading-6 text-rose-100">
             {sellSignal?.reason ?? "No sell/exit-watch setup is currently strong enough."}
           </p>
+          {sellSignal && <SymbolSparkline symbol={sellSignal.symbol} price={sellSignal.price} compact />}
           {sellSignal && (
             <div className="mt-3 text-xs text-rose-100">
               Horizon: {sellSignal.holdingPeriod.expectedHold}
@@ -2684,8 +3886,9 @@ function FastActionQueue({
                   <span className="min-w-0">
                     <span className="font-semibold text-white">{item.symbol}</span>
                     <span className="ml-2 inline-block max-w-[12rem] truncate align-bottom text-xs text-amber-100 sm:max-w-[18rem]">{item.blockers[0] ?? "Waiting for trigger"}</span>
+                    <SymbolSparkline symbol={item.symbol} price={item.price} compact />
                   </span>
-                  <span className="font-mono text-xs text-slate-300">{formatUsd(item.price)}</span>
+                  <span className="font-mono text-xs text-slate-300">{formatUsd(item.trigger)}</span>
                 </button>
               ))
             ) : (
@@ -2725,7 +3928,7 @@ function FastExecutionPanel({
   const disabled = !status?.orderPlacementReady || !ticket?.tradeable || placing || (live && acknowledgement.trim().length === 0);
 
   return (
-    <div className="h-full rounded-md border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm shadow-black/20">
+    <div className="min-w-0 rounded-md border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm shadow-black/20">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <SectionTitle icon={Calculator} title="Ticket And Execute" />
@@ -2754,15 +3957,21 @@ function FastExecutionPanel({
               </div>
               <MiniStat label="Mode" value={mode.toUpperCase()} tone={live ? "red" : "blue"} />
             </div>
-            <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
-              <MiniStat label="Entry" value={formatUsd(ticket.entry)} tone="green" />
+            <SymbolSparkline symbol={ticket.symbol} price={ticket.entry} compact />
+            <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-3 xl:grid-cols-4">
+              <MiniStat label="Trigger" value={formatUsd(ticket.trigger)} tone="green" />
               <MiniStat label="Stop" value={formatUsd(ticket.stop)} tone="amber" />
               <MiniStat label="Target" value={formatUsd(ticket.target)} tone="blue" />
-              <MiniStat label="Units" value={`${ticket.units}`} tone="plain" />
+              <MiniStat label="R/R" value={`${ticket.riskRewardRatio}R`} tone={ticket.riskRewardRatio >= 1.5 ? "green" : "red"} />
+              <MiniStat label="Potential Size" value={`${ticket.potentialUnits} / ${formatUsd(ticket.potentialNotional)}`} tone="blue" />
+              <MiniStat label="Position Size" value={ticket.positionSize} tone="plain" />
+              <MiniStat label="Suggested Size" value={ticket.suggestedPositionSize} tone={ticket.tradeable ? "green" : "amber"} />
               <MiniStat label="Max loss" value={formatUsd(ticket.maxLoss)} tone="red" />
-              <MiniStat label="R/R" value={`${ticket.rewardRisk}R`} tone={ticket.rewardRisk >= 1.5 ? "green" : "red"} />
               <MiniStat label="Hold" value={ticket.expectedHold} tone="amber" />
               <MiniStat label="Review" value={ticket.reviewCadence} tone="blue" />
+            </div>
+            <div className="mt-2 rounded-sm bg-black/25 p-2 text-xs leading-5 text-emerald-100">
+              Entry signal needed: {ticket.entrySignalNeeded}
             </div>
           </>
         ) : (
@@ -2855,7 +4064,7 @@ function FastRiskPanel({
   const riskFlags = risk?.report?.riskFlags ?? [];
 
   return (
-    <div className="h-full rounded-md border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm shadow-black/20">
+    <div className="min-w-0 rounded-md border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm shadow-black/20">
       <div className="flex items-start justify-between gap-3">
         <div>
           <SectionTitle icon={ShieldCheck} title="Risk State" />
@@ -2935,12 +4144,13 @@ function IsingBasketPanel({ basket }: { basket: IsingBasketResult }) {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="font-mono text-xl font-semibold text-white">{item.symbol}</div>
-                  <div className="mt-1 text-xs uppercase tracking-wide text-emerald-100">{item.group}</div>
+                  <div className="mt-1 text-xs font-semibold text-emerald-100">{item.group}</div>
                 </div>
                 <span className="rounded-sm bg-emerald-300 px-2 py-1 text-xs font-bold text-slate-950">
                   Selected
                 </span>
               </div>
+              <SymbolSparkline symbol={item.symbol} price={item.entry} compact />
               <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
                 <MiniStat label="Score" value={`${item.score}`} tone="green" />
                 <MiniStat label="Units" value={`${item.units}`} tone="plain" />
@@ -2988,29 +4198,48 @@ function IsingBasketPanel({ basket }: { basket: IsingBasketResult }) {
   );
 }
 
-function TrustOperationsTable({ gaps }: { gaps: typeof trustOperationGaps }) {
+function TrustOperationsTable({ gaps }: { gaps: TrustOperationGap[] }) {
   return (
     <div className="mt-4 overflow-hidden rounded-md border border-white/10">
-      <div className="hidden grid-cols-[1.1fr_5rem_6rem_1.2fr_1.2fr] gap-3 border-b border-white/10 bg-black/20 px-3 py-2 text-xs font-semibold uppercase text-slate-500 lg:grid">
-        <div>Missing Piece</div>
+      <div className="hidden grid-cols-[1.05fr_5rem_5rem_6rem_1.2fr_1.35fr] gap-3 border-b border-white/10 bg-black/20 px-3 py-2 text-xs font-semibold text-slate-400 lg:grid">
+        <div>Capability / Issue</div>
         <div>Priority</div>
         <div>Status</div>
-        <div>Current State</div>
-        <div>Next Action</div>
+        <div>Proof State</div>
+        <div>Proof Standard</div>
+        <div>State / Fix</div>
       </div>
       <div className="divide-y divide-white/10">
         {gaps.map((gap) => (
-          <div key={gap.missingPiece} className="grid gap-3 px-3 py-3 text-sm lg:grid-cols-[1.1fr_5rem_6rem_1.2fr_1.2fr]">
-            <div>
-              <div className="font-semibold text-white">{gap.missingPiece}</div>
-              <div className="mt-1 text-xs leading-5 text-slate-500">{gap.whyItMatters}</div>
+          <div key={gap.capability} className="grid gap-3 px-3 py-4 text-sm lg:grid-cols-[1.05fr_5rem_5rem_6rem_1.2fr_1.35fr]">
+            <div className="min-w-0">
+              <div className="font-semibold text-white">{gap.capability}</div>
+              <div className="mt-1 text-sm leading-6 text-slate-300">{gap.issue}</div>
+              <div className="mt-2 text-xs leading-5 text-slate-400">{gap.whyItMatters}</div>
             </div>
-            <div className="text-xs font-semibold text-slate-300">{gap.priority}</div>
+            <div>
+              <PriorityPill priority={gap.priority} />
+            </div>
             <div>
               <StatusPill status={gap.status} />
             </div>
-            <div className="text-slate-400">{gap.currentState}</div>
-            <div className="text-slate-300">{gap.nextAction}</div>
+            <div>
+              <StatusPill status={gap.proofStatus} />
+            </div>
+            <div className="text-slate-300">
+              <div>{gap.evidenceStandard}</div>
+              <ul className="mt-2 grid gap-1 pl-4 text-xs leading-5 text-slate-400">
+                {gap.acceptanceCriteria.map((criterion) => (
+                  <li key={criterion} className="list-disc">{criterion}</li>
+                ))}
+              </ul>
+            </div>
+            <div className="text-slate-300">
+              <div>{gap.currentState}</div>
+              <div className="mt-2 rounded-sm border border-amber-300/20 bg-amber-300/10 px-2 py-1.5 text-xs leading-5 text-amber-100">
+                Next: {gap.nextAction}
+              </div>
+            </div>
           </div>
         ))}
       </div>
@@ -3035,6 +4264,7 @@ function PaperTradesTable({ trades, onRemove }: { trades: PaperTrade[]; onRemove
             <div>
               <div className="font-semibold text-white">{trade.symbol}</div>
               <div className="text-xs text-slate-500">{trade.createdAt}</div>
+              <SymbolSparkline symbol={trade.symbol} price={trade.entry} compact />
             </div>
             <div className="font-mono text-slate-300">Entry {formatUsd(trade.entry)}</div>
             <div className="font-mono text-amber-200">Stop {formatUsd(trade.stop)}</div>
@@ -3065,6 +4295,16 @@ function StatusPill({ status }: { status: TrustStatus }) {
   return <span className={`inline-flex rounded-sm border px-2 py-1 text-xs font-semibold ${classes}`}>{status}</span>;
 }
 
+function PriorityPill({ priority }: { priority: TrustPriority }) {
+  const classes =
+    priority === "Critical"
+      ? "border-rose-300/25 bg-rose-300/10 text-rose-100"
+      : priority === "High"
+        ? "border-amber-300/25 bg-amber-300/10 text-amber-100"
+        : "border-cyan-300/25 bg-cyan-300/10 text-cyan-100";
+  return <span className={`inline-flex rounded-sm border px-2 py-1 text-xs font-semibold ${classes}`}>{priority}</span>;
+}
+
 function LiveTickerTape({
   quotes,
   signals,
@@ -3085,7 +4325,7 @@ function LiveTickerTape({
   return (
     <div className="sticky top-0 z-40 border-b border-white/10 bg-black/90 backdrop-blur">
       <div className="flex h-11 items-center gap-3 overflow-hidden">
-        <div className="flex h-full shrink-0 items-center gap-2 border-r border-white/10 bg-emerald-300 px-3 text-xs font-bold uppercase tracking-wide text-slate-950">
+        <div className="flex h-full shrink-0 items-center gap-2 border-r border-white/10 bg-emerald-300 px-3 text-xs font-bold uppercase text-slate-950">
           <span className="relative flex h-2.5 w-2.5">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-slate-950 opacity-60" />
             <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-slate-950" />
@@ -3111,7 +4351,7 @@ function LiveTickerTape({
                     key={`${quote.symbol}-${index}`}
                     className="flex items-center gap-2 whitespace-nowrap rounded-sm border border-white/10 bg-white/[0.04] px-3 py-1.5 text-sm"
                   >
-                    <span className={`rounded-sm px-2 py-1 text-[10px] font-bold uppercase tracking-wide ${action.className}`}>
+                    <span className={`rounded-sm px-2 py-1 text-xs font-bold uppercase ${action.className}`}>
                       {action.label}
                     </span>
                     <span className="font-semibold text-white">{quote.symbol}</span>
@@ -3120,7 +4360,7 @@ function LiveTickerTape({
                       {up ? "+" : ""}
                       {quote.changePct.toFixed(2)}%
                     </span>
-                    <span className="rounded-sm bg-black/30 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-slate-400">
+                    <span className="rounded-sm bg-black/30 px-1.5 py-0.5 text-xs font-semibold text-slate-400">
                       {signal?.dataFresh ? quote.quality : "STALE"}
                     </span>
                   </div>
@@ -3156,32 +4396,102 @@ function tickerAction(signal: TradeSignal, lead?: BuyLead, buyNow?: BuyNowSignal
   return { label: "HOLD", className: "bg-slate-500/20 text-slate-300" };
 }
 
-function SectionTitle({ icon: Icon, title }: { icon: typeof Target; title: string }) {
+function mindsetLabel(mindset: { score: number; stance: string; alignment: number }) {
+  return `${mindset.score}/100 ${mindset.stance.replace("-", " ")} (${mindset.alignment}%)`;
+}
+
+function mindsetTone(stance: string): "green" | "red" | "amber" | "blue" | "plain" {
+  if (stance === "buy-watch") return "green";
+  if (stance === "sell-watch" || stance === "risk-off") return "red";
+  if (stance === "hold") return "amber";
+  return "plain";
+}
+
+function SymbolSparkline({
+  symbol,
+  price,
+  changePct,
+  compact = false,
+}: {
+  symbol: string;
+  price: number;
+  changePct?: number;
+  compact?: boolean;
+}) {
+  const quoteHistory = useContext(QuoteHistoryContext);
+  if (!Number.isFinite(price) || price <= 0) return null;
+  const data = quoteHistory[symbol]?.length ? quoteHistory[symbol] : makeSpark(symbol, price);
+  const values = data.map((point) => point.value);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || Math.max(price * 0.01, 1);
+  const chartWidth = 120;
+  const chartHeight = compact ? 38 : 46;
+  const points = data
+    .map((point, index) => {
+      const x = data.length === 1 ? chartWidth : (index / (data.length - 1)) * chartWidth;
+      const y = chartHeight - ((point.value - min) / range) * (chartHeight - 6) - 3;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(" ");
+  const lastValue = values.at(-1) ?? price;
+  const firstValue = values[0] ?? price;
+  const up = typeof changePct === "number" ? changePct >= 0 : lastValue >= firstValue;
+  const tone = up ? "text-emerald-300" : "text-rose-300";
+  const stroke = up ? "#34d399" : "#fb7185";
+  return (
+    <div className="mt-3 rounded-md border border-white/10 bg-black/25 p-2">
+      <div className="mb-1 flex items-center justify-between gap-2 text-xs font-semibold text-slate-400">
+        <span>Price action</span>
+        <span className={`font-mono ${tone}`}>
+          {typeof changePct === "number" ? formatSignedPct(changePct) : formatUsd(lastValue)}
+        </span>
+      </div>
+      <svg
+        viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+        preserveAspectRatio="none"
+        className={compact ? "h-10 w-full" : "h-12 w-full"}
+        role="img"
+        aria-label={`${symbol} compact price action`}
+      >
+        <line x1="0" y1={chartHeight - 3} x2={chartWidth} y2={chartHeight - 3} stroke="rgba(148, 163, 184, 0.18)" />
+        <polyline className="sparkline-path" points={points} fill="none" stroke={stroke} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </div>
+  );
+}
+
+function SectionTitle({ icon: Icon, title, explanation }: { icon: typeof Target; title: string; explanation?: string }) {
+  const help = explanation ?? sectionExplanations[title];
   return (
     <div className="flex items-center gap-2">
       <Icon className="h-5 w-5 text-cyan-300" />
       <h2 className="text-lg font-semibold text-white">{title}</h2>
+      {help && <HelpTip text={help} />}
     </div>
   );
 }
 
 function Metric({ icon: Icon, label, value }: { icon: typeof Sparkles; label: string; value: string }) {
+  const help = metricExplanations[label] ?? `${label}: ${value}`;
   return (
-    <div className="rounded-md border border-white/10 bg-white/[0.03] p-3">
-      <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-500">
+    <div className="min-w-0 rounded-md border border-white/10 bg-white/[0.03] p-3" title={help} aria-label={`${label}. ${value}. ${help}`}>
+      <div className="flex items-center gap-2 text-xs uppercase text-slate-500">
         <Icon className="h-4 w-4 text-cyan-300" />
-        {label}
+        <span className="truncate">{label}</span>
+        <HelpTip text={help} />
       </div>
-      <div className="mt-2 min-h-10 text-base font-semibold text-white">{value}</div>
+      <div className="mt-2 min-h-10 text-pretty text-base font-semibold leading-5 text-white" title={value}>{value}</div>
     </div>
   );
 }
 
 function QualityBadge({ label, value, ready }: { label: string; value: string; ready: boolean }) {
+  const help = `${label} feed: ${value}. ${ready ? "This source is active or selected." : "This source is available but not currently selected."}`;
   return (
-    <div className="rounded-md border border-white/10 bg-white/[0.03] p-3">
+    <div className="rounded-md border border-white/10 bg-white/[0.03] p-3" title={help} aria-label={help}>
       <div className="flex items-center justify-between gap-3">
-        <div className="font-semibold text-white">{label}</div>
+        <div className="flex items-center gap-2 font-semibold text-white">{label}<HelpTip text={help} /></div>
         <span className={ready ? "text-xs text-emerald-300" : "text-xs text-slate-500"}>
           {ready ? "active" : "available"}
         </span>
@@ -3192,19 +4502,24 @@ function QualityBadge({ label, value, ready }: { label: string; value: string; r
 }
 
 function Signal({ label, value }: { label: string; value: string }) {
+  const help = statExplanations[label] ?? `${label}: ${value}`;
   return (
-    <div className="rounded-md border border-white/10 bg-white/[0.03] p-3">
-      <div className="text-xs text-slate-500">{label}</div>
+    <div className="rounded-md border border-white/10 bg-white/[0.03] p-3" title={help} aria-label={`${label}. ${value}. ${help}`}>
+      <div className="flex items-center gap-2 text-xs text-slate-500">{label}<HelpTip text={help} /></div>
       <div className="mt-1 break-words font-mono text-sm text-white">{value}</div>
     </div>
   );
 }
 
 function StatusLine({ label, value, ready = false }: { label: string; value: string; ready?: boolean }) {
+  const help = statusExplanations[label] ?? statExplanations[label] ?? `${label}: ${value}`;
   return (
-    <div className="flex items-center justify-between gap-3 rounded-sm bg-black/20 px-2 py-2">
-      <span className="text-slate-400">{label}</span>
-      <span className={ready ? "text-emerald-300" : "text-amber-300"}>{value}</span>
+    <div className="flex min-w-0 items-center justify-between gap-3 rounded-sm bg-black/20 px-2 py-2" title={help} aria-label={`${label}. ${value}. ${help}`}>
+      <span className="flex min-w-0 items-center gap-2 text-slate-400">
+        <span className="truncate">{label}</span>
+        <HelpTip text={help} />
+      </span>
+      <span className={`min-w-0 break-words text-right ${ready ? "text-emerald-300" : "text-amber-300"}`}>{value}</span>
     </div>
   );
 }
@@ -3217,40 +4532,55 @@ function BuyLeadCard({ lead, rank }: { lead: BuyLead; rank: number }) {
     : possible
       ? "border-cyan-300/25 bg-cyan-300/10"
       : "border-white/10 bg-white/[0.03]";
+  const hold = compactHoldLabel(lead.holdingPeriod.expectedHold);
+  const help = `${lead.symbol} buy-lead card. It shows whether this symbol is actionable, the trigger required before entry, the stop that invalidates the setup, the target, confidence score, horizon, and data freshness.`;
   return (
     <button
-      className={`rounded-md border p-3 text-left transition hover:border-white/30 ${toneClass}`}
+      className={`w-full min-w-0 rounded-md border p-4 text-left transition hover:border-white/30 ${toneClass}`}
       onClick={() => window.dispatchEvent(new CustomEvent("select-signal-symbol", { detail: lead.symbol }))}
+      title={help}
+      aria-label={help}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="flex h-7 w-7 items-center justify-center rounded-sm bg-black/30 font-mono text-xs text-white">
+      <div className="grid min-w-0 gap-4 md:grid-cols-[minmax(0,1.15fr)_minmax(17rem,0.85fr)] md:items-start">
+        <div className="min-w-0">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-sm bg-black/30 font-mono text-xs text-white">
               {rank}
             </span>
-            <div className="font-semibold text-white">{lead.symbol}</div>
+            <div className="font-mono text-xl font-semibold text-white">{lead.symbol}</div>
+            <span className={`rounded-sm px-2 py-1 text-xs font-bold uppercase ${active ? "bg-emerald-300 text-slate-950" : possible ? "bg-cyan-300 text-slate-950" : "bg-slate-500/20 text-slate-300"}`}>
+              {active ? "Buy Watch" : possible ? "Buy Lead" : "No Buy"}
+            </span>
           </div>
-          <div className="mt-1 truncate text-xs text-slate-400">{lead.name}</div>
+          <div className="mt-1 max-w-full truncate text-sm text-slate-400">{lead.name}</div>
+          <p className="mt-3 line-clamp-3 text-sm leading-6 text-slate-300">{lead.reason}</p>
+          <div className="mt-3 text-xs text-slate-500">
+            Move from open: {lead.moveFromOpenPct > 0 ? "+" : ""}
+            {lead.moveFromOpenPct}% | Data: {lead.dataFresh ? "fresh" : "stale"}
+          </div>
+          <SymbolSparkline symbol={lead.symbol} price={lead.price} changePct={lead.moveFromOpenPct} compact />
         </div>
-        <span className={`rounded-sm px-2 py-1 text-[10px] font-bold uppercase tracking-wide ${active ? "bg-emerald-300 text-slate-950" : possible ? "bg-cyan-300 text-slate-950" : "bg-slate-500/20 text-slate-300"}`}>
-          {active ? "Buy Watch" : possible ? "Buy Lead" : "No Buy"}
-        </span>
-      </div>
-      <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-        <MiniStat label="Trigger" value={formatUsd(lead.trigger)} tone={possible || active ? "green" : "plain"} />
-        <MiniStat label="Stop" value={formatUsd(lead.stop)} tone="amber" />
-        <MiniStat label="Target" value={formatUsd(lead.target)} tone="blue" />
-        <MiniStat label="Score" value={`${lead.confidence}`} tone={lead.confidence >= 60 ? "green" : "plain"} />
-        <MiniStat label="Horizon" value={lead.holdingPeriod.label} tone="amber" />
-        <MiniStat label="Hold" value={lead.holdingPeriod.expectedHold} tone="blue" />
-      </div>
-      <p className="mt-3 line-clamp-3 text-sm leading-6 text-slate-300">{lead.reason}</p>
-      <div className="mt-3 text-xs text-slate-500">
-        Move from open: {lead.moveFromOpenPct > 0 ? "+" : ""}
-        {lead.moveFromOpenPct}% | Data: {lead.dataFresh ? "fresh" : "stale"}
+
+        <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-3 md:grid-cols-2 xl:grid-cols-3">
+          <MiniStat label="Trigger" value={formatUsd(lead.trigger)} tone={possible || active ? "green" : "plain"} />
+          <MiniStat label="Stop" value={formatUsd(lead.stop)} tone="amber" />
+          <MiniStat label="Target" value={formatUsd(lead.target)} tone="blue" />
+          <MiniStat label="Score" value={`${lead.confidence}`} tone={lead.confidence >= 60 ? "green" : "plain"} />
+          <MiniStat label="Strategy Minds" value={mindsetLabel(lead.strategyMindset)} tone={mindsetTone(lead.strategyMindset.stance)} />
+          <MiniStat label="Horizon" value={lead.holdingPeriod.label} tone="amber" />
+          <MiniStat label="Hold" value={hold} tone="blue" />
+        </div>
       </div>
     </button>
   );
+}
+
+function compactHoldLabel(value: string) {
+  const normalized = value.toLowerCase();
+  if (normalized.includes("intraday") || normalized.includes("trigger")) return "Trigger wait";
+  if (normalized.includes("no position")) return "No position";
+  if (value.length > 18) return `${value.slice(0, 15).trim()}...`;
+  return value;
 }
 
 function SignalCard({ signal }: { signal: TradeSignal }) {
@@ -3261,24 +4591,27 @@ function SignalCard({ signal }: { signal: TradeSignal }) {
         ? "border-rose-300/30 bg-rose-300/10 text-rose-100"
         : "border-white/10 bg-white/[0.03] text-slate-300";
   const Icon = signal.action === "Buy Watch" ? TrendingUp : signal.action === "Sell/Exit Watch" ? TrendingDown : ShieldCheck;
+  const help = `${signal.symbol} signal card. It explains the current action, quality, invalidation level, reward-to-risk, holding period, confirmations, warnings, and freshness.`;
 
   return (
-    <div className={`rounded-md border p-3 ${actionStyle}`}>
+    <div className={`rounded-md border p-3 ${actionStyle}`} title={help} aria-label={help}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
             <Icon className="h-4 w-4" />
             <div className="font-semibold text-white">{signal.symbol}</div>
           </div>
-          <div className="mt-1 text-xs opacity-75">{signal.name}</div>
+          <div className="mt-1 text-xs text-slate-300">{signal.name}</div>
         </div>
         <span className="rounded-sm bg-black/20 px-2 py-1 text-xs font-semibold">{signal.action}</span>
       </div>
+      <SymbolSparkline symbol={signal.symbol} price={signal.price} compact />
       <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
         <MiniStat label="Price" value={formatUsd(signal.price)} tone="plain" />
         <MiniStat label="Quality" value={`${signal.quality} / ${signal.confidence}`} tone="blue" />
         <MiniStat label="Invalidation" value={formatUsd(signal.invalidation)} tone="amber" />
         <MiniStat label="R/R" value={`${signal.rewardRisk}R`} tone={signal.rewardRisk >= 1.5 ? "green" : "red"} />
+        <MiniStat label="Strategy Minds" value={mindsetLabel(signal.strategyMindset)} tone={mindsetTone(signal.strategyMindset.stance)} />
         <MiniStat label="Horizon" value={signal.holdingPeriod.label} tone="amber" />
         <MiniStat label="Hold" value={signal.holdingPeriod.expectedHold} tone="blue" />
       </div>
@@ -3287,6 +4620,9 @@ function SignalCard({ signal }: { signal: TradeSignal }) {
         <span className="rounded-sm bg-black/20 px-2 py-1 text-xs text-slate-200">{signal.setup}</span>
       </div>
       <p className="mt-3 text-sm leading-6 text-slate-300">{signal.reason}</p>
+      <div className="mt-3 rounded-sm bg-black/20 p-2 text-xs leading-5 text-slate-300">
+        Strategy minds: {signal.strategyMindset.summary}
+      </div>
       {signal.confirmations.length > 0 && (
         <div className="mt-3 text-xs leading-5 text-emerald-200">
           Confirmed: {signal.confirmations.join(", ")}
@@ -3316,9 +4652,13 @@ function LeaderboardColumn({
   empty: string;
 }) {
   const toneClass = tone === "green" ? "text-emerald-200 border-emerald-300/20" : "text-rose-200 border-rose-300/20";
+  const help = `${title} ranks signals so users can compare symbol, action quality, price, confidence, reward-to-risk, stop, and risk without opening every card.`;
   return (
-    <div className={`rounded-md border bg-white/[0.03] ${toneClass}`}>
-      <div className="border-b border-white/10 px-3 py-3 text-sm font-semibold text-white">{title}</div>
+    <div className={`rounded-md border bg-white/[0.03] ${toneClass}`} title={help} aria-label={help}>
+      <div className="flex items-center gap-2 border-b border-white/10 px-3 py-3 text-sm font-semibold text-white">
+        {title}
+        <HelpTip text={help} />
+      </div>
       <div className="divide-y divide-white/10">
         {signals.length === 0 ? (
           <div className="p-3 text-sm text-slate-400">{empty}</div>
@@ -3347,6 +4687,7 @@ function LeaderboardColumn({
                   <span className="rounded-sm bg-black/20 px-2 py-1">Stop {formatUsd(signal.invalidation)}</span>
                   <span className="rounded-sm bg-black/20 px-2 py-1">Risk {signal.positionRiskPct}%</span>
                 </div>
+                <SymbolSparkline symbol={signal.symbol} price={signal.price} compact />
                 {signal.warnings.length > 0 && (
                   <div className="mt-2 truncate text-xs text-amber-200">{signal.warnings[0]}</div>
                 )}
@@ -3360,9 +4701,13 @@ function LeaderboardColumn({
 }
 
 function BuyLeadColumn({ leads }: { leads: BuyLead[] }) {
+  const help = "Buy Leads ranks candidates that are near a buy setup. A row is a watch candidate unless its trigger, data freshness, and risk checks pass.";
   return (
-    <div className="rounded-md border border-cyan-300/20 bg-white/[0.03] text-cyan-100">
-      <div className="border-b border-white/10 px-3 py-3 text-sm font-semibold text-white">Buy Leads</div>
+    <div className="rounded-md border border-cyan-300/20 bg-white/[0.03] text-cyan-100" title={help} aria-label={help}>
+      <div className="flex items-center gap-2 border-b border-white/10 px-3 py-3 text-sm font-semibold text-white">
+        Buy Leads
+        <HelpTip text={help} />
+      </div>
       <div className="divide-y divide-white/10">
         {leads.length === 0 ? (
           <div className="p-3 text-sm text-slate-400">No buy leads are available yet.</div>
@@ -3391,6 +4736,7 @@ function BuyLeadColumn({ leads }: { leads: BuyLead[] }) {
                   <span className="rounded-sm bg-black/20 px-2 py-1">Target {formatUsd(lead.target)}</span>
                   <span className="rounded-sm bg-black/20 px-2 py-1">Hold {lead.holdingPeriod.expectedHold}</span>
                 </div>
+                <SymbolSparkline symbol={lead.symbol} price={lead.price} changePct={lead.moveFromOpenPct} compact />
                 {lead.warnings.length > 0 && (
                   <div className="mt-2 truncate text-xs text-amber-200">{lead.warnings[0]}</div>
                 )}
@@ -3440,11 +4786,11 @@ function AlgorithmCouncilPanel({ council }: { council: AlgorithmCouncilResponse 
         {scores.slice(0, 6).map((score) => (
           <button
             key={score.symbol}
-            className={`rounded-md border p-3 text-left transition hover:border-white/30 ${algorithmTone(score.recommendation)}`}
+            className={`w-full min-w-0 rounded-md border p-3 text-left transition hover:border-white/30 ${algorithmTone(score.recommendation)}`}
             onClick={() => window.dispatchEvent(new CustomEvent("select-signal-symbol", { detail: score.symbol }))}
           >
-            <div className="flex items-start justify-between gap-3">
-              <div>
+            <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+              <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="font-mono text-lg font-semibold text-white">{score.symbol}</span>
                   <span className="rounded-sm bg-black/25 px-2 py-1 text-xs font-semibold text-slate-200">
@@ -3453,7 +4799,7 @@ function AlgorithmCouncilPanel({ council }: { council: AlgorithmCouncilResponse 
                 </div>
                 <div className="mt-1 truncate text-xs text-slate-400">{score.name}{score.sector ? ` | ${score.sector}` : ""}</div>
               </div>
-              <span className="rounded-sm bg-black/25 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
+              <span className="w-fit max-w-full rounded-sm bg-black/25 px-2 py-1 text-xs font-bold uppercase text-white sm:shrink-0">
                 {score.recommendation}
               </span>
             </div>
@@ -3538,6 +4884,7 @@ function InstitutionalReadinessPanel({ readiness }: { readiness: InstitutionalRe
           <div className="mt-3 grid gap-2">
             <StatusLine label="Paper orders" value={readiness.controls?.allowPaperOrders ? "Allowed" : "Blocked"} ready={Boolean(readiness.controls?.allowPaperOrders)} />
             <StatusLine label="Live orders" value={readiness.controls?.allowLiveOrders ? "Allowed" : "Blocked"} ready={Boolean(readiness.controls?.allowLiveOrders)} />
+            <StatusLine label="Live agent" value={readiness.controls?.allowLiveAgentOrders ? "Armed" : "Locked"} ready={Boolean(readiness.controls?.allowLiveAgentOrders)} />
             <StatusLine label="Max open" value={`${readiness.controls?.maxOpenOrders ?? "N/A"}`} ready />
             <StatusLine label="Daily notional" value={`${readiness.controls?.maxDailySubmittedNotional ?? "N/A"}`} ready />
           </div>
@@ -3560,11 +4907,13 @@ function AgentTradingPanel({
   message,
   executing,
   onRunPaperAgent,
+  onRunLiveAgent,
 }: {
   agent: AgentTraderApi | null;
   message: string;
   executing: boolean;
   onRunPaperAgent: (symbol?: string) => void;
+  onRunLiveAgent: (symbol?: string) => void;
 }) {
   if (!agent) {
     return (
@@ -3577,18 +4926,19 @@ function AgentTradingPanel({
   const policy = agent.policy;
   const proposals = agent.proposals ?? [];
   const top = proposals[0];
+  const liveReady = Boolean(policy?.liveAutonomyAllowed && top?.status === "live-ready");
   return (
     <div className="mt-4 space-y-3">
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
         <MiniStat label="Agent Trading" value={policy?.enabled ? "Enabled" : "Locked"} tone={policy?.enabled ? "green" : "amber"} />
         <MiniStat label="Paper Agent" value={policy?.paperAutomationReady ? "Ready" : "Locked"} tone={policy?.paperAutomationReady ? "green" : "amber"} />
-        <MiniStat label="Live Orders" value="Manual rail" tone="amber" />
+        <MiniStat label="Live Agent" value={policy?.liveAutonomyAllowed ? "Armed" : policy?.liveAutomationEnabled ? "Gated" : "Off"} tone={policy?.liveAutonomyAllowed ? "green" : "amber"} />
         <MiniStat label="Min Trust" value={`${policy?.minConfidence ?? 75}`} tone="blue" />
         <MiniStat label="Proposals" value={`${proposals.length}`} tone={proposals.length ? "green" : "plain"} />
       </div>
 
-      <div className="rounded-md border border-amber-300/20 bg-amber-300/10 p-3 text-sm leading-6 text-amber-100">
-        {message} Agents may help prepare orders; live-money submission uses the manual broker rail.
+      <div className="rounded-md border border-amber-200/35 bg-amber-300/15 p-3 text-sm leading-6 text-amber-50">
+        {message} Real-money agent submission requires live-agent arming, a logged-in operator, the live acknowledgement phrase, audit storage, and pre-trade controls.
       </div>
 
       {policy?.missing && policy.missing.length > 0 && (
@@ -3607,7 +4957,7 @@ function AgentTradingPanel({
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-mono text-2xl font-semibold text-white">{top.symbol}</span>
-                <span className={`rounded-sm px-2 py-1 text-xs font-bold uppercase ${top.status === "paper-ready" ? "bg-emerald-300 text-slate-950" : "bg-amber-300/20 text-amber-100"}`}>
+                <span className={`rounded-sm px-2 py-1 text-xs font-bold uppercase ${top.status === "paper-ready" || top.status === "live-ready" ? "bg-emerald-300 text-slate-950" : "bg-amber-300/20 text-amber-100"}`}>
                   {top.status}
                 </span>
               </div>
@@ -3615,24 +4965,34 @@ function AgentTradingPanel({
                 Agent draft: buy {top.orderDraft.qty} at {formatUsd(top.orderDraft.limitPrice)} with stop {formatUsd(top.orderDraft.stopLossStopPrice ?? top.ticket.stop)} and target {formatUsd(top.orderDraft.takeProfitLimitPrice ?? top.ticket.target)}.
               </p>
             </div>
-            <button
-              onClick={() => onRunPaperAgent(top.symbol)}
-              disabled={executing || !policy?.paperAutomationReady || top.status !== "paper-ready"}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-md bg-emerald-300 px-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-200 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
-            >
-              <Bot className={`h-4 w-4 ${executing ? "animate-spin" : ""}`} />
-              Paper Trade With Agent
-            </button>
+            <div className="flex flex-col gap-2 sm:w-64">
+              <button
+                onClick={() => onRunPaperAgent(top.symbol)}
+                disabled={executing || !policy?.paperAutomationReady || top.status !== "paper-ready"}
+                className="inline-flex min-h-11 items-center justify-center gap-2 whitespace-normal rounded-md bg-emerald-300 px-3 py-2 text-sm font-semibold leading-5 text-slate-950 transition hover:bg-emerald-200 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
+              >
+                <Bot className={`h-4 w-4 ${executing ? "animate-spin" : ""}`} />
+                Paper Trade With Agent
+              </button>
+              <button
+                onClick={() => onRunLiveAgent(top.symbol)}
+                disabled={executing || !liveReady}
+                className="inline-flex min-h-11 items-center justify-center gap-2 whitespace-normal rounded-md border border-rose-300/40 bg-rose-300 px-3 py-2 text-sm font-semibold leading-5 text-slate-950 transition hover:bg-rose-200 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-slate-700 disabled:text-slate-400"
+              >
+                <ShieldCheck className={`h-4 w-4 ${executing ? "animate-pulse" : ""}`} />
+                Submit Live With Agent
+              </button>
+            </div>
           </div>
-          <div className="mt-3 grid gap-2 sm:grid-cols-3 lg:grid-cols-6">
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
             <MiniStat label="Confidence" value={`${top.confidence}`} tone={top.confidence >= 80 ? "green" : "blue"} />
             <MiniStat label="Units" value={`${top.orderDraft.qty}`} tone="plain" />
             <MiniStat label="Entry" value={formatUsd(top.orderDraft.limitPrice)} tone="green" />
             <MiniStat label="Stop" value={formatUsd(top.orderDraft.stopLossStopPrice ?? top.ticket.stop)} tone="amber" />
             <MiniStat label="Target" value={formatUsd(top.orderDraft.takeProfitLimitPrice ?? top.ticket.target)} tone="blue" />
-            <MiniStat label="Hold" value={top.ticket.expectedHold} tone="amber" />
+            <MiniStat label="Hold" value={top.ticket.expectedHold} tone="amber" className="sm:col-span-2 lg:col-span-5" />
           </div>
-          <div className="mt-3 rounded-sm bg-black/20 p-2 text-xs leading-5 text-cyan-100">
+          <div className="mt-3 rounded-sm bg-black/25 p-3 text-sm leading-6 text-cyan-50">
             Exit rule: {top.ticket.exitRule}
           </div>
           <div className="mt-3 space-y-1">
@@ -3704,7 +5064,7 @@ function FusionAlphaPanel({
             </div>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-cyan-100">{selected.thesis}</p>
           </div>
-          <div className="grid min-w-56 grid-cols-2 gap-2 text-xs">
+          <div className="grid w-full min-w-0 grid-cols-2 gap-2 text-xs sm:w-56 sm:shrink-0">
             <MiniStat label="Fusion" value={`${selected.score}/100`} tone={selected.score >= 65 ? "green" : selected.score <= 44 ? "red" : "amber"} />
             <MiniStat label="Trust" value={`${selected.confidence}/100`} tone={selected.confidence >= 70 ? "green" : "blue"} />
           </div>
@@ -3777,7 +5137,7 @@ function FusionAlphaPanel({
                 <div className="font-mono text-lg font-semibold text-white">{prediction.symbol}</div>
                 <div className="mt-1 text-xs text-slate-500">{prediction.expectedHold}</div>
               </div>
-              <span className={`rounded-sm px-2 py-1 text-[10px] font-bold uppercase ${fusionActionClass(prediction.action)}`}>
+              <span className={`rounded-sm px-2 py-1 text-xs font-bold uppercase ${fusionActionClass(prediction.action)}`}>
                 {prediction.action}
               </span>
             </div>
@@ -3804,19 +5164,37 @@ function ResearchStackPanel({ stack, autoResearch }: { stack: ResearchStackApi |
       </div>
     );
   }
-  const missingWorkers = stack.components.filter((component) => component.mode === "missing" && ["backtesting", "ai-research", "crypto", "fundamentals"].includes(component.category));
+  const missingWorkers = stack.components.filter((component) => component.mode === "missing" && ["backtesting", "ai-research", "crypto", "fundamentals", "operations"].includes(component.category));
   const providerRows = stack.components.filter((component) => ["market-data", "news", "filings", "database"].includes(component.category));
-  const workerRows = stack.components.filter((component) => ["fundamentals", "backtesting", "ai-research", "crypto"].includes(component.category));
+  const workerRows = stack.components.filter((component) => ["fundamentals", "backtesting", "ai-research", "crypto", "operations"].includes(component.category));
   const recentRuns = autoResearch?.recentRuns ?? [];
+  const appliedFreeReplacements = stack.freeReplacements.filter((item) => item.applied).length;
 
   return (
     <div className="mt-4 space-y-3">
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-6">
         <MiniStat label="Stack Grade" value={stack.grade} tone={stack.grade === "production-path" ? "green" : stack.grade === "research-ready" ? "blue" : "amber"} />
         <MiniStat label="Configured" value={`${stack.configured}/${stack.total}`} tone={stack.configured >= 8 ? "green" : "amber"} />
         <MiniStat label="Critical" value={`${stack.criticalConfigured}/${stack.criticalTotal}`} tone={stack.criticalConfigured === stack.criticalTotal ? "green" : "red"} />
         <MiniStat label="Workers" value={`${workerRows.filter((item) => item.ready).length}/${workerRows.length}`} tone={missingWorkers.length <= 3 ? "green" : "amber"} />
         <MiniStat label="AutoResearch" value={recentRuns.length ? `${recentRuns.length} run(s)` : `${autoResearch?.candidates?.length ?? 0} candidates`} tone={recentRuns.length ? "green" : "blue"} />
+        <MiniStat label="Free Paths" value={`${appliedFreeReplacements}/${stack.freeReplacements.length}`} tone={appliedFreeReplacements === stack.freeReplacements.length ? "green" : "amber"} />
+      </div>
+
+      <div className="rounded-md border border-cyan-300/20 bg-cyan-300/10 p-3">
+        <div className="font-semibold text-white">Free Replacements Applied</div>
+        <div className="mt-3 grid gap-2 md:grid-cols-2">
+          {stack.freeReplacements.map((item) => (
+            <div key={item.replaces} className="rounded-sm bg-black/20 p-2 text-xs leading-5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="font-semibold text-cyan-100">{item.replaces}</span>
+                <span className={item.applied ? "text-emerald-200" : "text-amber-200"}>{item.applied ? "Applied" : "Pending"}</span>
+              </div>
+              <div className="mt-1 text-slate-300">{item.freePath}</div>
+              <div className="mt-1 text-slate-500">{item.limitation}</div>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="grid gap-3 lg:grid-cols-2">
@@ -3829,7 +5207,7 @@ function ResearchStackPanel({ stack, autoResearch }: { stack: ResearchStackApi |
           </div>
         </div>
         <div className="rounded-md border border-white/10 bg-white/[0.03] p-3">
-          <div className="font-semibold text-white">External Research Workers</div>
+          <div className="font-semibold text-white">Research Workers And Reference Maps</div>
           <div className="mt-3 grid gap-2">
             {workerRows.map((component) => (
               <ResearchStackRow key={component.key} component={component} />
@@ -3862,11 +5240,12 @@ function ResearchStackRow({ component }: { component: ResearchStackApi["componen
           {component.ready ? component.mode : "missing"}
         </span>
       </div>
-      {!component.ready && component.freeAlternative && (
-        <div className="mt-2 text-amber-100">Fallback: {component.freeAlternative}</div>
+      {component.freeAlternative && (
+        <div className="mt-2 text-cyan-100">Free path: {component.freeAlternative}</div>
       )}
+      <div className="mt-2 text-slate-500">Cost path: {component.costProfile.replaceAll("-", " ")}</div>
       {component.env.length > 0 && (
-        <div className="mt-2 font-mono text-[10px] uppercase tracking-wide text-slate-500">
+        <div className="mt-2 font-mono text-xs font-semibold text-slate-400">
           {component.env.join(" | ")}
         </div>
       )}
@@ -4168,7 +5547,7 @@ function EngineCard({ engine, finding }: { engine: EngineCapability; finding?: F
             <span className="font-mono">{finding.score}/100 | w {finding.weight.toFixed(2)}</span>
           </div>
           <div className="mt-2 text-slate-100">{finding.finding}</div>
-          <div className="mt-2 font-mono text-[10px] uppercase tracking-wide opacity-80">
+          <div className="mt-2 font-mono text-xs uppercase text-slate-300">
             {finding.status} | {finding.stance}
           </div>
         </div>
@@ -4190,10 +5569,12 @@ function MiniStat({
   label,
   value,
   tone,
+  className = "",
 }: {
   label: string;
   value: string;
   tone: "green" | "red" | "amber" | "blue" | "plain";
+  className?: string;
 }) {
   const color =
     tone === "green"
@@ -4205,10 +5586,16 @@ function MiniStat({
           : tone === "blue"
             ? "text-cyan-300"
             : "text-white";
+  const help = statExplanations[label] ?? `${label}: ${value}`;
   return (
-    <div className="rounded-sm bg-black/20 p-2">
-      <div className="text-slate-500">{label}</div>
-      <div className={`mt-1 break-words font-mono leading-5 ${color}`}>{value}</div>
+    <div className={`min-h-[4.25rem] min-w-0 overflow-visible rounded-sm bg-black/20 p-2 ${className}`} title={help} aria-label={`${label}. ${value}. ${help}`}>
+      <div className="flex items-start gap-1.5 text-xs font-semibold text-slate-400">
+        <span className="min-w-0 break-words">{label}</span>
+        <HelpTip text={help} />
+      </div>
+      <div className={`mt-1 whitespace-normal break-words font-mono text-sm leading-6 tabular-nums ${color}`} title={`${value}. ${help}`}>
+        {value}
+      </div>
     </div>
   );
 }

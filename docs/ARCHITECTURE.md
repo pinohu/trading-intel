@@ -9,9 +9,10 @@ Runtime shape:
 - Browser dashboard renders the trading command center.
 - Serverless API routes fetch market data, generate rule-based signals, create trade tickets, and expose readiness metadata.
 - The Ising/QUBO optimizer chooses baskets from generated buy leads under budget, risk, max-position, and overlap constraints.
+- Native reference maps, including the systematic-trading map, classify missing data, alpha, analytics, backtest, live-control, architecture, tooling, and AI proof lanes before a trade idea is trusted.
 - Broker routes can connect to Alpaca account, positions, open orders, and guarded order placement when credentials are configured.
 - Vercel Cron calls `/api/monitor` every five minutes.
-- Alerts can be sent through webhook, Twilio, or Resend when configured.
+- Alerts use free browser notifications first; webhook, Twilio, or Resend are optional off-device channels when configured.
 - Browser `localStorage` stores the current mobile watchlist and local notes.
 - When `DATABASE_URL` is configured and `database/schema.sql` is applied, Postgres stores quote snapshots, signal snapshots, paper trades, model outcomes, provider health, and audit events.
 
@@ -21,10 +22,10 @@ The current application is safe-by-default for research, paper planning, and gua
 
 Production real-money trading requires these external systems before live execution is even considered:
 
-- Licensed real-time market data.
+- Free-first research data is implemented; licensed real-time market data is required only before execution-grade promotion.
 - Persistent database with the provided schema applied.
 - Broker execution account gates, live acknowledgement, and order audit storage.
-- Historical backtesting workers.
+- Historical backtesting, factor-analysis, native systematic reference maps, companion market-app, sentiment, alert-pattern, portfolio analytics, research data, LLM/agent research, crypto strategy/liquidity, and ML forecast workers, including optional Alpha Vantage, Alphalens, OpenStock, StockSight, StreetMerchant, Ghostfolio, AKShare, LSTM Time Series, LLM Trading Lab, Dexter, StockSharp C#/.NET, RQAlpha, Freqtrade, Hummingbot, StockPredictionAI-style, and Stock Prediction Models worker integrations.
 - Signal outcome tracker.
 - Immutable audit retention and export policy beyond the current audit-events table.
 - User auth and RBAC.
@@ -40,12 +41,13 @@ flowchart LR
   BFF --> Queue["Queue: alerts, backtests, outcome checks"]
   DataWorker["Market Data Workers"] --> Cache
   DataWorker --> DB
-  Providers["Licensed + Public Providers"] --> DataWorker
+  Providers["Free-First Public + Optional Licensed Providers"] --> DataWorker
   SignalWorker["Signal Engine Workers"] --> DB
   BFF --> Ising["Ising/QUBO Basket Optimizer"]
   BFF --> TradingAgents["Native TradingAgents: in-code multi-agent debate"]
   TradingAgents --> DB
-  BacktestWorker["Backtest Workers: LEAN/vectorbt/backtesting.py"] --> DB
+  ReferenceMaps["Native Reference Maps: systematic trading taxonomy + proof coverage"] --> BFF
+  BacktestWorker["Companion + Sentiment + Alert + Portfolio + Research Data + Factor + Agent + Backtest + Crypto + Forecast Workers: Alpha Vantage/Alphalens/OpenStock/StockSight/StreetMerchant/Ghostfolio/AKShare/LSTM Time Series/LLM Trading Lab/Dexter/StockPredictionAI/Stock Prediction Models/LEAN/StockSharp/RQAlpha/Freqtrade/Hummingbot/vectorbt/backtesting.py"] --> DB
   Broker["Broker Paper/Read-Only APIs"] --> BFF
   BFF --> BrokerExec["Broker Execution API: user-session only, live gated"]
   Queue --> Alerts["Webhook/SMS/Email/Push"]
@@ -57,7 +59,8 @@ flowchart LR
 - Never promote stale quotes to buy/sell actions.
 - Never place live orders from the app until paper results, audit logs, broker permissions, and operator approvals exist.
 - Never allow cron or agent bearer tokens to place broker orders.
-- Never let TradingAgents output place autonomous broker orders; manual paper/live execution stays in the broker controls and audit rail.
+- Never let TradingAgents, Alpha Vantage, Alphalens, LSTM Time Series, LLM Trading Lab, Dexter, OpenStock, StockSight, StreetMerchant, Ghostfolio, AKShare, StockPredictionAI, Stock Prediction Models, LEAN, StockSharp, RQAlpha, Freqtrade, or Hummingbot worker output place autonomous broker or exchange orders; manual paper/live execution stays in the broker controls and audit rail.
+- Never treat a curated reference map as market data, a signal, a backtest result, or execution authorization.
 - Never submit a market order from the current execution rail.
 - Never treat the Ising optimizer as a price predictor; it only selects among existing candidates.
 - Never allow auth to fail open.

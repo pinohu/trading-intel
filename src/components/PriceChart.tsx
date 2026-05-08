@@ -19,20 +19,20 @@ export default function PriceChart({ data }: { data: Point[] }) {
       height: container.clientHeight || 260,
       layout: {
         background: { type: ColorType.Solid, color: "transparent" },
-        textColor: "#94a3b8",
+        textColor: "#dbe4ef",
       },
       grid: {
-        vertLines: { color: "rgba(148,163,184,0.08)" },
-        horzLines: { color: "rgba(148,163,184,0.08)" },
+        vertLines: { color: "rgba(219,228,239,0.18)" },
+        horzLines: { color: "rgba(219,228,239,0.18)" },
       },
-      rightPriceScale: { borderColor: "rgba(148,163,184,0.15)" },
-      timeScale: { borderColor: "rgba(148,163,184,0.15)", visible: false },
+      rightPriceScale: { borderColor: "rgba(219,228,239,0.34)" },
+      timeScale: { borderColor: "rgba(219,228,239,0.34)", visible: false },
       crosshair: { mode: 0 },
     });
     const series = chart.addSeries(AreaSeries, {
       lineColor: "#67e8f9",
       topColor: "rgba(103,232,249,0.35)",
-      bottomColor: "rgba(103,232,249,0.02)",
+      bottomColor: "rgba(103,232,249,0.08)",
       priceLineVisible: false,
       lastValueVisible: true,
     });
@@ -57,5 +57,5 @@ export default function PriceChart({ data }: { data: Point[] }) {
     };
   }, [data]);
 
-  return <div ref={containerRef} className="h-full min-h-64 w-full" />;
+  return <div ref={containerRef} role="img" aria-label="Price action chart for the selected symbol." className="h-full min-h-64 w-full" />;
 }

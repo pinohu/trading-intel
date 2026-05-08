@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { authCookieName, cleanSecret, securityHeaders } from "@/lib/security";
+import { authCookieName, cleanSecret, configuredAccessCode, securityHeaders } from "@/lib/security";
 
 const PUBLIC_PATHS = [
   "/login",
@@ -14,7 +14,7 @@ const PUBLIC_PATHS = [
 
 export function proxy(request: NextRequest) {
   const accessToken = cleanSecret(process.env.TRADING_ACCESS_TOKEN);
-  const configuredCode = cleanSecret(process.env.TRADING_ACCESS_CODE);
+  const configuredCode = configuredAccessCode();
   const cronSecret = cleanSecret(process.env.CRON_SECRET);
   const headers = securityHeaders();
 

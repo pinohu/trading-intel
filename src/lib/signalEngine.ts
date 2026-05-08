@@ -1,3 +1,5 @@
+import { evaluateTradingMinds, type TradingMindConsensus, type TradingMindStance } from "@/lib/tradingMinds";
+
 export type SignalQuote = {
   symbol: string;
   name: string;
@@ -32,6 +34,7 @@ export type TradeSignal = {
   reason: string;
   confirmations: string[];
   warnings: string[];
+  strategyMindset: TradingMindConsensus;
   dataFresh: boolean;
   dataAgeMinutes: number | null;
   marketStatus?: string;
@@ -55,6 +58,7 @@ export type BuyLead = {
   reason: string;
   simpleWhy: string[];
   warnings: string[];
+  strategyMindset: TradingMindConsensus;
   dataFresh: boolean;
   dataAgeMinutes: number | null;
   marketStatus?: string;
@@ -112,6 +116,13 @@ function marketForSymbol(symbol: string): TradeSignal["market"] {
 
 function isCommodityMarket(market: TradeSignal["market"]) {
   return market === "Commodity ETF" || market === "Commodity Future";
+}
+
+function actionFromTradingMinds(action: TradeSignal["action"], mindset: { stance: TradingMindStance; score: number; alignment: number }): TradeSignal["action"] {
+  if (action === "Hold/No Trade" && mindset.stance === "buy-watch" && mindset.score >= 62 && mindset.alignment >= 50) return "Buy Watch";
+  if (action === "Buy Watch" && (mindset.stance === "sell-watch" || mindset.stance === "risk-off") && mindset.alignment >= 50) return "Sell/Exit Watch";
+  if (action === "Hold/No Trade" && mindset.stance === "sell-watch" && mindset.alignment >= 50) return "Sell/Exit Watch";
+  return action;
 }
 
 function intradayHoldingPeriod(action: TradeSignal["action"], market: TradeSignal["market"], fresh: boolean): HoldingPeriod {
@@ -243,44 +254,85 @@ export function generateSignal(quote: SignalQuote, riskPct = 1): TradeSignal {
       : exhaustionRisk || failedBreakout || extended
         ? "Sell/Exit Watch"
         : "Hold/No Trade";
-  const action = fresh && inTradingWindow ? rawAction : "Hold/No Trade";
+  let action: TradeSignal["action"] = fresh && inTradingWindow ? rawAction : "Hold/No Trade";
+  let invalidation =
+    action === "Buy Watch"
+      ? Math.max(shape.low, Math.min(shape.open, quote.price - range * 0.42))
+      : action === "Sell/Exit Watch"
+        ? Math.min(shape.high, quote.price + range * 0.35)
+        : shape.low;
+  let target =
+    action === "Buy Watch"
+      ? quote.price + range * 0.85
+      : action === "Sell/Exit Watch"
+        ? quote.price - range * 0.65
+        : quote.price;
+  let riskDistance = Math.max(Math.abs(quote.price - invalidation), quote.price * 0.0025);
+  let rewardRisk = Math.abs(target - quote.price) / riskDistance;
+  const strategyMindset = evaluateTradingMinds({
+    symbol: quote.symbol,
+    market,
+    price: quote.price,
+    dayMovePct: shape.dayMovePct,
+    closeLocation,
+    aboveOpen,
+    aboveVwapProxy,
+    liquid,
+    fresh,
+    inTradingWindow,
+    rewardRisk,
+    quality: quote.quality,
+    rangeEstimated: shape.rangeEstimated,
+    extended,
+    failedBreakout,
+    severeWeakness: exhaustionRisk,
+    volume: quote.volume,
+  });
+  action = actionFromTradingMinds(action, strategyMindset);
+  invalidation =
+    action === "Buy Watch"
+      ? Math.max(shape.low, Math.min(shape.open, quote.price - range * 0.42))
+      : action === "Sell/Exit Watch"
+        ? Math.min(shape.high, quote.price + range * 0.35)
+        : shape.low;
+  target =
+    action === "Buy Watch"
+      ? quote.price + range * 0.85
+      : action === "Sell/Exit Watch"
+        ? quote.price - range * 0.65
+        : quote.price;
+  riskDistance = Math.max(Math.abs(quote.price - invalidation), quote.price * 0.0025);
+  rewardRisk = Math.abs(target - quote.price) / riskDistance;
   const setup =
     !fresh
       ? "Stale Data - No Trade"
       : !inTradingWindow
         ? `${normalizedMarketStatus(quote) ?? "Outside regular session"} - Wait`
       : action === "Buy Watch"
-      ? openingRangeBreakout
-        ? "Opening Range Breakout"
-        : "VWAP Trend Continuation"
+      ? strategyMindset.stance === "buy-watch" && !openingRangeBreakout && !strongMomentum
+        ? "Legendary Strategy Alignment"
+        : openingRangeBreakout
+          ? "Opening Range Breakout"
+          : "VWAP Trend Continuation"
       : action === "Sell/Exit Watch"
         ? extended
           ? "Momentum Exhaustion"
           : failedBreakout
             ? "Failed Breakout"
-            : "Breakdown / Exit Risk"
-        : "No A+ Setup";
-  const urgency = action === "Hold/No Trade" ? "Low" : score >= 78 || Math.abs(quote.changePct) >= 2.5 ? "High" : "Medium";
-  const invalidation =
-    action === "Buy Watch"
-      ? Math.max(shape.low, Math.min(shape.open, quote.price - range * 0.42))
-      : action === "Sell/Exit Watch"
-        ? Math.min(shape.high, quote.price + range * 0.35)
-        : shape.low;
-  const target =
-    action === "Buy Watch"
-      ? quote.price + range * 0.85
-      : action === "Sell/Exit Watch"
-        ? quote.price - range * 0.65
-        : quote.price;
-  const riskDistance = Math.max(Math.abs(quote.price - invalidation), quote.price * 0.0025);
-  const rewardRisk = Math.abs(target - quote.price) / riskDistance;
+            : strategyMindset.stance === "sell-watch" || strategyMindset.stance === "risk-off"
+              ? "Strategy-Mind Risk Veto"
+              : "Breakdown / Exit Risk"
+        : strategyMindset.stance === "hold"
+          ? "Mixed Legendary Strategy Panel"
+          : "No A+ Setup";
+  const urgency = action === "Hold/No Trade" ? "Low" : score >= 78 || Math.abs(quote.changePct) >= 2.5 || strategyMindset.alignment >= 60 ? "High" : "Medium";
   const confirmations = [
     aboveOpen ? "Price above open" : "",
     aboveVwapProxy ? "Price above VWAP proxy" : "",
     closeLocation >= 0.66 ? "Close location strong" : "",
     liquid ? "Liquidity filter passed" : "",
     rewardRisk >= 1.5 ? "Reward/risk acceptable" : "",
+    strategyMindset.stance === "buy-watch" ? `Legendary strategy panel supports buy watch (${strategyMindset.alignment}% alignment)` : "",
   ].filter(Boolean);
   const warnings = [
     !fresh ? `Data is stale (${age === null ? "unknown age" : `${Math.round(age)} minutes old`})` : "",
@@ -289,6 +341,7 @@ export function generateSignal(quote: SignalQuote, riskPct = 1): TradeSignal {
     !liquid ? "Liquidity below preferred day-trading threshold" : "",
     quote.quality && quote.quality !== "Execution Grade" ? `Feed is ${quote.quality}, not licensed execution-grade` : "",
     extended ? "Move may be extended; chase risk is elevated" : "",
+    strategyMindset.stance === "sell-watch" || strategyMindset.stance === "risk-off" ? `Legendary strategy panel is ${strategyMindset.stance}: ${strategyMindset.summary}` : "",
     market === "Commodity ETF" ? "Commodity ETF: check macro, inventory, weather, roll, and geopolitical risk" : "",
     market === "Commodity Future" ? "Commodity future proxy: check contract roll, inventory, weather, OPEC/Fed, and geopolitical risk" : "",
     rewardRisk < 1.5 ? "Reward/risk is below preferred threshold" : "",
@@ -297,11 +350,12 @@ export function generateSignal(quote: SignalQuote, riskPct = 1): TradeSignal {
     confirmations.length * 16 +
     (action === "Hold/No Trade" ? 0 : 12) +
     Math.min(18, Math.abs(quote.changePct) * 4) -
-    warnings.length * 10;
+    warnings.length * 10 +
+    (strategyMindset.stance === "buy-watch" ? 8 : strategyMindset.stance === "sell-watch" || strategyMindset.stance === "risk-off" ? -12 : 0);
   const quality = !fresh ? "Avoid" : qualityScore >= 76 ? "A" : qualityScore >= 58 ? "B" : qualityScore >= 40 ? "C" : "Avoid";
   const confidence = Math.max(
     1,
-    Math.min(100, Math.round(score + confirmations.length * 5 + rewardRisk * 4 - warnings.length * 9 - (extended ? 16 : 0))),
+    Math.min(100, Math.round(score + confirmations.length * 5 + rewardRisk * 4 - warnings.length * 9 - (extended ? 16 : 0) + (strategyMindset.score - 50) * 0.22)),
   );
   const reason =
     !fresh
@@ -309,10 +363,10 @@ export function generateSignal(quote: SignalQuote, riskPct = 1): TradeSignal {
       : !inTradingWindow
         ? "The market is outside the clean regular-session window. Keep it as a watch item and wait for confirmation."
       : action === "Buy Watch"
-      ? "Multiple day-trading rules align: trend, range location, liquidity, and risk/reward. Confirm catalyst and thesis first."
+      ? `Multiple day-trading rules align, and the strategy-mind panel says: ${strategyMindset.summary} Confirm catalyst and thesis first.`
       : action === "Sell/Exit Watch"
-        ? "Exit/avoidance rules triggered from downside pressure, failed breakout, or extension risk."
-        : "No clean edge from the current rule set. Preserve capital and wait.";
+        ? `Exit/avoidance rules triggered from downside pressure, failed breakout, extension risk, or strategy-mind veto. ${strategyMindset.summary}`
+        : `No clean edge from the current rule set. ${strategyMindset.summary} Preserve capital and wait.`;
   const holdingPeriod = intradayHoldingPeriod(action, market, fresh);
 
   return {
@@ -333,6 +387,7 @@ export function generateSignal(quote: SignalQuote, riskPct = 1): TradeSignal {
     reason,
     confirmations,
     warnings,
+    strategyMindset,
     dataFresh: fresh,
     dataAgeMinutes: age === null ? null : Number(age.toFixed(1)),
     marketStatus: normalizedMarketStatus(quote),
@@ -349,6 +404,7 @@ export function generateSignal(quote: SignalQuote, riskPct = 1): TradeSignal {
 
 export function generateBuyLead(quote: SignalQuote, riskPct = 1): BuyLead {
   const signal = generateSignal(quote, riskPct);
+  const strategyMindset = signal.strategyMindset;
   const age = dataAgeMinutes(quote);
   const fresh = isQuoteFreshEnough(quote);
   const shape = quoteShape(quote);
@@ -369,12 +425,13 @@ export function generateBuyLead(quote: SignalQuote, riskPct = 1): BuyLead {
     (quote.quality === "Execution Grade" ? 8 : quote.quality === "Public Real-Time" ? 5 : 0) -
     (shape.rangeEstimated ? 4 : 0) -
     (extended ? 16 : 0) -
-    (severeWeakness ? 22 : 0);
+    (severeWeakness ? 22 : 0) +
+    (strategyMindset.stance === "buy-watch" ? 8 : strategyMindset.stance === "sell-watch" || strategyMindset.stance === "risk-off" ? -12 : 0);
   const confidence = clamp(Math.round(baseScore), 1, 100);
   const status =
     signal.action === "Buy Watch" && (signal.quality === "A" || signal.quality === "B")
       ? "Buy Watch"
-      : signal.action !== "Sell/Exit Watch" && fresh && liquid && !severeWeakness && !extended && confidence >= 45
+      : signal.action !== "Sell/Exit Watch" && strategyMindset.stance !== "sell-watch" && strategyMindset.stance !== "risk-off" && fresh && liquid && !severeWeakness && !extended && confidence >= 45
         ? "Buy Lead - Wait for Trigger"
         : "No Buy";
   const trigger =
@@ -393,6 +450,7 @@ export function generateBuyLead(quote: SignalQuote, riskPct = 1): BuyLead {
     aboveVwapProxy ? "It is holding the stronger side of today's range." : "It has not clearly reclaimed the stronger side of today's range.",
     liquid ? "There is enough activity to monitor it closely." : "Trading activity is below the preferred threshold.",
     shape.closeLocation >= 0.58 ? "It is closer to the upper part of today's range." : "It is not yet near the stronger part of today's range.",
+    `Strategy-mind panel: ${strategyMindset.summary}`,
   ];
   const warnings = [
     !fresh ? `Data is stale (${age === null ? "unknown age" : `${Math.round(age)} minutes old`})` : "",
@@ -400,6 +458,7 @@ export function generateBuyLead(quote: SignalQuote, riskPct = 1): BuyLead {
     shape.rangeEstimated ? "The day range is estimated, so the trigger needs extra confirmation" : "",
     !liquid ? "Liquidity is below the preferred day-trading threshold" : "",
     signal.action === "Sell/Exit Watch" ? "Sell/exit rules are active; do not treat this as a buy lead" : "",
+    strategyMindset.stance === "sell-watch" || strategyMindset.stance === "risk-off" ? `Strategy-mind veto: ${strategyMindset.summary}` : "",
     extended ? "The move is already stretched; avoid chasing" : "",
     severeWeakness ? "The chart is currently too weak for a buy lead" : "",
     market === "Commodity ETF" ? "Commodity ETF: confirm macro and inventory risk before acting" : "",
@@ -411,6 +470,8 @@ export function generateBuyLead(quote: SignalQuote, riskPct = 1): BuyLead {
       ? "This is the strongest buy candidate in the current rule stack. Confirm the news and risk level before acting."
       : status === "Buy Lead - Wait for Trigger"
         ? `This is a buy lead, not a buy-now order. It needs to push through ${formatPlainMoney(trigger)} with fresh data before it becomes cleaner.`
+        : strategyMindset.stance === "sell-watch" || strategyMindset.stance === "risk-off"
+          ? "This is not a buy candidate right now because the strategy-mind panel vetoed promotion."
         : signal.action === "Sell/Exit Watch"
           ? "This is not a buy candidate right now because sell/exit rules are active."
         : "This is not a buy candidate right now. Wait for strength, fresh data, and a cleaner trigger.";
@@ -432,6 +493,7 @@ export function generateBuyLead(quote: SignalQuote, riskPct = 1): BuyLead {
     reason,
     simpleWhy,
     warnings,
+    strategyMindset,
     dataFresh: fresh,
     dataAgeMinutes: age === null ? null : Number(age.toFixed(1)),
     marketStatus: normalizedMarketStatus(quote),

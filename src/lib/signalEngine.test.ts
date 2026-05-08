@@ -28,9 +28,12 @@ describe("signalEngine", () => {
     expect(signal.action).toBe("Buy Watch");
     expect(signal.quality).toMatch(/A|B/);
     expect(signal.rewardRisk).toBeGreaterThanOrEqual(1.5);
+    expect(signal.strategyMindset.votes.length).toBeGreaterThan(4);
+    expect(signal.confirmations.some((item) => item.includes("Legendary strategy"))).toBe(true);
     expect(signal.holdingPeriod.label).toBe("Day trade");
     expect(signal.holdingPeriod.expectedHold).toContain("Intraday");
     expect(lead.status).toBe("Buy Watch");
+    expect(lead.strategyMindset.stance).toBe("buy-watch");
     expect(lead.holdingPeriod.maxHold).toContain("Same trading day");
   });
 
@@ -41,6 +44,7 @@ describe("signalEngine", () => {
 
     expect(signal.action).toBe("Hold/No Trade");
     expect(signal.dataFresh).toBe(false);
+    expect(signal.strategyMindset.stance).toBe("risk-off");
     expect(signal.holdingPeriod.label).toBe("No trade");
     expect(lead.status).toBe("No Buy");
     expect(lead.warnings.some((warning) => warning.includes("stale"))).toBe(true);

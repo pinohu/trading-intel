@@ -64,20 +64,41 @@ create table if not exists trade_tickets (
   symbol text not null,
   side text not null,
   status text not null,
+  trigger numeric(20, 6),
+  entry_signal_needed text,
   entry numeric(20, 6) not null,
   stop numeric(20, 6) not null,
   target numeric(20, 6) not null,
   units integer not null,
   notional numeric(20, 2) not null,
+  potential_units integer,
+  potential_notional numeric(20, 2),
   max_loss numeric(20, 2) not null,
   reward_risk numeric(12, 6) not null,
+  risk_reward_ratio numeric(12, 6),
   risk_pct numeric(8, 4) not null,
+  risk_budget_dollars numeric(20, 2),
+  daily_loss_cap_dollars numeric(20, 2),
+  unit_risk numeric(20, 6),
+  position_size text,
+  suggested_position_size text,
   tradeable boolean not null,
   reason text not null,
   must_confirm jsonb not null default '[]'::jsonb,
   do_not_trade_if jsonb not null default '[]'::jsonb,
   created_at timestamptz not null default now()
 );
+
+alter table if exists trade_tickets add column if not exists trigger numeric(20, 6);
+alter table if exists trade_tickets add column if not exists entry_signal_needed text;
+alter table if exists trade_tickets add column if not exists potential_units integer;
+alter table if exists trade_tickets add column if not exists potential_notional numeric(20, 2);
+alter table if exists trade_tickets add column if not exists risk_reward_ratio numeric(12, 6);
+alter table if exists trade_tickets add column if not exists risk_budget_dollars numeric(20, 2);
+alter table if exists trade_tickets add column if not exists daily_loss_cap_dollars numeric(20, 2);
+alter table if exists trade_tickets add column if not exists unit_risk numeric(20, 6);
+alter table if exists trade_tickets add column if not exists position_size text;
+alter table if exists trade_tickets add column if not exists suggested_position_size text;
 
 create table if not exists paper_trades (
   id uuid primary key default gen_random_uuid(),
