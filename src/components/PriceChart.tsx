@@ -41,6 +41,7 @@ type PriceChartProps = {
   variant?: "area" | "candles";
   showVolume?: boolean;
   showEma?: boolean;
+  showVwap?: boolean;
   levels?: PriceLevel[];
 };
 
@@ -109,6 +110,32 @@ function buildEma(data: Point[], period = 9, candles?: ChartCandle[]) {
   });
 }
 
+function buildVwap(data: Point[], candles?: ChartCandle[]) {
+  if (candles?.length) {
+    let cumulativeTypicalVolume = 0;
+    let cumulativeVolume = 0;
+    return candles.map((candle, index) => {
+      const volume = Math.max(1, candle.volume ?? 1);
+      const typical = (candle.high + candle.low + candle.close) / 3;
+      cumulativeTypicalVolume += typical * volume;
+      cumulativeVolume += volume;
+      return {
+        time: normalizeChartTime(candle.time, index),
+        value: Number((cumulativeTypicalVolume / cumulativeVolume).toFixed(2)),
+      };
+    });
+  }
+
+  let cumulativeValue = 0;
+  return data.map((point, index) => {
+    cumulativeValue += point.value;
+    return {
+      time: (index + 1) as never,
+      value: Number((cumulativeValue / (index + 1)).toFixed(2)),
+    };
+  });
+}
+
 function normalizeChartTime(value: string | number, index: number) {
   if (typeof value === "number" && Number.isFinite(value)) return value as never;
   const timestamp = Date.parse(String(value));
@@ -116,11 +143,12 @@ function normalizeChartTime(value: string | number, index: number) {
   return (index + 1) as never;
 }
 
-export default function PriceChart({ data, candles, variant = "area", showVolume = false, showEma = false, levels = [] }: PriceChartProps) {
+export default function PriceChart({ data, candles, variant = "area", showVolume = false, showEma = false, showVwap = false, levels = [] }: PriceChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const mainSeriesRef = useRef<ISeriesApi<SeriesType> | null>(null);
   const emaSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
+  const vwapSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
   const volumeSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
   const priceLinesRef = useRef<IPriceLine[]>([]);
 
@@ -178,6 +206,17 @@ export default function PriceChart({ data, candles, variant = "area", showVolume
       emaSeriesRef.current = emaSeries;
     }
 
+    if (showVwap) {
+      const vwapSeries = chart.addSeries(LineSeries, {
+        color: "#a78bfa",
+        lineWidth: 2,
+        lineStyle: 1,
+        priceLineVisible: false,
+        lastValueVisible: false,
+      });
+      vwapSeriesRef.current = vwapSeries;
+    }
+
     if (showVolume) {
       const volumeSeries = chart.addSeries(HistogramSeries, {
         color: "rgba(148, 163, 184, 0.28)",
@@ -207,11 +246,12 @@ export default function PriceChart({ data, candles, variant = "area", showVolume
       priceLinesRef.current = [];
       mainSeriesRef.current = null;
       emaSeriesRef.current = null;
+      vwapSeriesRef.current = null;
       volumeSeriesRef.current = null;
       chartRef.current = null;
       chart.remove();
     };
-  }, [showEma, showVolume, variant]);
+  }, [showEma, showVolume, showVwap, variant]);
 
   useEffect(() => {
     const chart = chartRef.current;
@@ -237,6 +277,10 @@ export default function PriceChart({ data, candles, variant = "area", showVolume
 
     if (volumeSeriesRef.current) {
       volumeSeriesRef.current.setData(buildVolume(data, candles));
+    }
+
+    if (vwapSeriesRef.current) {
+      vwapSeriesRef.current.setData(buildVwap(data, candles));
     }
 
     chart.timeScale().fitContent();

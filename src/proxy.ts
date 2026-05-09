@@ -17,14 +17,6 @@ export function proxy(request: NextRequest) {
   const configuredCode = configuredAccessCode();
   const cronSecret = cleanSecret(process.env.CRON_SECRET);
   const headers = securityHeaders();
-
-  if (!accessToken || !configuredCode) {
-    return NextResponse.json(
-      { ok: false, error: "Private access is not configured. Access is closed." },
-      { status: 503, headers },
-    );
-  }
-
   const { pathname } = request.nextUrl;
   const isPublic =
     PUBLIC_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`)) ||
@@ -33,6 +25,13 @@ export function proxy(request: NextRequest) {
 
   if (isPublic) {
     return withSecurityHeaders(NextResponse.next());
+  }
+
+  if (!accessToken || !configuredCode) {
+    return NextResponse.json(
+      { ok: false, error: "Private access is not configured. Access is closed." },
+      { status: 503, headers },
+    );
   }
 
   const cookie = request.cookies.get(authCookieName)?.value;

@@ -86,6 +86,25 @@ type StreamStatusPayload = {
   implementationNote: string;
 };
 
+type DiagnosticsPayload = {
+  ok: boolean;
+  mode: string;
+  overallReady: boolean;
+  generatedAt: string;
+  checks: Array<{
+    key: string;
+    label: string;
+    ready: boolean;
+    severity: "critical" | "high" | "medium" | "low";
+    action: string;
+  }>;
+  streaming?: {
+    currentMode: string;
+    browserRefreshSeconds: number;
+    limitation: string;
+  };
+};
+
 const QuoteHistoryContext = createContext<Record<string, SparkPoint[]>>({});
 
 type Quote = {
@@ -3844,6 +3863,7 @@ function TradingViewTerminalWorkbench({
   const [backtestSummary, setBacktestSummary] = useState("");
   const [backtestLoading, setBacktestLoading] = useState(false);
   const [streamStatus, setStreamStatus] = useState<StreamStatusPayload | null>(null);
+  const [diagnostics, setDiagnostics] = useState<DiagnosticsPayload | null>(null);
   const [chartVariant, setChartVariant] = useState<"candles" | "area">(() => {
     if (typeof window === "undefined") return "candles";
     return window.localStorage.getItem("ti_chart_variant") === "area" ? "area" : "candles";
@@ -3855,6 +3875,10 @@ function TradingViewTerminalWorkbench({
   const [showEma, setShowEma] = useState(() => {
     if (typeof window === "undefined") return true;
     return window.localStorage.getItem("ti_chart_ema") !== "off";
+  });
+  const [showVwap, setShowVwap] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return window.localStorage.getItem("ti_chart_vwap") !== "off";
   });
   const [showRiskLines, setShowRiskLines] = useState(() => {
     if (typeof window === "undefined") return true;
@@ -3869,7 +3893,7 @@ function TradingViewTerminalWorkbench({
   const orders = brokerOverview?.orders ?? [];
   const tools = ["+", "T", "F", "R", "M", "A"];
   const tabs = ["Watchlist", "Positions", "Orders", "News"];
-  const dockTabs = ["Positions", "Orders", "Stream", "Alerts", "Journal", "Strategy"];
+  const dockTabs = ["Positions", "Orders", "Stream", "Diagnostics", "Alerts", "Journal", "Strategy"];
   const timeframes = ["1m", "5m", "15m", "1h", "1D", "1W", "1M"];
   const priceLevels = buildWorkbenchPriceLevels(selectedBuyNow, selectedLead, selectedSignal, showRiskLines);
   const signalTone = selectedBuyNow ? "green" : selectedSignal?.action === "Sell/Exit Watch" ? "red" : selectedLead ? "blue" : "plain";
@@ -3880,6 +3904,8 @@ function TradingViewTerminalWorkbench({
     [historyCandles, selectedQuote, timeframe],
   );
   const chartData = liveCandles?.length ? liveCandles.map((candle) => ({ label: String(candle.time), value: candle.close })) : spark;
+  const chartDataMode = history?.advisory ? "Proxy history + live quote" : history?.source ? history.source : "Live quote spark";
+  const chartDataQuality = history?.quality ?? selectedQuote?.quality ?? "Checking";
   const secondaryQuotes = visibleQuotes.filter((quote) => quote.symbol !== selectedSymbol).slice(0, layout === "4" ? 3 : layout === "2" ? 1 : 0);
   const quoteHistory = useContext(QuoteHistoryContext);
 
@@ -3894,6 +3920,10 @@ function TradingViewTerminalWorkbench({
   useEffect(() => {
     window.localStorage.setItem("ti_chart_ema", showEma ? "on" : "off");
   }, [showEma]);
+
+  useEffect(() => {
+    window.localStorage.setItem("ti_chart_vwap", showVwap ? "on" : "off");
+  }, [showVwap]);
 
   useEffect(() => {
     window.localStorage.setItem("ti_chart_risk_lines", showRiskLines ? "on" : "off");
@@ -3944,6 +3974,24 @@ function TradingViewTerminalWorkbench({
       cancelled = true;
     };
   }, [brokerMode]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadDiagnostics() {
+      try {
+        const payload = await fetchDashboardJson("/api/diagnostics");
+        if (!cancelled && payload.ok) setDiagnostics(payload as DiagnosticsPayload);
+      } catch {
+        if (!cancelled) setDiagnostics(null);
+      }
+    }
+    void loadDiagnostics();
+    const timer = window.setInterval(loadDiagnostics, Math.max(30, monitorSeconds * 2) * 1000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [monitorSeconds]);
 
   async function runWorkbenchBacktest() {
     setBacktestLoading(true);
@@ -4050,6 +4098,7 @@ function TradingViewTerminalWorkbench({
                   {chartVariant === "candles" ? "Candles" : "Area"}
                 </button>
                 <WorkbenchToggle label="EMA" active={showEma} onClick={() => setShowEma((current) => !current)} />
+                <WorkbenchToggle label="VWAP" active={showVwap} onClick={() => setShowVwap((current) => !current)} />
                 <WorkbenchToggle label="Volume" active={showVolume} onClick={() => setShowVolume((current) => !current)} />
                 <WorkbenchToggle label="Risk lines" active={showRiskLines} onClick={() => setShowRiskLines((current) => !current)} />
               </div>
@@ -4060,13 +4109,19 @@ function TradingViewTerminalWorkbench({
                 <div className="absolute left-3 top-3 z-10 rounded-sm border border-white/10 bg-black/40 px-2 py-1 font-mono text-xs text-slate-300">
                   {selectedSymbol} {timeframe} chart | {historyLoading ? "loading bars" : history?.source ?? "local history"} | polling {monitorSeconds}s
                 </div>
+                <div className="absolute bottom-3 left-3 z-10 flex max-w-[calc(100%-1.5rem)] flex-wrap gap-1 text-xs font-semibold">
+                  <span className="rounded-sm border border-cyan-300/30 bg-cyan-300/10 px-2 py-1 text-cyan-100">{chartDataMode}</span>
+                  <span className="rounded-sm border border-white/10 bg-black/40 px-2 py-1 text-slate-300">{chartDataQuality}</span>
+                  <span className="rounded-sm border border-violet-300/30 bg-violet-300/10 px-2 py-1 text-violet-100">{showVwap ? "VWAP on" : "VWAP off"}</span>
+                  <span className="rounded-sm border border-emerald-300/30 bg-emerald-300/10 px-2 py-1 text-emerald-100">{streamStatus?.serverlessMode ?? "polling"} mode</span>
+                </div>
                 <div className="absolute right-3 top-3 z-10 grid gap-1 text-right font-mono text-xs text-slate-300">
                   <span>O {selectedQuote ? formatUsd(selectedQuote.open) : "N/A"}</span>
                   <span>H {selectedQuote ? formatUsd(selectedQuote.high) : "N/A"}</span>
                   <span>L {selectedQuote ? formatUsd(selectedQuote.low) : "N/A"}</span>
                   <span>C {selectedQuote ? formatUsd(selectedQuote.price) : "N/A"}</span>
                 </div>
-                <PriceChart data={chartData} candles={liveCandles} variant={chartVariant} showVolume={showVolume} showEma={showEma} levels={priceLevels} />
+                <PriceChart data={chartData} candles={liveCandles} variant={chartVariant} showVolume={showVolume} showEma={showEma} showVwap={showVwap} levels={priceLevels} />
               </div>
             </div>
             {layout !== "1" && (
@@ -4125,6 +4180,7 @@ function TradingViewTerminalWorkbench({
               backtestLoading={backtestLoading}
               onRunBacktest={runWorkbenchBacktest}
               streamStatus={streamStatus}
+              diagnostics={diagnostics}
             />
             {(history?.advisory || historyError) && (
               <div className="border-t border-white/10 bg-amber-300/10 px-3 py-2 text-xs text-amber-100">
@@ -4338,6 +4394,7 @@ function WorkbenchDock({
   backtestLoading,
   onRunBacktest,
   streamStatus,
+  diagnostics,
 }: {
   activeDock: string;
   selectedSymbol: string;
@@ -4350,6 +4407,7 @@ function WorkbenchDock({
   backtestLoading: boolean;
   onRunBacktest: () => void;
   streamStatus: StreamStatusPayload | null;
+  diagnostics: DiagnosticsPayload | null;
 }) {
   if (activeDock === "Positions") {
     return (
@@ -4401,6 +4459,39 @@ function WorkbenchDock({
             title="Refresh cadence"
             value={streamStatus ? `${streamStatus.browserRefreshSeconds}s ${streamStatus.serverlessMode}` : "Checking"}
             detail="Serverless production remains polling-safe; a durable worker can subscribe to websocket endpoints later."
+          />
+        </div>
+      </WorkbenchDockShell>
+    );
+  }
+
+  if (activeDock === "Diagnostics") {
+    const failed = diagnostics?.checks.filter((check) => !check.ready) ?? [];
+    const critical = failed.filter((check) => check.severity === "critical" || check.severity === "high");
+    return (
+      <WorkbenchDockShell>
+        <div className="grid gap-2 md:grid-cols-[0.8fr_1.2fr_1fr]">
+          <DockInsight
+            title="System mode"
+            value={diagnostics ? diagnostics.mode : "Checking"}
+            detail={diagnostics?.overallReady ? "Core gates are ready." : "One or more core gates still need configuration."}
+          />
+          <div className="rounded-sm border border-white/10 bg-white/[0.03] p-3">
+            <div className="text-xs font-semibold uppercase text-slate-500">Blocked capabilities</div>
+            <div className="mt-2 grid gap-1">
+              {(critical.length ? critical : failed.slice(0, 3)).slice(0, 3).map((check) => (
+                <div key={check.key} className="flex items-start justify-between gap-2 rounded-sm bg-black/20 px-2 py-1">
+                  <span className="font-semibold text-slate-200">{check.label}</span>
+                  <span className={check.severity === "critical" ? "text-rose-300" : "text-amber-300"}>{check.severity}</span>
+                </div>
+              ))}
+              {!failed.length && <div className="text-slate-400">No blocked diagnostics reported.</div>}
+            </div>
+          </div>
+          <DockInsight
+            title="Next unlock"
+            value={failed[0]?.label ?? "Optimize"}
+            detail={failed[0]?.action ?? diagnostics?.streaming?.limitation ?? "Add websocket worker, licensed data, and production observability for the next tier."}
           />
         </div>
       </WorkbenchDockShell>

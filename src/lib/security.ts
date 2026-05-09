@@ -65,14 +65,15 @@ export function hasValidUserSession(request: Request) {
 }
 
 export function securityHeaders() {
+  const production = process.env.NODE_ENV === "production";
   return {
     "content-security-policy": [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      production ? "script-src 'self' 'unsafe-inline'" : "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data:",
       "font-src 'self' data:",
-      "connect-src 'self'",
+      "connect-src 'self' wss://stream.data.alpaca.markets wss://api.alpaca.markets wss://paper-api.alpaca.markets",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",

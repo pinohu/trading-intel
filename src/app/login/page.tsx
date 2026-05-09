@@ -19,7 +19,8 @@ export default function LoginPage() {
     });
     setLoading(false);
     if (!response.ok) {
-      setError("That access code did not work.");
+      const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+      setError(payload?.error ?? "That access code did not work.");
       return;
     }
     window.location.href = "/";
