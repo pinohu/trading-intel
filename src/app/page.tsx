@@ -710,6 +710,32 @@ function messageId(role: AssistantChatMessage["role"]) {
   return `${role}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
+async function fetchDashboardJson(path: string, init?: RequestInit) {
+  try {
+    const response = await fetch(path, init);
+    const contentType = response.headers.get("content-type") ?? "";
+    if (!contentType.includes("application/json")) {
+      return {
+        ok: false,
+        error: response.redirected ? "Authentication required for this dashboard endpoint." : `Expected JSON but received ${contentType || "unknown content"}.`,
+        status: response.status,
+      };
+    }
+    const payload = await response.json();
+    return {
+      ...payload,
+      ok: payload.ok ?? response.ok,
+      status: response.status,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Dashboard request failed.",
+      status: 0,
+    };
+  }
+}
+
 function predictionBrief(prediction: FusionPrediction | undefined) {
   if (!prediction) return null;
   return {
@@ -1142,53 +1168,41 @@ export default function Home() {
     const symbolParam = watchlist.join(",");
     try {
       const [
-        marketResponse,
-        newsResponse,
-        brokerResponse,
-        aitableResponse,
-        opsResponse,
-        riskResponse,
-        performanceResponse,
-        algorithmResponse,
-        institutionalResponse,
-        researchStackResponse,
-        autoResearchResponse,
-        agentTraderResponse,
-        researchNotesResponse,
-        orchestrationResponse,
+        marketData,
+        newsData,
+        brokerData,
+        aitableData,
+        opsData,
+        riskData,
+        performanceData,
+        algorithmData,
+        institutionalData,
+        researchStackData,
+        autoResearchData,
+        agentTraderData,
+        researchNotesData,
+        orchestrationData,
       ] = await Promise.all([
-        fetch(`/api/market?symbols=${encodeURIComponent(symbolParam)}&provider=${encodeURIComponent(provider)}`),
-        fetch(`/api/news?symbols=${encodeURIComponent(watchlist.slice(0, 6).join(","))}`),
-        fetch(`/api/broker/overview?mode=${brokerMode}`),
-        fetch("/api/integrations/aitable/readiness"),
-        fetch("/api/ops/status"),
-        fetch(`/api/risk/portfolio?mode=${brokerMode}&maxDailyLossPct=${maxDailyLossPct}`),
-        fetch("/api/model-performance"),
-        fetch(`/api/algorithms?symbols=${encodeURIComponent(watchlist.slice(0, 12).join(","))}&provider=${encodeURIComponent(provider)}`),
-        fetch("/api/institutional/readiness"),
-        fetch("/api/research-stack/readiness"),
-        fetch("/api/autoresearch/lab?limit=5"),
-        fetch(`/api/agent-trader/proposals?mode=${brokerMode}&symbols=${encodeURIComponent(symbolParam)}&provider=${encodeURIComponent(provider)}&accountSize=${accountSize}&riskPct=${draft.risk}&maxDailyLossPct=${maxDailyLossPct}`),
-        fetch("/api/research-notes?limit=20"),
-        fetch("/api/control-plane/runs?limit=3"),
+        fetchDashboardJson(`/api/market?symbols=${encodeURIComponent(symbolParam)}&provider=${encodeURIComponent(provider)}`),
+        fetchDashboardJson(`/api/news?symbols=${encodeURIComponent(watchlist.slice(0, 6).join(","))}`),
+        fetchDashboardJson(`/api/broker/overview?mode=${brokerMode}`),
+        fetchDashboardJson("/api/integrations/aitable/readiness"),
+        fetchDashboardJson("/api/ops/status"),
+        fetchDashboardJson(`/api/risk/portfolio?mode=${brokerMode}&maxDailyLossPct=${maxDailyLossPct}`),
+        fetchDashboardJson("/api/model-performance"),
+        fetchDashboardJson(`/api/algorithms?symbols=${encodeURIComponent(watchlist.slice(0, 12).join(","))}&provider=${encodeURIComponent(provider)}`),
+        fetchDashboardJson("/api/institutional/readiness"),
+        fetchDashboardJson("/api/research-stack/readiness"),
+        fetchDashboardJson("/api/autoresearch/lab?limit=5"),
+        fetchDashboardJson(`/api/agent-trader/proposals?mode=${brokerMode}&symbols=${encodeURIComponent(symbolParam)}&provider=${encodeURIComponent(provider)}&accountSize=${accountSize}&riskPct=${draft.risk}&maxDailyLossPct=${maxDailyLossPct}`),
+        fetchDashboardJson("/api/research-notes?limit=20"),
+        fetchDashboardJson("/api/control-plane/runs?limit=3"),
       ]);
-      const marketData = await marketResponse.json();
-      const newsData = await newsResponse.json();
-      const brokerData = await brokerResponse.json();
-      const aitableData = await aitableResponse.json();
-      const opsData = await opsResponse.json();
-      const riskData = await riskResponse.json();
-      const performanceData = await performanceResponse.json();
-      const algorithmData = await algorithmResponse.json();
-      const institutionalData = await institutionalResponse.json();
-      const researchStackData = await researchStackResponse.json();
-      const autoResearchData = await autoResearchResponse.json();
-      const agentTraderData = await agentTraderResponse.json();
-      const researchNotesData = await researchNotesResponse.json().catch(() => ({ ok: false }));
-      const orchestrationData = await orchestrationResponse.json().catch(() => ({ ok: false }));
       const freshQuotes = marketData.quotes ?? [];
-      setQuotes(freshQuotes);
-      setQuoteHistory((current) => appendQuoteHistory(current, freshQuotes));
+      if (freshQuotes.length) {
+        setQuotes(freshQuotes);
+        setQuoteHistory((current) => appendQuoteHistory(current, freshQuotes));
+      }
       setNews(newsData.items ?? []);
       setAitableStatus(aitableData.ok ? aitableData : null);
       setOpsStatus(opsData.ok ? opsData : null);
@@ -1232,10 +1246,9 @@ export default function Home() {
       const symbols = [selected, ...watchlist.filter((symbol) => !["GOLD", "SILVER", "OIL", "NATGAS", "COPPER", "CORN", "WHEAT", "SOY", "BTCUSD", "ETHUSD"].includes(symbol))]
         .filter(Boolean)
         .slice(0, 8);
-      const response = await fetch(
+      const payload = await fetchDashboardJson(
         `/api/backtest?mode=${brokerMode}&symbols=${encodeURIComponent(Array.from(new Set(symbols)).join(","))}&lookbackDays=${Math.max(45, lookback * 3)}&slippageBps=5&feeBps=1`,
       );
-      const payload = await response.json();
       setRealBacktest(payload);
       setQuantMessage(payload.ok ? "Backtest complete. Results are shown below." : (payload.error ?? "Backtest could not run."));
     } catch {
@@ -1254,7 +1267,7 @@ export default function Home() {
         .filter((symbol) => !["GOLD", "SILVER", "OIL", "NATGAS", "COPPER", "CORN", "WHEAT", "SOY", "BTCUSD", "ETHUSD"].includes(symbol))
         .filter(Boolean)
         .slice(0, 6);
-      const response = await fetch(`/api/autoresearch/lab?mode=${brokerMode}`, {
+      const payload = await fetchDashboardJson(`/api/autoresearch/lab?mode=${brokerMode}`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -1263,7 +1276,6 @@ export default function Home() {
           budget: 3,
         }),
       });
-      const payload = await response.json();
       setAutoResearch(payload);
       setQuantMessage(payload.ok ? "AutoResearch complete. Champion and experiments are shown below." : (payload.error ?? "AutoResearch could not run."));
     } catch {
@@ -1283,7 +1295,7 @@ export default function Home() {
         .filter((symbol) => !["GOLD", "SILVER", "OIL", "NATGAS", "COPPER", "CORN", "WHEAT", "SOY"].includes(symbol))
         .filter(Boolean)
         .slice(0, 4);
-      const response = await fetch("/api/tradingagents/analyze", {
+      const payload = await fetchDashboardJson("/api/tradingagents/analyze", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -1291,7 +1303,6 @@ export default function Home() {
           depth: "standard",
         }),
       });
-      const payload = await response.json();
       setTradingAgents(payload);
       setQuantMessage(
         payload.ok
@@ -1318,10 +1329,9 @@ export default function Home() {
       const symbols = [selected, ...watchlist]
         .filter(Boolean)
         .slice(0, 8);
-      const response = await fetch(
+      const payload = await fetchDashboardJson(
         `/api/fusion-alpha?mode=${brokerMode}&symbols=${encodeURIComponent(Array.from(new Set(symbols)).join(","))}&provider=${encodeURIComponent(provider)}&lookbackDays=${Math.max(60, lookback * 3)}&accountSize=${accountSize}&riskPct=${draft.risk}&maxDailyLossPct=${maxDailyLossPct}&depth=standard`,
       );
-      const payload = await response.json();
       setFusionAlpha(payload);
       setQuantMessage(payload.ok ? "Fusion Alpha complete. The highest-level buy/sell prediction is shown above and in the engine map." : (payload.error ?? "Fusion Alpha could not run."));
     } catch {
@@ -1339,7 +1349,7 @@ export default function Home() {
       const symbols = [selected, ...watchlist]
         .filter(Boolean)
         .slice(0, 8);
-      const response = await fetch(`/api/control-plane/runs?mode=${brokerMode}`, {
+      const payload = await fetchDashboardJson(`/api/control-plane/runs?mode=${brokerMode}`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -1351,7 +1361,6 @@ export default function Home() {
           lookbackDays: Math.max(60, lookback * 3),
         }),
       });
-      const payload = await response.json();
       if (payload.run) {
         setOrchestration((current) => ({
           ok: Boolean(payload.ok),
@@ -3893,11 +3902,10 @@ function TradingViewTerminalWorkbench({
       setHistoryLoading(true);
       setHistoryError("");
       try {
-        const response = await fetch(`/api/chart/history?symbol=${encodeURIComponent(selectedSymbol)}&timeframe=${encodeURIComponent(timeframe)}&provider=${encodeURIComponent(provider)}&mode=${brokerMode}`);
-        const payload = await response.json();
+        const payload = await fetchDashboardJson(`/api/chart/history?symbol=${encodeURIComponent(selectedSymbol)}&timeframe=${encodeURIComponent(timeframe)}&provider=${encodeURIComponent(provider)}&mode=${brokerMode}`);
         if (!cancelled) {
           if (payload.ok) {
-            setHistory(payload);
+            setHistory(payload as ChartHistoryPayload);
           } else {
             setHistoryError(payload.error ?? "Chart history unavailable.");
           }
@@ -3918,9 +3926,8 @@ function TradingViewTerminalWorkbench({
     let cancelled = false;
     async function loadStreamStatus() {
       try {
-        const response = await fetch(`/api/stream/status?mode=${brokerMode}`);
-        const payload = await response.json();
-        if (!cancelled && payload.ok) setStreamStatus(payload);
+        const payload = await fetchDashboardJson(`/api/stream/status?mode=${brokerMode}`);
+        if (!cancelled && payload.ok) setStreamStatus(payload as StreamStatusPayload);
       } catch {
         if (!cancelled) setStreamStatus(null);
       }
@@ -3935,13 +3942,12 @@ function TradingViewTerminalWorkbench({
     setBacktestLoading(true);
     setBacktestSummary("");
     try {
-      const response = await fetch(`/api/backtest?symbols=${encodeURIComponent(selectedSymbol)}&lookbackDays=180&maxHoldBars=8&rewardRisk=2&mode=${brokerMode}`);
-      const payload = await response.json();
+      const payload = await fetchDashboardJson(`/api/backtest?symbols=${encodeURIComponent(selectedSymbol)}&lookbackDays=180&maxHoldBars=8&rewardRisk=2&mode=${brokerMode}`);
       if (!payload.ok) {
         setBacktestSummary(payload.error ?? "Backtest unavailable.");
         return;
       }
-      const first = payload.results?.[0];
+      const first = (payload as BacktestApiResponse).results?.[0];
       setBacktestSummary(
         first
           ? `${first.symbol}: ${first.trades} trades, ${formatSignedPct(first.totalReturnPct)}, ${first.winRate}% win, ${first.profitFactor} PF`
@@ -4047,7 +4053,7 @@ function TradingViewTerminalWorkbench({
                 <div className="absolute left-3 top-3 z-10 rounded-sm border border-white/10 bg-black/40 px-2 py-1 font-mono text-xs text-slate-300">
                   {selectedSymbol} {timeframe} chart | {historyLoading ? "loading bars" : history?.source ?? "local history"}
                 </div>
-                <div className="absolute right-3 top-3 z-10 grid gap-1 text-right font-mono text-[11px] text-slate-300">
+                <div className="absolute right-3 top-3 z-10 grid gap-1 text-right font-mono text-xs text-slate-300">
                   <span>O {selectedQuote ? formatUsd(selectedQuote.open) : "N/A"}</span>
                   <span>H {selectedQuote ? formatUsd(selectedQuote.high) : "N/A"}</span>
                   <span>L {selectedQuote ? formatUsd(selectedQuote.low) : "N/A"}</span>
@@ -4086,7 +4092,7 @@ function TradingViewTerminalWorkbench({
               <MiniStat label="Setup Score" value={setupQuality ? `${setupQuality}/100` : "N/A"} tone={setupQuality >= 70 ? "green" : setupQuality >= 50 ? "amber" : "plain"} />
             </div>
 
-            <div className="grid grid-cols-3 gap-px bg-white/10 text-[11px] sm:grid-cols-6">
+            <div className="grid grid-cols-3 gap-px bg-white/10 text-xs sm:grid-cols-6">
               {dockTabs.map((tab) => (
                 <button
                   key={tab}
@@ -4121,7 +4127,7 @@ function TradingViewTerminalWorkbench({
           </div>
 
           <aside className="hidden min-w-0 border-l border-white/10 bg-[#0b0f16] lg:flex lg:flex-col">
-            <div className="grid grid-cols-4 gap-px border-b border-white/10 bg-white/10 text-[11px]">
+            <div className="grid grid-cols-4 gap-px border-b border-white/10 bg-white/10 text-xs">
               {tabs.map((tab) => (
                 <button
                   key={tab}
@@ -4197,7 +4203,7 @@ function TradingViewTerminalWorkbench({
             </div>
 
             <div className="border-t border-white/10 p-3">
-              <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Signal stack</div>
+              <div className="mb-2 text-xs font-semibold uppercase text-slate-500">Signal stack</div>
               <div className="space-y-2 text-xs">
                 <StatusLine label="Buy now" value={`${buyNow.length}`} ready={buyNow.length > 0} />
                 <StatusLine label="Buy leads" value={`${buyLeads.length}`} ready={buyLeads.length > 0} />
@@ -4391,7 +4397,7 @@ function WorkbenchDock({
     <WorkbenchDockShell>
       <div className="grid gap-2 md:grid-cols-3">
         <div className="rounded-sm border border-white/10 bg-white/[0.03] p-3">
-          <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Evidence run</div>
+          <div className="text-xs font-semibold uppercase text-slate-500">Evidence run</div>
           <button
             type="button"
             onClick={onRunBacktest}
@@ -4416,7 +4422,7 @@ function WorkbenchDockShell({ children }: { children: ReactNode }) {
 function DockInsight({ title, value, detail }: { title: string; value: string; detail: string }) {
   return (
     <div className="rounded-sm border border-white/10 bg-white/[0.03] p-3">
-      <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{title}</div>
+      <div className="text-xs font-semibold uppercase text-slate-500">{title}</div>
       <div className="mt-1 font-mono text-sm font-semibold text-white">{value}</div>
       <div className="mt-1 line-clamp-2 text-slate-400">{detail}</div>
     </div>
