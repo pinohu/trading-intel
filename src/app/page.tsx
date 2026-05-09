@@ -40,6 +40,7 @@ import {
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { engineCapabilities, engineWorkflow, type EngineCapability } from "@/lib/engineCatalog";
 import { buildFusionAlphaPredictions, type FusionEngineFinding, type FusionPrediction } from "@/lib/fusionAlpha";
 import { generateBuyLeads, generateSignals, scoreQuote, type BuyLead, type TradeSignal } from "@/lib/signalEngine";
@@ -53,6 +54,7 @@ import { optimizeTradeBasketFromLeads, type IsingBasketResult } from "@/lib/isin
 import type { OrchestrationRun } from "@/lib/orchestration";
 import { referenceReportLessons, referenceReportSummary } from "@/lib/referenceReports";
 import type { TradingAssistantDashboardContext } from "@/lib/tradingAssistant";
+import type { PriceLevel } from "@/components/PriceChart";
 
 const PriceChart = dynamic(() => import("@/components/PriceChart"), {
   ssr: false,
@@ -3791,7 +3793,24 @@ function TradingViewTerminalWorkbench({
   onSelectSymbol: (symbol: string) => void;
 }) {
   const [activeTab, setActiveTab] = useState("Watchlist");
+  const [activeDock, setActiveDock] = useState("Positions");
   const [timeframe, setTimeframe] = useState("1D");
+  const [chartVariant, setChartVariant] = useState<"candles" | "area">(() => {
+    if (typeof window === "undefined") return "candles";
+    return window.localStorage.getItem("ti_chart_variant") === "area" ? "area" : "candles";
+  });
+  const [showVolume, setShowVolume] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return window.localStorage.getItem("ti_chart_volume") !== "off";
+  });
+  const [showEma, setShowEma] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return window.localStorage.getItem("ti_chart_ema") !== "off";
+  });
+  const [showRiskLines, setShowRiskLines] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return window.localStorage.getItem("ti_chart_risk_lines") !== "off";
+  });
   const selectedSymbol = selectedQuote?.symbol ?? quotes[0]?.symbol ?? "SPY";
   const selectedSignal = signals.find((signal) => signal.symbol === selectedSymbol);
   const selectedBuyNow = buyNow.find((signal) => signal.symbol === selectedSymbol);
@@ -3803,6 +3822,25 @@ function TradingViewTerminalWorkbench({
   const tabs = ["Watchlist", "Positions", "Orders", "News"];
   const dockTabs = ["Positions", "Orders", "Fills", "Alerts", "Journal", "Strategy"];
   const timeframes = ["1m", "5m", "15m", "1h", "1D", "1W", "1M"];
+  const priceLevels = buildWorkbenchPriceLevels(selectedBuyNow, selectedLead, selectedSignal, showRiskLines);
+  const signalTone = selectedBuyNow ? "green" : selectedSignal?.action === "Sell/Exit Watch" ? "red" : selectedLead ? "blue" : "plain";
+  const setupQuality = selectedBuyNow?.confidence ?? selectedLead?.confidence ?? selectedSignal?.confidence ?? 0;
+
+  useEffect(() => {
+    window.localStorage.setItem("ti_chart_variant", chartVariant);
+  }, [chartVariant]);
+
+  useEffect(() => {
+    window.localStorage.setItem("ti_chart_volume", showVolume ? "on" : "off");
+  }, [showVolume]);
+
+  useEffect(() => {
+    window.localStorage.setItem("ti_chart_ema", showEma ? "on" : "off");
+  }, [showEma]);
+
+  useEffect(() => {
+    window.localStorage.setItem("ti_chart_risk_lines", showRiskLines ? "on" : "off");
+  }, [showRiskLines]);
 
   return (
     <section aria-label="TradingView-style workbench" className="overflow-hidden rounded-md border border-white/10 bg-[#080b10] shadow-2xl shadow-black/40">
@@ -3865,10 +3903,16 @@ function TradingViewTerminalWorkbench({
                 </div>
               </div>
               <div className="flex flex-wrap gap-2 text-xs">
-                <span className="rounded-sm bg-white/[0.04] px-2 py-1">EMA</span>
-                <span className="rounded-sm bg-white/[0.04] px-2 py-1">VWAP</span>
-                <span className="rounded-sm bg-white/[0.04] px-2 py-1">RSI</span>
-                <span className="rounded-sm bg-white/[0.04] px-2 py-1">Volume</span>
+                <button
+                  type="button"
+                  onClick={() => setChartVariant((current) => (current === "candles" ? "area" : "candles"))}
+                  className="rounded-sm bg-white/[0.04] px-2 py-1 text-slate-200 transition hover:bg-white/10"
+                >
+                  {chartVariant === "candles" ? "Candles" : "Area"}
+                </button>
+                <WorkbenchToggle label="EMA" active={showEma} onClick={() => setShowEma((current) => !current)} />
+                <WorkbenchToggle label="Volume" active={showVolume} onClick={() => setShowVolume((current) => !current)} />
+                <WorkbenchToggle label="Risk lines" active={showRiskLines} onClick={() => setShowRiskLines((current) => !current)} />
               </div>
             </div>
 
@@ -3877,15 +3921,22 @@ function TradingViewTerminalWorkbench({
                 <div className="absolute left-3 top-3 z-10 rounded-sm border border-white/10 bg-black/40 px-2 py-1 font-mono text-xs text-slate-300">
                   {selectedSymbol} {timeframe} chart
                 </div>
-                <PriceChart data={spark} />
+                <div className="absolute right-3 top-3 z-10 grid gap-1 text-right font-mono text-[11px] text-slate-300">
+                  <span>O {selectedQuote ? formatUsd(selectedQuote.open) : "N/A"}</span>
+                  <span>H {selectedQuote ? formatUsd(selectedQuote.high) : "N/A"}</span>
+                  <span>L {selectedQuote ? formatUsd(selectedQuote.low) : "N/A"}</span>
+                  <span>C {selectedQuote ? formatUsd(selectedQuote.price) : "N/A"}</span>
+                </div>
+                <PriceChart data={spark} variant={chartVariant} showVolume={showVolume} showEma={showEma} levels={priceLevels} />
               </div>
             </div>
 
-            <div className="grid gap-2 border-b border-white/10 bg-[#080b10] p-3 text-xs sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-2 border-b border-white/10 bg-[#080b10] p-3 text-xs sm:grid-cols-2 lg:grid-cols-5">
               <MiniStat label="Open" value={selectedQuote ? formatUsd(selectedQuote.open) : "N/A"} tone="plain" />
               <MiniStat label="Range" value={selectedQuote ? `${formatUsd(selectedQuote.low)} - ${formatUsd(selectedQuote.high)}` : "N/A"} tone="blue" />
               <MiniStat label="Volume" value={selectedQuote ? formatVolume(selectedQuote.volume) : "N/A"} tone="amber" />
-              <MiniStat label="Signal" value={selectedBuyNow ? "Buy now" : selectedLead ? "Buy lead" : selectedSignal?.action ?? "Watching"} tone={selectedBuyNow ? "green" : selectedSignal?.action === "Sell/Exit Watch" ? "red" : "plain"} />
+              <MiniStat label="Signal" value={selectedBuyNow ? "Buy now" : selectedLead ? "Buy lead" : selectedSignal?.action ?? "Watching"} tone={signalTone} />
+              <MiniStat label="Setup Score" value={setupQuality ? `${setupQuality}/100` : "N/A"} tone={setupQuality >= 70 ? "green" : setupQuality >= 50 ? "amber" : "plain"} />
             </div>
 
             <div className="grid grid-cols-3 gap-px bg-white/10 text-[11px] sm:grid-cols-6">
@@ -3893,12 +3944,24 @@ function TradingViewTerminalWorkbench({
                 <button
                   key={tab}
                   type="button"
-                  className="bg-[#0d1118] px-3 py-2 text-left font-semibold text-slate-300 transition hover:bg-[#141a24] hover:text-white"
+                  onClick={() => setActiveDock(tab)}
+                  className={`px-3 py-2 text-left font-semibold transition ${
+                    activeDock === tab ? "bg-[#172033] text-cyan-100" : "bg-[#0d1118] text-slate-300 hover:bg-[#141a24] hover:text-white"
+                  }`}
                 >
                   {tab}
                 </button>
               ))}
             </div>
+            <WorkbenchDock
+              activeDock={activeDock}
+              selectedSymbol={selectedSymbol}
+              selectedBuyNow={selectedBuyNow}
+              selectedLead={selectedLead}
+              selectedSignal={selectedSignal}
+              positions={positions}
+              orders={orders}
+            />
           </div>
 
           <aside className="hidden min-w-0 border-l border-white/10 bg-[#0b0f16] lg:flex lg:flex-col">
@@ -4014,6 +4077,157 @@ function TerminalRows({
           <div className="mt-1 truncate text-xs text-slate-500">{row.detail}</div>
         </div>
       ))}
+    </div>
+  );
+}
+
+function WorkbenchToggle({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`rounded-sm px-2 py-1 transition ${
+        active ? "bg-cyan-300 text-slate-950" : "bg-white/[0.04] text-slate-300 hover:bg-white/10"
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
+
+function buildWorkbenchPriceLevels(
+  buyNow: BuyNowSignal | undefined,
+  lead: BuyLead | undefined,
+  signal: TradeSignal | undefined,
+  enabled: boolean,
+): PriceLevel[] {
+  if (!enabled) return [];
+  if (buyNow) {
+    return [
+      { price: buyNow.trigger, label: "Trigger", color: "#34d399" },
+      { price: buyNow.stop, label: "Stop", color: "#fb7185" },
+      { price: buyNow.target, label: "Target", color: "#67e8f9" },
+    ];
+  }
+  if (lead) {
+    return [
+      { price: lead.trigger, label: "Trigger", color: "#34d399" },
+      { price: lead.stop, label: "Stop", color: "#fb7185" },
+      { price: lead.target, label: "Target", color: "#67e8f9" },
+    ];
+  }
+  if (signal) {
+    return [
+      { price: signal.invalidation, label: "Invalidation", color: "#fb7185" },
+      { price: signal.target, label: "Target", color: "#67e8f9" },
+    ];
+  }
+  return [];
+}
+
+function WorkbenchDock({
+  activeDock,
+  selectedSymbol,
+  selectedBuyNow,
+  selectedLead,
+  selectedSignal,
+  positions,
+  orders,
+}: {
+  activeDock: string;
+  selectedSymbol: string;
+  selectedBuyNow: BuyNowSignal | undefined;
+  selectedLead: BuyLead | undefined;
+  selectedSignal: TradeSignal | undefined;
+  positions: Array<Record<string, unknown>>;
+  orders: Array<Record<string, unknown>>;
+}) {
+  if (activeDock === "Positions") {
+    return (
+      <WorkbenchDockShell>
+        <TerminalRows
+          empty="No live broker positions. Paper or broker-linked positions will appear here."
+          rows={positions.slice(0, 4).map((position, index) => ({
+            key: `${String(position.symbol ?? "position")}-${index}`,
+            label: String(position.symbol ?? "Position"),
+            value: String(position.qty ?? position.quantity ?? "open"),
+            detail: String(position.market_value ?? position.unrealized_pl ?? "tracked"),
+          }))}
+        />
+      </WorkbenchDockShell>
+    );
+  }
+
+  if (activeDock === "Orders") {
+    return (
+      <WorkbenchDockShell>
+        <TerminalRows
+          empty="No open orders. Validated limit, stop, and target orders will stage here."
+          rows={orders.slice(0, 4).map((order, index) => ({
+            key: `${String(order.symbol ?? "order")}-${index}`,
+            label: String(order.symbol ?? "Order"),
+            value: String(order.side ?? order.type ?? "pending"),
+            detail: String(order.status ?? order.limit_price ?? "queued"),
+          }))}
+        />
+      </WorkbenchDockShell>
+    );
+  }
+
+  if (activeDock === "Fills") {
+    return (
+      <WorkbenchDockShell>
+        <DockInsight title="Fill tape" value="No recent fills" detail="Broker activities will map into this lane after authenticated execution history is available." />
+      </WorkbenchDockShell>
+    );
+  }
+
+  if (activeDock === "Alerts") {
+    return (
+      <WorkbenchDockShell>
+        <div className="grid gap-2 md:grid-cols-3">
+          <DockInsight title="Trigger" value={selectedBuyNow ? formatUsd(selectedBuyNow.trigger) : selectedLead ? formatUsd(selectedLead.trigger) : "No trigger"} detail="Alert when price reaches the actionable entry area." />
+          <DockInsight title="Invalidation" value={selectedBuyNow ? formatUsd(selectedBuyNow.stop) : selectedLead ? formatUsd(selectedLead.stop) : selectedSignal ? formatUsd(selectedSignal.invalidation) : "N/A"} detail="Alert when the setup is no longer worth trading." />
+          <DockInsight title="Target" value={selectedBuyNow ? formatUsd(selectedBuyNow.target) : selectedLead ? formatUsd(selectedLead.target) : selectedSignal ? formatUsd(selectedSignal.target) : "N/A"} detail="Alert when reward capture or review is due." />
+        </div>
+      </WorkbenchDockShell>
+    );
+  }
+
+  if (activeDock === "Journal") {
+    return (
+      <WorkbenchDockShell>
+        <DockInsight
+          title={`${selectedSymbol} journal prompt`}
+          value={selectedBuyNow ? "Trade requires confirmation" : selectedLead ? "Wait for trigger" : "Document the setup"}
+          detail={selectedBuyNow?.reasons?.[0] ?? selectedLead?.reason ?? selectedSignal?.reason ?? "Write catalyst, invalidation, planned size, and what would prove the idea wrong."}
+        />
+      </WorkbenchDockShell>
+    );
+  }
+
+  return (
+    <WorkbenchDockShell>
+      <div className="grid gap-2 md:grid-cols-3">
+        <DockInsight title="Scenario A" value="Base case" detail="Entry respects trigger, stop remains intact, target line defines first trim." />
+        <DockInsight title="Scenario B" value="Failed break" detail="Price violates invalidation; no averaging down, no market-order chase." />
+        <DockInsight title="Scenario C" value="Extension" detail="If volume expands and trend holds, trail with review cadence instead of guessing." />
+      </div>
+    </WorkbenchDockShell>
+  );
+}
+
+function WorkbenchDockShell({ children }: { children: ReactNode }) {
+  return <div className="min-h-[104px] border-t border-white/10 bg-[#080b10] p-3 text-xs">{children}</div>;
+}
+
+function DockInsight({ title, value, detail }: { title: string; value: string; detail: string }) {
+  return (
+    <div className="rounded-sm border border-white/10 bg-white/[0.03] p-3">
+      <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{title}</div>
+      <div className="mt-1 font-mono text-sm font-semibold text-white">{value}</div>
+      <div className="mt-1 line-clamp-2 text-slate-400">{detail}</div>
     </div>
   );
 }
