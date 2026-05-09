@@ -2162,6 +2162,7 @@ export default function Home() {
             secondsAgo={secondsAgo}
             provider={provider}
             brokerMode={brokerMode}
+            monitorSeconds={monitorSeconds}
             onSelectSymbol={(symbol) => {
               setSelected(symbol);
               setDraft((current) => ({ ...current, symbol }));
@@ -3812,6 +3813,7 @@ function TradingViewTerminalWorkbench({
   secondsAgo,
   provider,
   brokerMode,
+  monitorSeconds,
   onSelectSymbol,
 }: {
   selectedQuote: Quote | undefined;
@@ -3825,6 +3827,7 @@ function TradingViewTerminalWorkbench({
   secondsAgo: number | null;
   provider: string;
   brokerMode: BrokerMode;
+  monitorSeconds: number;
   onSelectSymbol: (symbol: string) => void;
 }) {
   const [activeTab, setActiveTab] = useState("Watchlist");
@@ -3872,7 +3875,11 @@ function TradingViewTerminalWorkbench({
   const signalTone = selectedBuyNow ? "green" : selectedSignal?.action === "Sell/Exit Watch" ? "red" : selectedLead ? "blue" : "plain";
   const setupQuality = selectedBuyNow?.confidence ?? selectedLead?.confidence ?? selectedSignal?.confidence ?? 0;
   const historyCandles = history?.symbol === selectedSymbol && history.timeframe === timeframe ? history.candles : undefined;
-  const chartData = historyCandles?.length ? historyCandles.map((candle) => ({ label: String(candle.time), value: candle.close })) : spark;
+  const liveCandles = useMemo(
+    () => mergeLiveQuoteIntoCandles(historyCandles, selectedQuote, timeframe),
+    [historyCandles, selectedQuote, timeframe],
+  );
+  const chartData = liveCandles?.length ? liveCandles.map((candle) => ({ label: String(candle.time), value: candle.close })) : spark;
   const secondaryQuotes = visibleQuotes.filter((quote) => quote.symbol !== selectedSymbol).slice(0, layout === "4" ? 3 : layout === "2" ? 1 : 0);
   const quoteHistory = useContext(QuoteHistoryContext);
 
@@ -4051,7 +4058,7 @@ function TradingViewTerminalWorkbench({
             <div className="min-h-[430px] flex-1 border-b border-white/10 p-3">
               <div className="relative h-full min-h-[410px] overflow-hidden rounded-sm border border-white/10 bg-[linear-gradient(90deg,rgba(148,163,184,0.055)_1px,transparent_1px),linear-gradient(rgba(148,163,184,0.055)_1px,transparent_1px)] bg-[size:72px_72px]">
                 <div className="absolute left-3 top-3 z-10 rounded-sm border border-white/10 bg-black/40 px-2 py-1 font-mono text-xs text-slate-300">
-                  {selectedSymbol} {timeframe} chart | {historyLoading ? "loading bars" : history?.source ?? "local history"}
+                  {selectedSymbol} {timeframe} chart | {historyLoading ? "loading bars" : history?.source ?? "local history"} | polling {monitorSeconds}s
                 </div>
                 <div className="absolute right-3 top-3 z-10 grid gap-1 text-right font-mono text-xs text-slate-300">
                   <span>O {selectedQuote ? formatUsd(selectedQuote.open) : "N/A"}</span>
@@ -4059,7 +4066,7 @@ function TradingViewTerminalWorkbench({
                   <span>L {selectedQuote ? formatUsd(selectedQuote.low) : "N/A"}</span>
                   <span>C {selectedQuote ? formatUsd(selectedQuote.price) : "N/A"}</span>
                 </div>
-                <PriceChart data={chartData} candles={historyCandles} variant={chartVariant} showVolume={showVolume} showEma={showEma} levels={priceLevels} />
+                <PriceChart data={chartData} candles={liveCandles} variant={chartVariant} showVolume={showVolume} showEma={showEma} levels={priceLevels} />
               </div>
             </div>
             {layout !== "1" && (
@@ -4286,6 +4293,37 @@ function buildWorkbenchPriceLevels(
     ];
   }
   return [];
+}
+
+function mergeLiveQuoteIntoCandles(candles: ChartCandle[] | undefined, quote: Quote | undefined, timeframe: string) {
+  if (!quote || !Number.isFinite(quote.price) || quote.price <= 0) return candles;
+  const base = candles?.length ? [...candles] : makeSpark(quote.symbol, quote.price).map((point) => ({
+    time: point.label,
+    open: point.value,
+    high: point.value * 1.002,
+    low: point.value * 0.998,
+    close: point.value,
+    volume: Math.max(1, Math.round(quote.volume / 24)),
+  }));
+  const last = base.at(-1);
+  const updatedAt = Date.parse(quote.updatedAt);
+  const nowIso = Number.isFinite(updatedAt) ? new Date(updatedAt).toISOString() : new Date().toISOString();
+  const liveTime = timeframe === "1D" || timeframe === "1W" || timeframe === "1M"
+    ? (last?.time ?? nowIso)
+    : nowIso;
+  const live: ChartCandle = {
+    time: liveTime,
+    open: last?.open ?? quote.open ?? quote.price,
+    high: Math.max(last?.high ?? quote.high ?? quote.price, quote.high, quote.price),
+    low: Math.min(last?.low ?? quote.low ?? quote.price, quote.low, quote.price),
+    close: quote.price,
+    volume: Math.max(last?.volume ?? 0, quote.volume ?? 0),
+  };
+  if (last && String(last.time) === String(live.time)) {
+    base[base.length - 1] = live;
+    return base;
+  }
+  return [...base, live].slice(-220);
 }
 
 function WorkbenchDock({
