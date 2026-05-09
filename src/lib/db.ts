@@ -60,6 +60,8 @@ export async function databaseSchemaStatus() {
         to_regclass('public.factor_snapshots') is not null as factor_snapshots,
         to_regclass('public.control_state') is not null as control_state,
         to_regclass('public.model_validation_reports') is not null as model_validation_reports,
+        to_regclass('public.strategy_registry') is not null as strategy_registry,
+        to_regclass('public.strategy_evaluations') is not null as strategy_evaluations,
         to_regclass('public.catalyst_events') is not null as catalyst_events,
         to_regclass('public.option_volatility_snapshots') is not null as option_volatility_snapshots,
         to_regclass('public.broker_reconciliations') is not null as broker_reconciliations,
@@ -81,6 +83,8 @@ export async function databaseSchemaStatus() {
       factor_snapshots: boolean;
       control_state: boolean;
       model_validation_reports: boolean;
+      strategy_registry: boolean;
+      strategy_evaluations: boolean;
       catalyst_events: boolean;
       option_volatility_snapshots: boolean;
       broker_reconciliations: boolean;
@@ -102,6 +106,8 @@ export async function databaseSchemaStatus() {
       status.factor_snapshots &&
       status.control_state &&
       status.model_validation_reports &&
+      status.strategy_registry &&
+      status.strategy_evaluations &&
       status.catalyst_events &&
       status.option_volatility_snapshots &&
       status.broker_reconciliations &&

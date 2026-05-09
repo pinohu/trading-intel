@@ -390,6 +390,37 @@ type AutoResearchApi = {
   error?: string;
 };
 
+type StrategyPortfolioApi = {
+  ok: boolean;
+  databaseBacked: boolean;
+  summary: {
+    total: number;
+    liveEligible: number;
+    paperActive: number;
+    paperCandidates: number;
+    researchOnly: number;
+    paused: number;
+    allocatedRiskPct: number;
+  };
+  strategies: Array<{
+    id: string;
+    version: string;
+    name: string;
+    family: string;
+    description: string;
+    state: "research" | "paper-candidate" | "paper-active" | "live-eligible" | "paused";
+    proofScore: number;
+    riskBudgetPct: number;
+    allocationWeightPct: number;
+    lastEvaluatedAt: string | null;
+    promotionBlockers: string[];
+    demotionTriggers: string[];
+  }>;
+  recentChampions: Array<{ id: string; name: string; score: number; createdAt: string }>;
+  advisory: string;
+  error?: string;
+};
+
 type TradingAgentsApi = {
   ok: boolean;
   source?: "native-codebase-debate" | string;
@@ -1098,6 +1129,7 @@ export default function Home() {
   const [institutionalReadiness, setInstitutionalReadiness] = useState<InstitutionalReadinessApi | null>(null);
   const [researchStack, setResearchStack] = useState<ResearchStackApi | null>(null);
   const [autoResearch, setAutoResearch] = useState<AutoResearchApi | null>(null);
+  const [strategyPortfolio, setStrategyPortfolio] = useState<StrategyPortfolioApi | null>(null);
   const [tradingAgents, setTradingAgents] = useState<TradingAgentsApi | null>(null);
   const [fusionAlpha, setFusionAlpha] = useState<FusionAlphaApi | null>(null);
   const [agentTrader, setAgentTrader] = useState<AgentTraderApi | null>(null);
@@ -1198,6 +1230,7 @@ export default function Home() {
         institutionalData,
         researchStackData,
         autoResearchData,
+        strategyPortfolioData,
         agentTraderData,
         researchNotesData,
         orchestrationData,
@@ -1213,6 +1246,7 @@ export default function Home() {
         fetchDashboardJson("/api/institutional/readiness"),
         fetchDashboardJson("/api/research-stack/readiness"),
         fetchDashboardJson("/api/autoresearch/lab?limit=5"),
+        fetchDashboardJson("/api/strategies/portfolio?limit=50"),
         fetchDashboardJson(`/api/agent-trader/proposals?mode=${brokerMode}&symbols=${encodeURIComponent(symbolParam)}&provider=${encodeURIComponent(provider)}&accountSize=${accountSize}&riskPct=${draft.risk}&maxDailyLossPct=${maxDailyLossPct}`),
         fetchDashboardJson("/api/research-notes?limit=20"),
         fetchDashboardJson("/api/control-plane/runs?limit=3"),
@@ -1231,6 +1265,7 @@ export default function Home() {
       setInstitutionalReadiness(institutionalData.ok ? institutionalData : null);
       setResearchStack(researchStackData.ok ? researchStackData : null);
       setAutoResearch(autoResearchData.ok ? autoResearchData : null);
+      setStrategyPortfolio(strategyPortfolioData.ok ? strategyPortfolioData : null);
       setAgentTrader(agentTraderData.ok || agentTraderData.policy ? agentTraderData : null);
       setResearchNotes(researchNotesData.ok ? researchNotesData.notes ?? [] : []);
       setOrchestration(orchestrationData.ok ? orchestrationData : null);
@@ -2750,6 +2785,7 @@ export default function Home() {
             </div>
             <RealBacktestPanel result={realBacktest} />
             <AutoResearchPanel result={autoResearch} />
+            <StrategyPortfolioPanel portfolio={strategyPortfolio} />
             <TradingAgentsPanel result={tradingAgents} />
             <div className="mt-4 grid gap-3 lg:grid-cols-5">
               {strategies.map((strategy) => (
@@ -5101,6 +5137,18 @@ function StatusPill({ status }: { status: TrustStatus }) {
   return <span className={`inline-flex rounded-sm border px-2 py-1 text-xs font-semibold ${classes}`}>{status}</span>;
 }
 
+function StrategyStatePill({ state }: { state: StrategyPortfolioApi["strategies"][number]["state"] }) {
+  const classes =
+    state === "live-eligible"
+      ? "border-emerald-300/25 bg-emerald-300/10 text-emerald-200"
+      : state === "paper-active" || state === "paper-candidate"
+        ? "border-cyan-300/25 bg-cyan-300/10 text-cyan-200"
+        : state === "paused"
+          ? "border-rose-300/25 bg-rose-300/10 text-rose-200"
+          : "border-amber-300/25 bg-amber-300/10 text-amber-200";
+  return <span className={`inline-flex rounded-sm border px-2 py-1 text-xs font-semibold ${classes}`}>{state.replace("-", " ")}</span>;
+}
+
 function PriorityPill({ priority }: { priority: TrustPriority }) {
   const classes =
     priority === "Critical"
@@ -6065,6 +6113,56 @@ function stackModeClass(component: ResearchStackApi["components"][number]) {
   if (component.ready && component.mode === "worker") return "bg-blue-300 text-slate-950";
   if (component.ready && component.mode === "native") return "bg-emerald-300 text-slate-950";
   return "bg-amber-300/20 text-amber-100";
+}
+
+function StrategyPortfolioPanel({ portfolio }: { portfolio: StrategyPortfolioApi | null }) {
+  if (!portfolio) {
+    return (
+      <div className="mt-4 rounded-md border border-white/10 bg-black/20 p-3 text-sm leading-6 text-slate-400">
+        Strategy portfolio state loads deployment stages, proof scores, risk budgets, and promotion blockers from stored evidence.
+      </div>
+    );
+  }
+
+  const top = [...portfolio.strategies].sort((a, b) => b.proofScore - a.proofScore).slice(0, 4);
+  return (
+    <div className="mt-4 rounded-md border border-emerald-300/20 bg-emerald-300/10 p-3">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <div className="font-semibold text-white">Strategy Portfolio</div>
+          <div className="mt-1 text-xs leading-5 text-emerald-100">{portfolio.advisory}</div>
+        </div>
+        <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+          <MiniStat label="Live Eligible" value={`${portfolio.summary.liveEligible}`} tone={portfolio.summary.liveEligible ? "green" : "plain"} />
+          <MiniStat label="Paper" value={`${portfolio.summary.paperActive + portfolio.summary.paperCandidates}`} tone="blue" />
+          <MiniStat label="Research" value={`${portfolio.summary.researchOnly}`} tone="amber" />
+          <MiniStat label="Risk Budget" value={`${portfolio.summary.allocatedRiskPct}%`} tone="plain" />
+        </div>
+      </div>
+      <div className="mt-3 grid gap-3 lg:grid-cols-4">
+        {top.map((strategy) => (
+          <div key={`${strategy.id}-${strategy.version}`} className="rounded-md border border-white/10 bg-black/20 p-3">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <div className="font-semibold text-white">{strategy.name}</div>
+                <div className="mt-1 text-xs text-emerald-100">v{strategy.version} / {strategy.family}</div>
+              </div>
+              <StrategyStatePill state={strategy.state} />
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+              <MiniStat label="Proof" value={`${Math.round(strategy.proofScore)}`} tone={strategy.proofScore >= 75 ? "green" : strategy.proofScore >= 45 ? "amber" : "plain"} />
+              <MiniStat label="Risk" value={`${strategy.riskBudgetPct}%`} tone="plain" />
+              <MiniStat label="Weight" value={`${strategy.allocationWeightPct}%`} tone="blue" />
+              <MiniStat label="Blockers" value={`${strategy.promotionBlockers.length}`} tone={strategy.promotionBlockers.length ? "amber" : "green"} />
+            </div>
+            <div className="mt-3 line-clamp-2 text-xs leading-5 text-slate-400">
+              {strategy.promotionBlockers[0] ?? strategy.demotionTriggers[0]}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function AutoResearchPanel({ result }: { result: AutoResearchApi | null }) {

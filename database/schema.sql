@@ -202,6 +202,38 @@ create table if not exists strategy_backtests (
 create index if not exists strategy_backtests_created_at_idx
   on strategy_backtests (created_at desc);
 
+create table if not exists strategy_registry (
+  id text not null,
+  version text not null,
+  name text not null,
+  family text not null,
+  description text not null,
+  deployment_state text not null default 'research',
+  risk_budget_pct numeric(8, 4) not null default 0,
+  max_drawdown_limit_pct numeric(8, 4) not null default 0,
+  promotion_criteria jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  primary key (id, version)
+);
+
+create table if not exists strategy_evaluations (
+  id uuid primary key default gen_random_uuid(),
+  strategy_id text not null,
+  strategy_version text not null,
+  state text not null,
+  proof_score numeric(8, 4) not null,
+  allocation_weight_pct numeric(8, 4) not null default 0,
+  risk_budget_pct numeric(8, 4) not null default 0,
+  evidence jsonb not null default '{}'::jsonb,
+  promotion_blockers jsonb not null default '[]'::jsonb,
+  demotion_triggers jsonb not null default '[]'::jsonb,
+  evaluated_at timestamptz not null default now()
+);
+
+create index if not exists strategy_evaluations_strategy_evaluated_at_idx
+  on strategy_evaluations (strategy_id, evaluated_at desc);
+
 create table if not exists alert_events (
   id uuid primary key default gen_random_uuid(),
   alert_type text not null,
