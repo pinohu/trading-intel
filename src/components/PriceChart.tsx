@@ -9,6 +9,9 @@ import {
   LineSeries,
   createChart,
   type IChartApi,
+  type IPriceLine,
+  type ISeriesApi,
+  type SeriesType,
 } from "lightweight-charts";
 import { useEffect, useRef } from "react";
 
@@ -115,6 +118,11 @@ function normalizeChartTime(value: string | number, index: number) {
 
 export default function PriceChart({ data, candles, variant = "area", showVolume = false, showEma = false, levels = [] }: PriceChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<IChartApi | null>(null);
+  const mainSeriesRef = useRef<ISeriesApi<SeriesType> | null>(null);
+  const emaSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
+  const volumeSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
+  const priceLinesRef = useRef<IPriceLine[]>([]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -138,6 +146,7 @@ export default function PriceChart({ data, candles, variant = "area", showVolume
         horzLine: { color: "rgba(139, 214, 255, 0.55)", labelBackgroundColor: "#0f172a" },
       },
     });
+    chartRef.current = chart;
     const series =
       variant === "candles"
         ? chart.addSeries(CandlestickSeries, {
@@ -157,28 +166,7 @@ export default function PriceChart({ data, candles, variant = "area", showVolume
             priceLineVisible: true,
             lastValueVisible: true,
           });
-
-    if (variant === "candles") {
-      series.setData(buildCandles(data, candles));
-    } else {
-      series.setData(
-        (candles?.length ? candles.map((candle, index) => ({ time: normalizeChartTime(candle.time, index), value: candle.close })) : data.map((point, index) => ({
-          time: (index + 1) as never,
-          value: point.value,
-        }))),
-      );
-    }
-
-    for (const level of levels.filter((item) => Number.isFinite(item.price) && item.price > 0)) {
-      series.createPriceLine({
-        price: level.price,
-        color: level.color,
-        lineWidth: 1,
-        lineStyle: 2,
-        axisLabelVisible: true,
-        title: level.label,
-      });
-    }
+    mainSeriesRef.current = series;
 
     if (showEma) {
       const emaSeries = chart.addSeries(LineSeries, {
@@ -187,7 +175,7 @@ export default function PriceChart({ data, candles, variant = "area", showVolume
         priceLineVisible: false,
         lastValueVisible: false,
       });
-      emaSeries.setData(buildEma(data, 9, candles));
+      emaSeriesRef.current = emaSeries;
     }
 
     if (showVolume) {
@@ -204,10 +192,8 @@ export default function PriceChart({ data, candles, variant = "area", showVolume
           bottom: 0,
         },
       });
-      volumeSeries.setData(buildVolume(data, candles));
+      volumeSeriesRef.current = volumeSeries;
     }
-
-    chart.timeScale().fitContent();
 
     const observer = new ResizeObserver(([entry]) => {
       chart.applyOptions({
@@ -218,9 +204,65 @@ export default function PriceChart({ data, candles, variant = "area", showVolume
     observer.observe(container);
     return () => {
       observer.disconnect();
+      priceLinesRef.current = [];
+      mainSeriesRef.current = null;
+      emaSeriesRef.current = null;
+      volumeSeriesRef.current = null;
+      chartRef.current = null;
       chart.remove();
     };
-  }, [candles, data, levels, showEma, showVolume, variant]);
+  }, [showEma, showVolume, variant]);
+
+  useEffect(() => {
+    const chart = chartRef.current;
+    const series = mainSeriesRef.current;
+    if (!chart || !series) return;
+
+    if (variant === "candles") {
+      series.setData(buildCandles(data, candles));
+    } else {
+      series.setData(
+        candles?.length
+          ? candles.map((candle, index) => ({ time: normalizeChartTime(candle.time, index), value: candle.close }))
+          : data.map((point, index) => ({
+              time: (index + 1) as never,
+              value: point.value,
+            })),
+      );
+    }
+
+    if (emaSeriesRef.current) {
+      emaSeriesRef.current.setData(buildEma(data, 9, candles));
+    }
+
+    if (volumeSeriesRef.current) {
+      volumeSeriesRef.current.setData(buildVolume(data, candles));
+    }
+
+    chart.timeScale().fitContent();
+  }, [candles, data, variant]);
+
+  useEffect(() => {
+    const series = mainSeriesRef.current;
+    if (!series) return;
+
+    for (const line of priceLinesRef.current) {
+      series.removePriceLine(line);
+    }
+
+    priceLinesRef.current = levels
+      .filter((item) => Number.isFinite(item.price) && item.price > 0)
+      .map((level) =>
+        series.createPriceLine({
+          price: level.price,
+          color: level.color,
+          lineWidth: 1,
+          lineStyle: 2,
+          axisLabelVisible: true,
+          title: level.label,
+        }),
+      );
+  }, [levels]);
 
   return <div ref={containerRef} role="img" aria-label="Price action chart for the selected symbol." className="h-full min-h-64 w-full" />;
 }
