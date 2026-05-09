@@ -2119,6 +2119,21 @@ export default function Home() {
             brokerStatus={brokerStatus}
             brokerMessage={brokerMessage}
           />
+          <TradingViewTerminalWorkbench
+            selectedQuote={selectedQuote}
+            quotes={ranked}
+            spark={spark}
+            signals={signals}
+            buyNow={buyNowSignals}
+            buyLeads={activeBuyLeads}
+            brokerOverview={brokerOverview}
+            brokerStatus={brokerStatus}
+            secondsAgo={secondsAgo}
+            onSelectSymbol={(symbol) => {
+              setSelected(symbol);
+              setDraft((current) => ({ ...current, symbol }));
+            }}
+          />
           <InvestmentGradeTruthPanel
             selectedQuote={selectedQuote}
             brokerStatus={brokerStatus}
@@ -3748,6 +3763,257 @@ function ProductionOpsStrip({
         value={ops?.liveData?.licensedSip ? "SIP/paid" : ops?.liveData?.freeFirstDefault ? "Free-first" : ops?.liveData?.alpacaConfigured ? "IEX/public" : "Public only"}
         ready={Boolean(ops?.liveData?.licensedSip)}
       />
+    </div>
+  );
+}
+
+function TradingViewTerminalWorkbench({
+  selectedQuote,
+  quotes,
+  spark,
+  signals,
+  buyNow,
+  buyLeads,
+  brokerOverview,
+  brokerStatus,
+  secondsAgo,
+  onSelectSymbol,
+}: {
+  selectedQuote: Quote | undefined;
+  quotes: Quote[];
+  spark: SparkPoint[];
+  signals: TradeSignal[];
+  buyNow: BuyNowSignal[];
+  buyLeads: BuyLead[];
+  brokerOverview: BrokerOverview | null;
+  brokerStatus: BrokerStatus | null;
+  secondsAgo: number | null;
+  onSelectSymbol: (symbol: string) => void;
+}) {
+  const [activeTab, setActiveTab] = useState("Watchlist");
+  const [timeframe, setTimeframe] = useState("1D");
+  const selectedSymbol = selectedQuote?.symbol ?? quotes[0]?.symbol ?? "SPY";
+  const selectedSignal = signals.find((signal) => signal.symbol === selectedSymbol);
+  const selectedBuyNow = buyNow.find((signal) => signal.symbol === selectedSymbol);
+  const selectedLead = buyLeads.find((lead) => lead.symbol === selectedSymbol);
+  const visibleQuotes = quotes.slice(0, 9);
+  const positions = brokerOverview?.positions ?? [];
+  const orders = brokerOverview?.orders ?? [];
+  const tools = ["+", "T", "F", "R", "M", "A"];
+  const tabs = ["Watchlist", "Positions", "Orders", "News"];
+  const dockTabs = ["Positions", "Orders", "Fills", "Alerts", "Journal", "Strategy"];
+  const timeframes = ["1m", "5m", "15m", "1h", "1D", "1W", "1M"];
+
+  return (
+    <section aria-label="TradingView-style workbench" className="overflow-hidden rounded-md border border-white/10 bg-[#080b10] shadow-2xl shadow-black/40">
+      <div className="flex min-h-[760px] flex-col text-sm text-slate-200">
+        <div className="flex min-h-12 flex-wrap items-center gap-2 border-b border-white/10 bg-[#0d1118] px-3 py-2">
+          <div className="flex h-9 min-w-[13rem] items-center gap-2 rounded border border-white/10 bg-black/30 px-3 font-mono text-white">
+            <LineChart className="h-4 w-4 text-cyan-300" />
+            <span className="text-base font-semibold">{selectedSymbol}</span>
+            <span className={selectedQuote && selectedQuote.changePct >= 0 ? "text-emerald-300" : "text-rose-300"}>
+              {selectedQuote ? `${selectedQuote.changePct >= 0 ? "+" : ""}${selectedQuote.changePct.toFixed(2)}%` : "Loading"}
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center gap-1">
+            {timeframes.map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => setTimeframe(item)}
+                className={`h-8 min-w-9 rounded-sm px-2 font-mono text-xs transition ${
+                  timeframe === item ? "bg-cyan-300 text-slate-950" : "bg-white/[0.04] text-slate-300 hover:bg-white/10"
+                }`}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
+          <div className="ml-auto flex flex-wrap items-center gap-2 text-xs">
+            <span className="rounded-sm border border-emerald-300/30 bg-emerald-300/10 px-2 py-1 text-emerald-200">
+              {secondsAgo === null ? "feed pending" : `${secondsAgo}s feed`}
+            </span>
+            <span className="rounded-sm border border-white/10 bg-white/[0.04] px-2 py-1">
+              {brokerStatus?.orderPlacementReady ? `${brokerStatus.mode.toUpperCase()} ready` : "Broker locked"}
+            </span>
+            <span className="rounded-sm border border-amber-300/30 bg-amber-300/10 px-2 py-1 text-amber-100">Risk first</span>
+          </div>
+        </div>
+
+        <div className="grid min-h-0 flex-1 grid-cols-[3rem_minmax(0,1fr)] lg:grid-cols-[3rem_minmax(0,1fr)_22rem]">
+          <div className="flex flex-col items-center gap-2 border-r border-white/10 bg-[#0b0f16] px-1 py-3">
+            {tools.map((tool) => (
+              <button
+                key={tool}
+                type="button"
+                title={`Chart tool ${tool}`}
+                className="flex h-9 w-9 items-center justify-center rounded-sm border border-white/10 bg-white/[0.03] font-mono text-xs text-slate-300 transition hover:border-cyan-300/60 hover:text-white"
+              >
+                {tool}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex min-w-0 flex-col bg-[#05070b]">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 px-3 py-2">
+              <div>
+                <div className="font-mono text-lg font-semibold text-white">
+                  {selectedQuote ? formatUsd(selectedQuote.price) : "Loading"}
+                </div>
+                <div className="text-xs text-slate-500">
+                  {selectedQuote?.name ?? "Select a symbol"} | {selectedQuote?.quality ?? "Awaiting feed"}
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2 text-xs">
+                <span className="rounded-sm bg-white/[0.04] px-2 py-1">EMA</span>
+                <span className="rounded-sm bg-white/[0.04] px-2 py-1">VWAP</span>
+                <span className="rounded-sm bg-white/[0.04] px-2 py-1">RSI</span>
+                <span className="rounded-sm bg-white/[0.04] px-2 py-1">Volume</span>
+              </div>
+            </div>
+
+            <div className="min-h-[430px] flex-1 border-b border-white/10 p-3">
+              <div className="relative h-full min-h-[410px] overflow-hidden rounded-sm border border-white/10 bg-[linear-gradient(90deg,rgba(148,163,184,0.055)_1px,transparent_1px),linear-gradient(rgba(148,163,184,0.055)_1px,transparent_1px)] bg-[size:72px_72px]">
+                <div className="absolute left-3 top-3 z-10 rounded-sm border border-white/10 bg-black/40 px-2 py-1 font-mono text-xs text-slate-300">
+                  {selectedSymbol} {timeframe} chart
+                </div>
+                <PriceChart data={spark} />
+              </div>
+            </div>
+
+            <div className="grid gap-2 border-b border-white/10 bg-[#080b10] p-3 text-xs sm:grid-cols-2 lg:grid-cols-4">
+              <MiniStat label="Open" value={selectedQuote ? formatUsd(selectedQuote.open) : "N/A"} tone="plain" />
+              <MiniStat label="Range" value={selectedQuote ? `${formatUsd(selectedQuote.low)} - ${formatUsd(selectedQuote.high)}` : "N/A"} tone="blue" />
+              <MiniStat label="Volume" value={selectedQuote ? formatVolume(selectedQuote.volume) : "N/A"} tone="amber" />
+              <MiniStat label="Signal" value={selectedBuyNow ? "Buy now" : selectedLead ? "Buy lead" : selectedSignal?.action ?? "Watching"} tone={selectedBuyNow ? "green" : selectedSignal?.action === "Sell/Exit Watch" ? "red" : "plain"} />
+            </div>
+
+            <div className="grid grid-cols-3 gap-px bg-white/10 text-[11px] sm:grid-cols-6">
+              {dockTabs.map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  className="bg-[#0d1118] px-3 py-2 text-left font-semibold text-slate-300 transition hover:bg-[#141a24] hover:text-white"
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <aside className="hidden min-w-0 border-l border-white/10 bg-[#0b0f16] lg:flex lg:flex-col">
+            <div className="grid grid-cols-4 gap-px border-b border-white/10 bg-white/10 text-[11px]">
+              {tabs.map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-2 py-2 font-semibold transition ${
+                    activeTab === tab ? "bg-cyan-300 text-slate-950" : "bg-[#0d1118] text-slate-300 hover:bg-[#141a24]"
+                  }`}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto p-3">
+              {activeTab === "Watchlist" && (
+                <div className="space-y-2">
+                  {visibleQuotes.map((quote) => {
+                    const positive = quote.changePct >= 0;
+                    return (
+                      <button
+                        key={quote.symbol}
+                        type="button"
+                        onClick={() => onSelectSymbol(quote.symbol)}
+                        className={`grid w-full grid-cols-[4.5rem_1fr_4.5rem] items-center gap-2 rounded-sm border px-2 py-2 text-left transition ${
+                          quote.symbol === selectedSymbol ? "border-cyan-300/70 bg-cyan-300/10" : "border-white/10 bg-white/[0.03] hover:border-white/25"
+                        }`}
+                      >
+                        <span className="font-mono font-semibold text-white">{quote.symbol}</span>
+                        <span className="truncate text-xs text-slate-400">{quote.name}</span>
+                        <span className={`text-right font-mono text-xs ${positive ? "text-emerald-300" : "text-rose-300"}`}>
+                          {positive ? "+" : ""}{quote.changePct.toFixed(2)}%
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {activeTab === "Positions" && (
+                <TerminalRows
+                  empty="No broker positions in this session."
+                  rows={positions.slice(0, 8).map((position, index) => ({
+                    key: `${String(position.symbol ?? "position")}-${index}`,
+                    label: String(position.symbol ?? "Position"),
+                    value: String(position.qty ?? position.quantity ?? "open"),
+                    detail: String(position.market_value ?? position.current_price ?? "tracked"),
+                  }))}
+                />
+              )}
+
+              {activeTab === "Orders" && (
+                <TerminalRows
+                  empty="No open broker orders."
+                  rows={orders.slice(0, 8).map((order, index) => ({
+                    key: `${String(order.symbol ?? "order")}-${index}`,
+                    label: String(order.symbol ?? "Order"),
+                    value: String(order.side ?? order.type ?? "pending"),
+                    detail: String(order.status ?? order.limit_price ?? "queued"),
+                  }))}
+                />
+              )}
+
+              {activeTab === "News" && (
+                <div className="space-y-2">
+                  {(selectedBuyNow?.reasons ?? (selectedLead ? [selectedLead.reason] : ["Signal context will appear as live evidence arrives."])).slice(0, 3).map((item, index) => (
+                    <div key={`${selectedSymbol}-news-${index}`} className="rounded-sm border border-white/10 bg-white/[0.03] p-3 text-xs leading-5 text-slate-300">
+                      {item}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="border-t border-white/10 p-3">
+              <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Signal stack</div>
+              <div className="space-y-2 text-xs">
+                <StatusLine label="Buy now" value={`${buyNow.length}`} ready={buyNow.length > 0} />
+                <StatusLine label="Buy leads" value={`${buyLeads.length}`} ready={buyLeads.length > 0} />
+                <StatusLine label="Positions" value={`${positions.length}`} ready={positions.length > 0} />
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function TerminalRows({
+  rows,
+  empty,
+}: {
+  rows: Array<{ key: string; label: string; value: string; detail: string }>;
+  empty: string;
+}) {
+  if (!rows.length) {
+    return <div className="rounded-sm border border-white/10 bg-white/[0.03] p-3 text-xs text-slate-400">{empty}</div>;
+  }
+
+  return (
+    <div className="space-y-2">
+      {rows.map((row) => (
+        <div key={row.key} className="rounded-sm border border-white/10 bg-white/[0.03] p-3">
+          <div className="flex items-center justify-between gap-3">
+            <span className="font-mono text-sm font-semibold text-white">{row.label}</span>
+            <span className="text-xs text-slate-300">{row.value}</span>
+          </div>
+          <div className="mt-1 truncate text-xs text-slate-500">{row.detail}</div>
+        </div>
+      ))}
     </div>
   );
 }
