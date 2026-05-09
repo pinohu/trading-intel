@@ -306,7 +306,7 @@ export default function PriceChart({ data, candles, variant = "area", showVolume
           title: level.label,
         }),
       );
-  }, [levels]);
+  }, [levels, showEma, showVolume, showVwap, variant]);
 
   return <div ref={containerRef} role="img" aria-label="Price action chart for the selected symbol." className="h-full min-h-64 w-full" />;
 }

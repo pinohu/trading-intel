@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { recordAuditEvent } from "@/lib/audit";
+import { databaseConfigured } from "@/lib/db";
+import { consumePersistentRateLimit } from "@/lib/persistence";
 import { authCookieName, cleanSecret, clientIp, configuredAccessCode, rateLimit } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
@@ -16,11 +18,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const limit = rateLimit({
-    key: `login:${clientIp(request)}`,
-    limit: 8,
-    windowMs: 15 * 60 * 1000,
-  });
+  const limit = await loginRateLimit(`login:${clientIp(request)}`);
   if (!limit.allowed) {
     await recordAuditEvent("login.rate_limited", actor, { route: "/api/auth/login" });
     return NextResponse.json(
@@ -47,4 +45,18 @@ export async function POST(request: Request) {
     maxAge: 60 * 60 * 8,
   });
   return response;
+}
+
+async function loginRateLimit(key: string) {
+  const options = {
+    key,
+    limit: 8,
+    windowMs: 15 * 60 * 1000,
+  };
+  if (!databaseConfigured()) return rateLimit(options);
+  try {
+    return await consumePersistentRateLimit(options);
+  } catch {
+    return rateLimit(options);
+  }
 }

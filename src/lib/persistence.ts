@@ -121,6 +121,39 @@ export type AutoResearchRunPayload = {
   guardrails: string[];
 };
 
+export async function consumePersistentRateLimit({
+  key,
+  limit,
+  windowMs,
+}: {
+  key: string;
+  limit: number;
+  windowMs: number;
+}) {
+  const sql = getSql();
+  const rows = await sql<{ count: number | string; reset_at: string }>`
+    insert into rate_limit_buckets (key, count, reset_at)
+    values (${key}, 1, now() + (${windowMs}::double precision * interval '1 millisecond'))
+    on conflict (key) do update set
+      count = case
+        when rate_limit_buckets.reset_at <= now() then 1
+        else rate_limit_buckets.count + 1
+      end,
+      reset_at = case
+        when rate_limit_buckets.reset_at <= now() then now() + (${windowMs}::double precision * interval '1 millisecond')
+        else rate_limit_buckets.reset_at
+      end
+    returning count, reset_at::text
+  `;
+  const count = Number(rows[0]?.count ?? limit + 1);
+  const resetAt = Date.parse(rows[0]?.reset_at ?? "");
+  return {
+    allowed: count <= limit,
+    remaining: Math.max(0, limit - count),
+    resetAt: Number.isFinite(resetAt) ? resetAt : Date.now() + windowMs,
+  };
+}
+
 export async function insertFundamentalSnapshot(snapshot: FundamentalSnapshot) {
   const sql = getSql();
   const rows = await sql`

@@ -8,6 +8,15 @@ create table if not exists audit_events (
   created_at timestamptz not null default now()
 );
 
+create table if not exists rate_limit_buckets (
+  key text primary key,
+  count integer not null default 0,
+  reset_at timestamptz not null
+);
+
+create index if not exists rate_limit_buckets_reset_at_idx
+  on rate_limit_buckets (reset_at);
+
 create table if not exists quote_snapshots (
   id uuid primary key default gen_random_uuid(),
   symbol text not null,

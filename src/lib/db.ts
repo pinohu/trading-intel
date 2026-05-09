@@ -64,6 +64,7 @@ export async function databaseSchemaStatus() {
         to_regclass('public.option_volatility_snapshots') is not null as option_volatility_snapshots,
         to_regclass('public.broker_reconciliations') is not null as broker_reconciliations,
         to_regclass('public.research_notes') is not null as research_notes,
+        to_regclass('public.rate_limit_buckets') is not null as rate_limit_buckets,
         to_regclass('public.autoresearch_runs') is not null as autoresearch_runs
     `;
     const status = rows[0] as {
@@ -84,6 +85,7 @@ export async function databaseSchemaStatus() {
       option_volatility_snapshots: boolean;
       broker_reconciliations: boolean;
       research_notes: boolean;
+      rate_limit_buckets: boolean;
       autoresearch_runs: boolean;
     };
     const schemaReady =
@@ -104,6 +106,7 @@ export async function databaseSchemaStatus() {
       status.option_volatility_snapshots &&
       status.broker_reconciliations &&
       status.research_notes &&
+      status.rate_limit_buckets &&
       status.autoresearch_runs;
     return { configured: true, reachable: true, schemaReady, error: null as string | null };
   } catch {
@@ -115,7 +118,7 @@ function sslConfig(url: string) {
   const host = safeHost(url);
   if (!host) return undefined;
   if (host.includes("localhost") || host === "127.0.0.1") return undefined;
-  return { rejectUnauthorized: false };
+  return { rejectUnauthorized: (cleanSecret(process.env.DATABASE_SSL_REJECT_UNAUTHORIZED) ?? "").toLowerCase() !== "false" };
 }
 
 function safeHost(url: string) {

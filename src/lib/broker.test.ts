@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { brokerConfig, validateBrokerOrderPayload } from "@/lib/broker";
+import { brokerConfig, buildReplacementOrderPayload, validateBrokerOrderPayload } from "@/lib/broker";
 
 const originalEnv = { ...process.env };
 
@@ -133,5 +133,26 @@ describe("broker", () => {
       expect(result.order.symbol).toBe("BTC/USD");
       expect(result.order.timeInForce).toBe("gtc");
     }
+  });
+
+  it("builds replacement candidates that still pass through order risk validation", () => {
+    process.env.BROKER_MAX_ORDER_NOTIONAL = "1000";
+    process.env.BROKER_MAX_ORDER_UNITS = "20";
+
+    const existingOrder = {
+      symbol: "SPY",
+      side: "buy",
+      qty: "2",
+      type: "limit",
+      limit_price: "400",
+      time_in_force: "day",
+      client_order_id: "replace-1",
+    };
+
+    const accepted = validateBrokerOrderPayload(buildReplacementOrderPayload(existingOrder, { limitPrice: 450 }));
+    const rejected = validateBrokerOrderPayload(buildReplacementOrderPayload(existingOrder, { limitPrice: 600 }));
+
+    expect(accepted.ok).toBe(true);
+    expect(rejected.ok).toBe(false);
   });
 });

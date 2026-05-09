@@ -17,8 +17,7 @@ function authorized(request: Request) {
   if (!cronSecret) return false;
   const headerSecret = request.headers.get("x-cron-secret");
   const bearer = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
-  const querySecret = new URL(request.url).searchParams.get("secret");
-  return headerSecret === cronSecret || bearer === cronSecret || querySecret === cronSecret;
+  return headerSecret === cronSecret || bearer === cronSecret;
 }
 
 export async function GET(request: Request) {

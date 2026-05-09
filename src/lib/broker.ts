@@ -254,11 +254,38 @@ export function listBrokerOrders({ mode, status = "open", limit = 50 }: { mode?:
   return alpacaRequest<Record<string, unknown>[]>(`/v2/orders?${params}`, {}, mode);
 }
 
+export function getBrokerOrder(id: string, mode?: BrokerMode) {
+  return alpacaRequest<Record<string, unknown>>(`/v2/orders/${encodeURIComponent(id)}?nested=true`, {}, mode);
+}
+
 export function replaceBrokerOrder(id: string, payload: Record<string, unknown>, mode?: BrokerMode) {
   return alpacaRequest<Record<string, unknown>>(`/v2/orders/${encodeURIComponent(id)}`, {
     method: "PATCH",
     body: JSON.stringify(payload),
   }, mode);
+}
+
+export function buildReplacementOrderPayload(
+  existingOrder: Record<string, unknown>,
+  replacement: { qty?: number | string; limitPrice?: number | string; timeInForce?: string; acknowledgement?: string },
+): BrokerOrderPayload {
+  const symbol = readText(existingOrder, "symbol");
+  return {
+    symbol,
+    assetClass: symbol.includes("/") ? "crypto" : "stock",
+    side: readText(existingOrder, "side").toLowerCase() === "sell" ? "sell" : "buy",
+    qty: replacement.qty === undefined ? readNumber(existingOrder, "qty") : Number(replacement.qty),
+    type: "limit",
+    limitPrice: replacement.limitPrice === undefined ? readNumber(existingOrder, "limit_price") : Number(replacement.limitPrice),
+    timeInForce: normalizeReplacementTimeInForce(replacement.timeInForce ?? readText(existingOrder, "time_in_force")),
+    extendedHours: Boolean(existingOrder.extended_hours),
+    orderClass: readText(existingOrder, "order_class") === "bracket" ? "bracket" : "simple",
+    takeProfitLimitPrice: readNestedNumber(existingOrder, "take_profit", "limit_price"),
+    stopLossStopPrice: readNestedNumber(existingOrder, "stop_loss", "stop_price"),
+    clientOrderId: readText(existingOrder, "client_order_id") || undefined,
+    acknowledgement: replacement.acknowledgement,
+    source: "manual",
+  };
 }
 
 export function cancelBrokerOrder(id: string, mode?: BrokerMode) {
@@ -487,6 +514,12 @@ function normalizeTimeInForce(value: string | undefined, assetClass: BrokerAsset
   return "day";
 }
 
+function normalizeReplacementTimeInForce(value: string): BrokerOrderPayload["timeInForce"] {
+  const clean = value.trim().toLowerCase();
+  if (clean === "gtc" || clean === "ioc") return clean;
+  return "day";
+}
+
 function parseEnvNumber(key: string, fallback: number, min: number, max: number) {
   const parsed = Number(cleanSecret(process.env[key]));
   if (!Number.isFinite(parsed)) return fallback;
@@ -505,6 +538,23 @@ function numberOrNull(value: unknown) {
 
 function normalizeEndpoint(value: string) {
   return value.replace(/\/+$/, "").replace(/\/v2$/i, "");
+}
+
+function readText(record: Record<string, unknown>, key: string) {
+  const value = record[key];
+  return typeof value === "string" ? value : "";
+}
+
+function readNumber(record: Record<string, unknown>, key: string) {
+  const parsed = Number(record[key]);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function readNestedNumber(record: Record<string, unknown>, key: string, nestedKey: string) {
+  const value = record[key];
+  if (!value || typeof value !== "object") return undefined;
+  const parsed = Number((value as Record<string, unknown>)[nestedKey]);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
 }
 
 function parseJson(text: string) {

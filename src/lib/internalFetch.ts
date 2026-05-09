@@ -1,4 +1,3 @@
-import { cleanSecret } from "@/lib/security";
 import type { SignalQuote } from "@/lib/signalEngine";
 
 export type MarketPayload = {
@@ -35,11 +34,6 @@ function internalForwardHeaders(request: Request) {
   copyHeader(request, headers, "cookie");
   copyHeader(request, headers, "authorization");
   copyHeader(request, headers, "x-cron-secret");
-
-  const querySecret = cleanSecret(new URL(request.url).searchParams.get("secret"));
-  if (querySecret && !headers.has("x-cron-secret")) {
-    headers.set("x-cron-secret", querySecret);
-  }
 
   return headers;
 }

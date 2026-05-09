@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { brokerReadiness, cancelBrokerOrder, replaceBrokerOrder } from "@/lib/broker";
+import { brokerConfig, brokerReadiness, buildReplacementOrderPayload, cancelBrokerOrder, getBrokerOrder, replaceBrokerOrder, validateBrokerOrderPayload } from "@/lib/broker";
 import { brokerUpstreamError, modeFromRequest, truthyConfirmation } from "@/lib/brokerRoutes";
+import { evaluatePreTradeControls } from "@/lib/executionControl";
 import { cleanSecret, hasValidUserSession } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
@@ -43,6 +44,26 @@ export async function PATCH(request: Request, { params }: Params) {
   }
 
   try {
+    const existingOrder = await getBrokerOrder(id, mode);
+    const candidate = buildReplacementOrderPayload(existingOrder, body);
+    const validation = validateBrokerOrderPayload(candidate, brokerConfig(mode));
+    if (!validation.ok) {
+      return NextResponse.json({ ok: false, mode, error: validation.error, readiness }, { status: 400 });
+    }
+    const preTrade = await evaluatePreTradeControls({ mode, order: validation.order });
+    if (!preTrade.ok) {
+      return NextResponse.json(
+        {
+          ok: false,
+          mode,
+          error: "Pre-trade controls blocked this order replacement.",
+          blockers: preTrade.blockers,
+          warnings: preTrade.warnings,
+          controlState: preTrade.state,
+        },
+        { status: 409 },
+      );
+    }
     const order = await replaceBrokerOrder(id, replacement, mode);
     return NextResponse.json({ ok: true, mode, order });
   } catch (error) {
