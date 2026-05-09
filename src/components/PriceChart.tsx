@@ -17,6 +17,15 @@ type Point = {
   value: number;
 };
 
+export type ChartCandle = {
+  time: string | number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume?: number;
+};
+
 export type PriceLevel = {
   price: number;
   label: string;
@@ -25,13 +34,23 @@ export type PriceLevel = {
 
 type PriceChartProps = {
   data: Point[];
+  candles?: ChartCandle[];
   variant?: "area" | "candles";
   showVolume?: boolean;
   showEma?: boolean;
   levels?: PriceLevel[];
 };
 
-function buildCandles(data: Point[]) {
+function buildCandles(data: Point[], candles?: ChartCandle[]) {
+  if (candles?.length) {
+    return candles.map((candle, index) => ({
+      time: normalizeChartTime(candle.time, index),
+      open: Number(candle.open.toFixed(2)),
+      high: Number(candle.high.toFixed(2)),
+      low: Number(candle.low.toFixed(2)),
+      close: Number(candle.close.toFixed(2)),
+    }));
+  }
   return data.map((point, index) => {
     const previous = data[index - 1]?.value ?? point.value * (1 - Math.sin(index + 1) * 0.004);
     const close = point.value;
@@ -49,7 +68,17 @@ function buildCandles(data: Point[]) {
   });
 }
 
-function buildVolume(data: Point[]) {
+function buildVolume(data: Point[], candles?: ChartCandle[]) {
+  if (candles?.length) {
+    return candles.map((candle, index) => {
+      const positive = candle.close >= candle.open;
+      return {
+        time: normalizeChartTime(candle.time, index),
+        value: Math.max(1, Math.round(candle.volume ?? 1)),
+        color: positive ? "rgba(52, 211, 153, 0.38)" : "rgba(251, 113, 133, 0.38)",
+      };
+    });
+  }
   return data.map((point, index) => {
     const previous = data[index - 1]?.value ?? point.value;
     const positive = point.value >= previous;
@@ -62,19 +91,29 @@ function buildVolume(data: Point[]) {
   });
 }
 
-function buildEma(data: Point[], period = 9) {
+function buildEma(data: Point[], period = 9, candles?: ChartCandle[]) {
+  const source = candles?.length
+    ? candles.map((candle, index) => ({ time: normalizeChartTime(candle.time, index), value: candle.close }))
+    : data.map((point, index) => ({ time: (index + 1) as never, value: point.value }));
   const multiplier = 2 / (period + 1);
-  let ema = data[0]?.value ?? 0;
-  return data.map((point, index) => {
+  let ema = source[0]?.value ?? 0;
+  return source.map((point, index) => {
     ema = index === 0 ? point.value : point.value * multiplier + ema * (1 - multiplier);
     return {
-      time: (index + 1) as never,
+      time: point.time,
       value: Number(ema.toFixed(2)),
     };
   });
 }
 
-export default function PriceChart({ data, variant = "area", showVolume = false, showEma = false, levels = [] }: PriceChartProps) {
+function normalizeChartTime(value: string | number, index: number) {
+  if (typeof value === "number" && Number.isFinite(value)) return value as never;
+  const timestamp = Date.parse(String(value));
+  if (Number.isFinite(timestamp)) return Math.floor(timestamp / 1000) as never;
+  return (index + 1) as never;
+}
+
+export default function PriceChart({ data, candles, variant = "area", showVolume = false, showEma = false, levels = [] }: PriceChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -120,13 +159,13 @@ export default function PriceChart({ data, variant = "area", showVolume = false,
           });
 
     if (variant === "candles") {
-      series.setData(buildCandles(data));
+      series.setData(buildCandles(data, candles));
     } else {
       series.setData(
-        data.map((point, index) => ({
+        (candles?.length ? candles.map((candle, index) => ({ time: normalizeChartTime(candle.time, index), value: candle.close })) : data.map((point, index) => ({
           time: (index + 1) as never,
           value: point.value,
-        })),
+        }))),
       );
     }
 
@@ -148,7 +187,7 @@ export default function PriceChart({ data, variant = "area", showVolume = false,
         priceLineVisible: false,
         lastValueVisible: false,
       });
-      emaSeries.setData(buildEma(data));
+      emaSeries.setData(buildEma(data, 9, candles));
     }
 
     if (showVolume) {
@@ -165,7 +204,7 @@ export default function PriceChart({ data, variant = "area", showVolume = false,
           bottom: 0,
         },
       });
-      volumeSeries.setData(buildVolume(data));
+      volumeSeries.setData(buildVolume(data, candles));
     }
 
     chart.timeScale().fitContent();
@@ -181,7 +220,7 @@ export default function PriceChart({ data, variant = "area", showVolume = false,
       observer.disconnect();
       chart.remove();
     };
-  }, [data, levels, showEma, showVolume, variant]);
+  }, [candles, data, levels, showEma, showVolume, variant]);
 
   return <div ref={containerRef} role="img" aria-label="Price action chart for the selected symbol." className="h-full min-h-64 w-full" />;
 }

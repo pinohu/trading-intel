@@ -54,7 +54,7 @@ import { optimizeTradeBasketFromLeads, type IsingBasketResult } from "@/lib/isin
 import type { OrchestrationRun } from "@/lib/orchestration";
 import { referenceReportLessons, referenceReportSummary } from "@/lib/referenceReports";
 import type { TradingAssistantDashboardContext } from "@/lib/tradingAssistant";
-import type { PriceLevel } from "@/components/PriceChart";
+import type { ChartCandle, PriceLevel } from "@/components/PriceChart";
 
 const PriceChart = dynamic(() => import("@/components/PriceChart"), {
   ssr: false,
@@ -64,6 +64,26 @@ const PriceChart = dynamic(() => import("@/components/PriceChart"), {
 type SparkPoint = {
   label: string;
   value: number;
+};
+
+type ChartHistoryPayload = {
+  ok: boolean;
+  symbol: string;
+  timeframe: string;
+  source: string;
+  quality: string;
+  advisory?: string;
+  candles: ChartCandle[];
+};
+
+type StreamStatusPayload = {
+  ok: boolean;
+  mode: BrokerMode;
+  serverlessMode: string;
+  browserRefreshSeconds: number;
+  brokerTradingStreamAvailable: boolean;
+  marketDataStreamAvailable: boolean;
+  implementationNote: string;
 };
 
 const QuoteHistoryContext = createContext<Record<string, SparkPoint[]>>({});
@@ -2131,6 +2151,8 @@ export default function Home() {
             brokerOverview={brokerOverview}
             brokerStatus={brokerStatus}
             secondsAgo={secondsAgo}
+            provider={provider}
+            brokerMode={brokerMode}
             onSelectSymbol={(symbol) => {
               setSelected(symbol);
               setDraft((current) => ({ ...current, symbol }));
@@ -3779,6 +3801,8 @@ function TradingViewTerminalWorkbench({
   brokerOverview,
   brokerStatus,
   secondsAgo,
+  provider,
+  brokerMode,
   onSelectSymbol,
 }: {
   selectedQuote: Quote | undefined;
@@ -3790,11 +3814,24 @@ function TradingViewTerminalWorkbench({
   brokerOverview: BrokerOverview | null;
   brokerStatus: BrokerStatus | null;
   secondsAgo: number | null;
+  provider: string;
+  brokerMode: BrokerMode;
   onSelectSymbol: (symbol: string) => void;
 }) {
   const [activeTab, setActiveTab] = useState("Watchlist");
   const [activeDock, setActiveDock] = useState("Positions");
   const [timeframe, setTimeframe] = useState("1D");
+  const [layout, setLayout] = useState<"1" | "2" | "4">(() => {
+    if (typeof window === "undefined") return "1";
+    const saved = window.localStorage.getItem("ti_chart_layout");
+    return saved === "2" || saved === "4" ? saved : "1";
+  });
+  const [history, setHistory] = useState<ChartHistoryPayload | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState("");
+  const [backtestSummary, setBacktestSummary] = useState("");
+  const [backtestLoading, setBacktestLoading] = useState(false);
+  const [streamStatus, setStreamStatus] = useState<StreamStatusPayload | null>(null);
   const [chartVariant, setChartVariant] = useState<"candles" | "area">(() => {
     if (typeof window === "undefined") return "candles";
     return window.localStorage.getItem("ti_chart_variant") === "area" ? "area" : "candles";
@@ -3820,11 +3857,15 @@ function TradingViewTerminalWorkbench({
   const orders = brokerOverview?.orders ?? [];
   const tools = ["+", "T", "F", "R", "M", "A"];
   const tabs = ["Watchlist", "Positions", "Orders", "News"];
-  const dockTabs = ["Positions", "Orders", "Fills", "Alerts", "Journal", "Strategy"];
+  const dockTabs = ["Positions", "Orders", "Stream", "Alerts", "Journal", "Strategy"];
   const timeframes = ["1m", "5m", "15m", "1h", "1D", "1W", "1M"];
   const priceLevels = buildWorkbenchPriceLevels(selectedBuyNow, selectedLead, selectedSignal, showRiskLines);
   const signalTone = selectedBuyNow ? "green" : selectedSignal?.action === "Sell/Exit Watch" ? "red" : selectedLead ? "blue" : "plain";
   const setupQuality = selectedBuyNow?.confidence ?? selectedLead?.confidence ?? selectedSignal?.confidence ?? 0;
+  const historyCandles = history?.symbol === selectedSymbol && history.timeframe === timeframe ? history.candles : undefined;
+  const chartData = historyCandles?.length ? historyCandles.map((candle) => ({ label: String(candle.time), value: candle.close })) : spark;
+  const secondaryQuotes = visibleQuotes.filter((quote) => quote.symbol !== selectedSymbol).slice(0, layout === "4" ? 3 : layout === "2" ? 1 : 0);
+  const quoteHistory = useContext(QuoteHistoryContext);
 
   useEffect(() => {
     window.localStorage.setItem("ti_chart_variant", chartVariant);
@@ -3841,6 +3882,77 @@ function TradingViewTerminalWorkbench({
   useEffect(() => {
     window.localStorage.setItem("ti_chart_risk_lines", showRiskLines ? "on" : "off");
   }, [showRiskLines]);
+
+  useEffect(() => {
+    window.localStorage.setItem("ti_chart_layout", layout);
+  }, [layout]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadHistory() {
+      setHistoryLoading(true);
+      setHistoryError("");
+      try {
+        const response = await fetch(`/api/chart/history?symbol=${encodeURIComponent(selectedSymbol)}&timeframe=${encodeURIComponent(timeframe)}&provider=${encodeURIComponent(provider)}&mode=${brokerMode}`);
+        const payload = await response.json();
+        if (!cancelled) {
+          if (payload.ok) {
+            setHistory(payload);
+          } else {
+            setHistoryError(payload.error ?? "Chart history unavailable.");
+          }
+        }
+      } catch {
+        if (!cancelled) setHistoryError("Chart history request failed.");
+      } finally {
+        if (!cancelled) setHistoryLoading(false);
+      }
+    }
+    void loadHistory();
+    return () => {
+      cancelled = true;
+    };
+  }, [brokerMode, provider, selectedSymbol, timeframe]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadStreamStatus() {
+      try {
+        const response = await fetch(`/api/stream/status?mode=${brokerMode}`);
+        const payload = await response.json();
+        if (!cancelled && payload.ok) setStreamStatus(payload);
+      } catch {
+        if (!cancelled) setStreamStatus(null);
+      }
+    }
+    void loadStreamStatus();
+    return () => {
+      cancelled = true;
+    };
+  }, [brokerMode]);
+
+  async function runWorkbenchBacktest() {
+    setBacktestLoading(true);
+    setBacktestSummary("");
+    try {
+      const response = await fetch(`/api/backtest?symbols=${encodeURIComponent(selectedSymbol)}&lookbackDays=180&maxHoldBars=8&rewardRisk=2&mode=${brokerMode}`);
+      const payload = await response.json();
+      if (!payload.ok) {
+        setBacktestSummary(payload.error ?? "Backtest unavailable.");
+        return;
+      }
+      const first = payload.results?.[0];
+      setBacktestSummary(
+        first
+          ? `${first.symbol}: ${first.trades} trades, ${formatSignedPct(first.totalReturnPct)}, ${first.winRate}% win, ${first.profitFactor} PF`
+          : "Backtest completed with no result rows.",
+      );
+    } catch {
+      setBacktestSummary("Backtest request failed.");
+    } finally {
+      setBacktestLoading(false);
+    }
+  }
 
   return (
     <section aria-label="TradingView-style workbench" className="overflow-hidden rounded-md border border-white/10 bg-[#080b10] shadow-2xl shadow-black/40">
@@ -3864,6 +3976,20 @@ function TradingViewTerminalWorkbench({
                 }`}
               >
                 {item}
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-wrap items-center gap-1">
+            {(["1", "2", "4"] as const).map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => setLayout(item)}
+                className={`h-8 rounded-sm px-2 font-mono text-xs transition ${
+                  layout === item ? "bg-white text-slate-950" : "bg-white/[0.04] text-slate-300 hover:bg-white/10"
+                }`}
+              >
+                {item}x
               </button>
             ))}
           </div>
@@ -3919,7 +4045,7 @@ function TradingViewTerminalWorkbench({
             <div className="min-h-[430px] flex-1 border-b border-white/10 p-3">
               <div className="relative h-full min-h-[410px] overflow-hidden rounded-sm border border-white/10 bg-[linear-gradient(90deg,rgba(148,163,184,0.055)_1px,transparent_1px),linear-gradient(rgba(148,163,184,0.055)_1px,transparent_1px)] bg-[size:72px_72px]">
                 <div className="absolute left-3 top-3 z-10 rounded-sm border border-white/10 bg-black/40 px-2 py-1 font-mono text-xs text-slate-300">
-                  {selectedSymbol} {timeframe} chart
+                  {selectedSymbol} {timeframe} chart | {historyLoading ? "loading bars" : history?.source ?? "local history"}
                 </div>
                 <div className="absolute right-3 top-3 z-10 grid gap-1 text-right font-mono text-[11px] text-slate-300">
                   <span>O {selectedQuote ? formatUsd(selectedQuote.open) : "N/A"}</span>
@@ -3927,9 +4053,30 @@ function TradingViewTerminalWorkbench({
                   <span>L {selectedQuote ? formatUsd(selectedQuote.low) : "N/A"}</span>
                   <span>C {selectedQuote ? formatUsd(selectedQuote.price) : "N/A"}</span>
                 </div>
-                <PriceChart data={spark} variant={chartVariant} showVolume={showVolume} showEma={showEma} levels={priceLevels} />
+                <PriceChart data={chartData} candles={historyCandles} variant={chartVariant} showVolume={showVolume} showEma={showEma} levels={priceLevels} />
               </div>
             </div>
+            {layout !== "1" && (
+              <div className={`grid gap-2 border-b border-white/10 bg-[#070a0f] p-3 ${layout === "4" ? "md:grid-cols-3" : "md:grid-cols-1"}`}>
+                {secondaryQuotes.map((quote) => {
+                  const miniData = quoteHistory[quote.symbol]?.length ? quoteHistory[quote.symbol] : makeSpark(quote.symbol, quote.price);
+                  return (
+                    <button
+                      key={quote.symbol}
+                      type="button"
+                      onClick={() => onSelectSymbol(quote.symbol)}
+                      className="min-h-48 rounded-sm border border-white/10 bg-black/20 p-2 text-left transition hover:border-cyan-300/60"
+                    >
+                      <div className="mb-2 flex items-center justify-between gap-2 text-xs">
+                        <span className="font-mono font-semibold text-white">{quote.symbol}</span>
+                        <span className={quote.changePct >= 0 ? "text-emerald-300" : "text-rose-300"}>{formatSignedPct(quote.changePct)}</span>
+                      </div>
+                      <PriceChart data={miniData} variant="area" showVolume={false} showEma={false} />
+                    </button>
+                  );
+                })}
+              </div>
+            )}
 
             <div className="grid gap-2 border-b border-white/10 bg-[#080b10] p-3 text-xs sm:grid-cols-2 lg:grid-cols-5">
               <MiniStat label="Open" value={selectedQuote ? formatUsd(selectedQuote.open) : "N/A"} tone="plain" />
@@ -3961,7 +4108,16 @@ function TradingViewTerminalWorkbench({
               selectedSignal={selectedSignal}
               positions={positions}
               orders={orders}
+              backtestSummary={backtestSummary}
+              backtestLoading={backtestLoading}
+              onRunBacktest={runWorkbenchBacktest}
+              streamStatus={streamStatus}
             />
+            {(history?.advisory || historyError) && (
+              <div className="border-t border-white/10 bg-amber-300/10 px-3 py-2 text-xs text-amber-100">
+                {historyError || history?.advisory}
+              </div>
+            )}
           </div>
 
           <aside className="hidden min-w-0 border-l border-white/10 bg-[#0b0f16] lg:flex lg:flex-col">
@@ -4134,6 +4290,10 @@ function WorkbenchDock({
   selectedSignal,
   positions,
   orders,
+  backtestSummary,
+  backtestLoading,
+  onRunBacktest,
+  streamStatus,
 }: {
   activeDock: string;
   selectedSymbol: string;
@@ -4142,6 +4302,10 @@ function WorkbenchDock({
   selectedSignal: TradeSignal | undefined;
   positions: Array<Record<string, unknown>>;
   orders: Array<Record<string, unknown>>;
+  backtestSummary: string;
+  backtestLoading: boolean;
+  onRunBacktest: () => void;
+  streamStatus: StreamStatusPayload | null;
 }) {
   if (activeDock === "Positions") {
     return (
@@ -4175,10 +4339,26 @@ function WorkbenchDock({
     );
   }
 
-  if (activeDock === "Fills") {
+  if (activeDock === "Stream") {
     return (
       <WorkbenchDockShell>
-        <DockInsight title="Fill tape" value="No recent fills" detail="Broker activities will map into this lane after authenticated execution history is available." />
+        <div className="grid gap-2 md:grid-cols-3">
+          <DockInsight
+            title="Market stream"
+            value={streamStatus?.marketDataStreamAvailable ? "Websocket ready" : "Polling mode"}
+            detail={streamStatus?.implementationNote ?? "Checking stream readiness."}
+          />
+          <DockInsight
+            title="Broker stream"
+            value={streamStatus?.brokerTradingStreamAvailable ? "Trade updates ready" : "Credentials needed"}
+            detail="When broker credentials are configured, the account stream can power fill/order lifecycle updates."
+          />
+          <DockInsight
+            title="Refresh cadence"
+            value={streamStatus ? `${streamStatus.browserRefreshSeconds}s ${streamStatus.serverlessMode}` : "Checking"}
+            detail="Serverless production remains polling-safe; a durable worker can subscribe to websocket endpoints later."
+          />
+        </div>
       </WorkbenchDockShell>
     );
   }
@@ -4210,9 +4390,20 @@ function WorkbenchDock({
   return (
     <WorkbenchDockShell>
       <div className="grid gap-2 md:grid-cols-3">
+        <div className="rounded-sm border border-white/10 bg-white/[0.03] p-3">
+          <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Evidence run</div>
+          <button
+            type="button"
+            onClick={onRunBacktest}
+            disabled={backtestLoading}
+            className="mt-2 rounded-sm bg-cyan-300 px-3 py-2 text-xs font-bold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-wait disabled:bg-slate-500"
+          >
+            {backtestLoading ? "Running..." : `Backtest ${selectedSymbol}`}
+          </button>
+          <div className="mt-2 line-clamp-2 text-slate-400">{backtestSummary || "Run a quick momentum proof check against historical bars when configured."}</div>
+        </div>
         <DockInsight title="Scenario A" value="Base case" detail="Entry respects trigger, stop remains intact, target line defines first trim." />
         <DockInsight title="Scenario B" value="Failed break" detail="Price violates invalidation; no averaging down, no market-order chase." />
-        <DockInsight title="Scenario C" value="Extension" detail="If volume expands and trend holds, trail with review cadence instead of guessing." />
       </div>
     </WorkbenchDockShell>
   );
