@@ -55,6 +55,7 @@ import type { OrchestrationRun } from "@/lib/orchestration";
 import { referenceReportLessons, referenceReportSummary } from "@/lib/referenceReports";
 import type { TradingAssistantDashboardContext } from "@/lib/tradingAssistant";
 import type { ChartCandle, PriceLevel } from "@/components/PriceChart";
+import { normalizeOrchestrationRun } from "@/lib/orchestrationView";
 
 const PriceChart = dynamic(() => import("@/components/PriceChart"), {
   ssr: false,
@@ -1682,7 +1683,7 @@ export default function Home() {
     fusionPredictions.find((prediction) => prediction.direction === "review" && prediction.symbol !== buyDecision?.symbol) ??
     fusionPredictions.find((prediction) => prediction.symbol !== buyDecision?.symbol) ??
     topFusionPrediction;
-  const latestOrchestrationRun = orchestration?.latest ?? orchestration?.runs?.[0] ?? null;
+  const latestOrchestrationRun = normalizeOrchestrationRun(orchestration?.latest) ?? normalizeOrchestrationRun(orchestration?.runs?.[0]);
   const topAlgorithmScore = algorithmScores[0];
   const institutionalGrade = institutionalReadiness?.productionInstitutionalReady
     ? "Ready"
