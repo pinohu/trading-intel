@@ -1,4 +1,5 @@
 import { evaluateTradingMinds, type TradingMindConsensus, type TradingMindStance } from "@/lib/tradingMinds";
+import { evaluateOptimalDayTradingStrategy, type OptimalStrategyFit } from "@/lib/optimalDayTradingStrategy";
 
 export type SignalQuote = {
   symbol: string;
@@ -34,6 +35,7 @@ export type TradeSignal = {
   reason: string;
   confirmations: string[];
   warnings: string[];
+  optimalStrategy: OptimalStrategyFit;
   strategyMindset: TradingMindConsensus;
   dataFresh: boolean;
   dataAgeMinutes: number | null;
@@ -58,6 +60,7 @@ export type BuyLead = {
   reason: string;
   simpleWhy: string[];
   warnings: string[];
+  optimalStrategy: OptimalStrategyFit;
   strategyMindset: TradingMindConsensus;
   dataFresh: boolean;
   dataAgeMinutes: number | null;
@@ -248,12 +251,43 @@ export function generateSignal(quote: SignalQuote, riskPct = 1): TradeSignal {
   const exhaustionRisk = shape.dayMovePct <= -1.2 || closeLocation <= 0.18;
   const failedBreakout = shape.dayMovePct > 0.4 && closeLocation < 0.42;
   const extended = shape.dayMovePct >= (isCommodityMarket(market) ? 2.8 : market === "Crypto" ? 3.5 : 4.2) && closeLocation >= 0.84;
+  const hasCatalyst = Math.abs(quote.changePct) >= 1.2 || quote.source.toLowerCase().includes("news") || quote.source.toLowerCase().includes("catalyst");
+  const preliminaryRiskDistance = Math.max(Math.abs(quote.price - Math.max(shape.low, Math.min(shape.open, quote.price - range * 0.42))), quote.price * 0.0025);
+  const preliminaryRewardRisk = Math.abs(quote.price + range * 0.85 - quote.price) / preliminaryRiskDistance;
+  const optimalStrategy = evaluateOptimalDayTradingStrategy({
+    symbol: quote.symbol,
+    market,
+    price: quote.price,
+    open: shape.open,
+    high: shape.high,
+    low: shape.low,
+    range,
+    closeLocation,
+    vwapProxy: shape.vwapProxy,
+    dayMovePct: shape.dayMovePct,
+    changePct: quote.changePct,
+    volume: quote.volume,
+    liquid,
+    fresh,
+    inTradingWindow,
+    rewardRisk: preliminaryRewardRisk,
+    hasCatalyst,
+    quality: quote.quality,
+    rangeEstimated: shape.rangeEstimated,
+    extended,
+    failedBreakout,
+    severeWeakness: exhaustionRisk,
+  });
   const rawAction =
-    (strongMomentum || openingRangeBreakout) && !extended
+    optimalStrategy.stance === "buy-watch"
       ? "Buy Watch"
-      : exhaustionRisk || failedBreakout || extended
+      : optimalStrategy.stance === "sell-watch" || optimalStrategy.stance === "blocked"
         ? "Sell/Exit Watch"
-        : "Hold/No Trade";
+        : (strongMomentum || openingRangeBreakout) && !extended
+          ? "Buy Watch"
+          : exhaustionRisk || failedBreakout || extended
+            ? "Sell/Exit Watch"
+            : "Hold/No Trade";
   let action: TradeSignal["action"] = fresh && inTradingWindow ? rawAction : "Hold/No Trade";
   let invalidation =
     action === "Buy Watch"
@@ -309,11 +343,13 @@ export function generateSignal(quote: SignalQuote, riskPct = 1): TradeSignal {
       : !inTradingWindow
         ? `${normalizedMarketStatus(quote) ?? "Outside regular session"} - Wait`
       : action === "Buy Watch"
-      ? strategyMindset.stance === "buy-watch" && !openingRangeBreakout && !strongMomentum
-        ? "Legendary Strategy Alignment"
-        : openingRangeBreakout
-          ? "Opening Range Breakout"
-          : "VWAP Trend Continuation"
+        ? optimalStrategy.stance === "buy-watch"
+          ? optimalStrategy.matchedSetups[0]?.name ?? "Optimal Composite Strategy"
+          : strategyMindset.stance === "buy-watch" && !openingRangeBreakout && !strongMomentum
+            ? "Legendary Strategy Alignment"
+            : openingRangeBreakout
+              ? "Opening Range Breakout"
+              : "VWAP Trend Continuation"
       : action === "Sell/Exit Watch"
         ? extended
           ? "Momentum Exhaustion"
@@ -332,6 +368,7 @@ export function generateSignal(quote: SignalQuote, riskPct = 1): TradeSignal {
     closeLocation >= 0.66 ? "Close location strong" : "",
     liquid ? "Liquidity filter passed" : "",
     rewardRisk >= 1.5 ? "Reward/risk acceptable" : "",
+    optimalStrategy.stance === "buy-watch" ? `Optimal composite strategy supports buy watch (${optimalStrategy.alignment}% setup alignment)` : "",
     strategyMindset.stance === "buy-watch" ? `Legendary strategy panel supports buy watch (${strategyMindset.alignment}% alignment)` : "",
   ].filter(Boolean);
   const warnings = [
@@ -339,6 +376,7 @@ export function generateSignal(quote: SignalQuote, riskPct = 1): TradeSignal {
     shape.rangeEstimated ? "Day range is estimated from limited public quote fields" : "",
     !inTradingWindow && fresh ? `${normalizedMarketStatus(quote) ?? "Market not in regular session"}: wait for cleaner regular-session confirmation` : "",
     !liquid ? "Liquidity below preferred day-trading threshold" : "",
+    ...optimalStrategy.blockers.filter((blocker) => !/Reward\/risk/i.test(blocker)).slice(0, 3),
     quote.quality && quote.quality !== "Execution Grade" ? `Feed is ${quote.quality}, not licensed execution-grade` : "",
     extended ? "Move may be extended; chase risk is elevated" : "",
     strategyMindset.stance === "sell-watch" || strategyMindset.stance === "risk-off" ? `Legendary strategy panel is ${strategyMindset.stance}: ${strategyMindset.summary}` : "",
@@ -387,6 +425,7 @@ export function generateSignal(quote: SignalQuote, riskPct = 1): TradeSignal {
     reason,
     confirmations,
     warnings,
+    optimalStrategy,
     strategyMindset,
     dataFresh: fresh,
     dataAgeMinutes: age === null ? null : Number(age.toFixed(1)),
@@ -422,6 +461,7 @@ export function generateBuyLead(quote: SignalQuote, riskPct = 1): BuyLead {
     (aboveOpen ? 10 : -6) +
     (aboveVwapProxy ? 8 : -5) +
     (shape.closeLocation >= 0.58 ? 8 : -4) +
+    (signal.optimalStrategy.stance === "buy-watch" ? 12 : signal.optimalStrategy.stance === "sell-watch" || signal.optimalStrategy.stance === "blocked" ? -16 : 0) +
     (quote.quality === "Execution Grade" ? 8 : quote.quality === "Public Real-Time" ? 5 : 0) -
     (shape.rangeEstimated ? 4 : 0) -
     (extended ? 16 : 0) -
@@ -431,7 +471,16 @@ export function generateBuyLead(quote: SignalQuote, riskPct = 1): BuyLead {
   const status =
     signal.action === "Buy Watch" && (signal.quality === "A" || signal.quality === "B")
       ? "Buy Watch"
-      : signal.action !== "Sell/Exit Watch" && strategyMindset.stance !== "sell-watch" && strategyMindset.stance !== "risk-off" && fresh && liquid && !severeWeakness && !extended && confidence >= 45
+      : signal.action !== "Sell/Exit Watch" &&
+          signal.optimalStrategy.stance !== "blocked" &&
+          signal.optimalStrategy.stance !== "sell-watch" &&
+          strategyMindset.stance !== "sell-watch" &&
+          strategyMindset.stance !== "risk-off" &&
+          fresh &&
+          liquid &&
+          !severeWeakness &&
+          !extended &&
+          confidence >= 45
         ? "Buy Lead - Wait for Trigger"
         : "No Buy";
   const trigger =
@@ -450,6 +499,7 @@ export function generateBuyLead(quote: SignalQuote, riskPct = 1): BuyLead {
     aboveVwapProxy ? "It is holding the stronger side of today's range." : "It has not clearly reclaimed the stronger side of today's range.",
     liquid ? "There is enough activity to monitor it closely." : "Trading activity is below the preferred threshold.",
     shape.closeLocation >= 0.58 ? "It is closer to the upper part of today's range." : "It is not yet near the stronger part of today's range.",
+    `Optimal composite strategy: ${signal.optimalStrategy.summary}`,
     `Strategy-mind panel: ${strategyMindset.summary}`,
   ];
   const warnings = [
@@ -457,6 +507,7 @@ export function generateBuyLead(quote: SignalQuote, riskPct = 1): BuyLead {
     !inTradingWindow && fresh ? `${normalizedMarketStatus(quote) ?? "Outside regular session"}: wait for cleaner entry timing` : "",
     shape.rangeEstimated ? "The day range is estimated, so the trigger needs extra confirmation" : "",
     !liquid ? "Liquidity is below the preferred day-trading threshold" : "",
+    ...signal.optimalStrategy.blockers.slice(0, 3),
     signal.action === "Sell/Exit Watch" ? "Sell/exit rules are active; do not treat this as a buy lead" : "",
     strategyMindset.stance === "sell-watch" || strategyMindset.stance === "risk-off" ? `Strategy-mind veto: ${strategyMindset.summary}` : "",
     extended ? "The move is already stretched; avoid chasing" : "",
@@ -493,6 +544,7 @@ export function generateBuyLead(quote: SignalQuote, riskPct = 1): BuyLead {
     reason,
     simpleWhy,
     warnings,
+    optimalStrategy: signal.optimalStrategy,
     strategyMindset,
     dataFresh: fresh,
     dataAgeMinutes: age === null ? null : Number(age.toFixed(1)),

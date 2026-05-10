@@ -39,6 +39,7 @@ This is a mobile-first trading research and intelligence cockpit. It is built fo
 - External worker bridge at `/api/research-workers/run` and `/api/research-workers/readiness` for OpenBB, Alpha Vantage, Alphalens, OpenStock, StockSight, StreetMerchant alert ops, Ghostfolio, AKShare, LSTM Time Series, LLM Trading Lab, Dexter, LEAN, StockSharp, RQAlpha, Freqtrade, Hummingbot, StockPredictionAI, Stock Prediction Models, Backtrader, vectorbt, NautilusTrader, FinGPT, FinRL, and Jesse workers outside Vercel
 - Native systematic-trading reference map inspired by `awesome-systematic-trading`, used to keep data, alpha, analytics, backtest, live-control, architecture, tooling, resource, and AI/LLM proof lanes visible before a setup is trusted
 - Native TradingAgents integration at `/api/tradingagents/analyze` for in-code market/fundamental/bull/bear/trader/risk/portfolio-manager debate persisted to research notes when Postgres is configured
+- Financial-services workflow layer inspired by Anthropic's reference agents, with market research, earnings review, thesis tracking, catalyst calendar, model update, risk review, portfolio rebalance, tax-loss harvesting, artifact publishing, optional institutional MCP-style connectors, and explicit human review gates at `/api/financial-services/readiness`
 - Analyst chat can use `LOCAL_LLM_BASE_URL` with a free/self-hosted OpenAI-compatible model before paid OpenAI models, then deterministic cockpit fallback
 - Supervised agent-trading rail at `/api/agent-trader/policy`, `/api/agent-trader/proposals`, and `/api/agent-trader/execute`; agents can draft orders, paper-trade, and submit live-money orders only when live-agent gates and per-order acknowledgement pass
 - Options volatility context at `/api/options/volatility` using Alpaca contracts/snapshots where available, with OPRA/indicative/contract-only quality labels
@@ -70,6 +71,7 @@ This is a mobile-first trading research and intelligence cockpit. It is built fo
 - Rule-based `Buy Watch`, `Sell/Exit Watch`, and `Hold/No Trade` alerts with confidence, invalidation, target, and risk cap
 - Dedicated `Buy Lead - Wait for Trigger` ranking so the dashboard still shows the closest buy candidates when no symbol qualifies for an active buy watch
 - Strict first-screen `Buy Now` gate that only promotes a symbol when fresh data, active trigger, confidence, reward/risk, and position sizing all pass
+- Optimal day-trading composite strategy automatically applied to signals, buy leads, and buy-now candidates, combining VWAP continuation, opening-range breakout, failed-breakout/reversal, catalyst momentum, VWAP mean reversion, support/resistance reactions, and trend pullbacks with freshness, liquidity, reward/risk, extension, and session vetoes
 - Trade Ticket workflow that turns the selected buy lead into entry, stop, target, units, max loss, reward/risk, confirmations, and do-not-trade rules
 - Local paper ticket tracking for simulated plans before broker paper execution is connected
 - Browser notification support for active buy/sell-watch alerts
@@ -158,6 +160,7 @@ Free/no-license feeds are now the default for research and monitoring, but they 
 - [Algorithm Council](docs/ALGORITHM_COUNCIL.md)
 - [Institutional Gates](docs/INSTITUTIONAL_GATES.md)
 - [Research Stack](docs/RESEARCH_STACK.md)
+- [Financial Services Workflows](docs/FINANCIAL_SERVICES_WORKFLOWS.md)
 - [Systematic Trading Reference Map](docs/SYSTEMATIC_TRADING_REFERENCE_MAP.md)
 - [Alpha Vantage Worker](docs/ALPHA_VANTAGE_WORKER.md)
 - [Alphalens Worker](docs/ALPHALENS_WORKER.md)

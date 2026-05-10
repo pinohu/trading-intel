@@ -2,6 +2,7 @@ import type { AgentTradeProposal, AgentTradingPolicy } from "@/lib/agentTrader";
 import type { BrokerMode, ValidatedBrokerOrder } from "@/lib/broker";
 import { databaseConfigured } from "@/lib/db";
 import type { PreTradeControlResult } from "@/lib/executionControl";
+import { financialServicesChecklist, humanReviewGates, workflowLabelsForGovernance } from "@/lib/financialServicesWorkflows";
 import type { FusionPrediction } from "@/lib/fusionAlpha";
 import { executionReferenceChecklist, minimumReferenceRewardRisk, referenceReportLessons } from "@/lib/referenceReports";
 import { getControlValue, upsertControlValue } from "@/lib/persistence";
@@ -54,6 +55,9 @@ export type OrchestrationRun = {
     noLiveWithoutRiskApproval: true;
     referenceReportsApplied: string[];
     referenceChecklist: string[];
+    financialServicesWorkflowsApplied: string[];
+    financialServicesChecklist: string[];
+    humanReviewGates: string[];
   };
 };
 
@@ -130,6 +134,9 @@ export function buildOrchestrationRun({
       noLiveWithoutRiskApproval: true,
       referenceReportsApplied: referenceReportLessons.map((lesson) => lesson.title),
       referenceChecklist: executionReferenceChecklist(),
+      financialServicesWorkflowsApplied: workflowLabelsForGovernance(),
+      financialServicesChecklist: financialServicesChecklist(),
+      humanReviewGates,
     },
   };
 }

@@ -189,6 +189,9 @@ describe("orchestration", () => {
     expect(run.decision.live.status).toBe("approval-required");
     expect(run.governance.noLiveWithoutRiskApproval).toBe(true);
     expect(run.governance.referenceReportsApplied).toContain("Broker Execution");
+    expect(run.governance.financialServicesWorkflowsApplied).toContain("Risk Reviewer");
+    expect(run.governance.financialServicesChecklist).toContain("Untrusted documents cannot instruct the agent or app.");
+    expect(run.governance.humanReviewGates).toContain("operator-acknowledged");
   });
 
   it("blocks paper and live execution when the prediction carries risk blockers", () => {

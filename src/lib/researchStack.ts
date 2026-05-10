@@ -1,4 +1,5 @@
 import { databaseConfigured } from "@/lib/db";
+import { buildInstitutionalConnectors, financialServicesWorkflows, type InstitutionalConnector } from "@/lib/financialServicesWorkflows";
 import { cleanSecret } from "@/lib/security";
 
 export type ResearchStackComponent = {
@@ -36,6 +37,17 @@ export type ResearchStackReadiness = {
     command: string;
     urlEnv: string;
   }>;
+  financialServices: {
+    source: "anthropic-financial-services-patterns";
+    workflowCount: number;
+    workflows: Array<{
+      key: string;
+      label: string;
+      category: string;
+      executionBoundary: string;
+    }>;
+    institutionalConnectors: InstitutionalConnector[];
+  };
   missingExternalEntitlements: string[];
 };
 
@@ -493,6 +505,7 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
 
   const criticalKeys = new Set(["alpaca", "sec-edgar", "public-market-fallbacks", "postgres"]);
   const configured = components.filter((component) => component.ready).length;
+  const institutionalConnectors = buildInstitutionalConnectors();
   const criticalConfigured = components.filter((component) => criticalKeys.has(component.key) && component.ready).length;
   const criticalTotal = criticalKeys.size;
   const workerCount = components.filter((component) => component.mode === "worker" && component.ready).length;
@@ -555,6 +568,17 @@ export function buildResearchStackReadiness(): ResearchStackReadiness {
     criticalConfigured,
     criticalTotal,
     components,
+    financialServices: {
+      source: "anthropic-financial-services-patterns",
+      workflowCount: financialServicesWorkflows.length,
+      workflows: financialServicesWorkflows.map((workflow) => ({
+        key: workflow.key,
+        label: workflow.label,
+        category: workflow.category,
+        executionBoundary: workflow.executionBoundary,
+      })),
+      institutionalConnectors,
+    },
     freeReplacements,
     workerCommands: [
       {

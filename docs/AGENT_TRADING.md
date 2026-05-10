@@ -1,5 +1,19 @@
 # Agent Trading
 
+## Optimal Strategy Layer
+
+Signals, buy leads, and buy-now candidates now carry `optimalStrategy`, a deterministic composite strategy result. It combines:
+
+- VWAP trend continuation
+- Opening-range breakout
+- Failed breakout / reversal
+- Catalyst momentum
+- VWAP mean reversion
+- Support / resistance reaction
+- Trend pullback
+
+The layer can support a buy watch, flag sell/avoid risk, ask the operator to wait, or block promotion. It never places orders. Freshness, regular-session state, liquidity, reward/risk, range quality, extended-move risk, severe weakness, and data-quality labels can veto or reduce risk before any paper or live gate sees the idea.
+
 The platform supports supervised agent trading:
 
 - agents can scan markets,
