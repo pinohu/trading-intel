@@ -39,7 +39,7 @@ import {
   Zap,
 } from "lucide-react";
 import dynamic from "next/dynamic";
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { Component, createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { engineCapabilities, engineWorkflow, type EngineCapability } from "@/lib/engineCatalog";
 import { buildFusionAlphaPredictions, type FusionEngineFinding, type FusionPrediction } from "@/lib/fusionAlpha";
@@ -107,6 +107,60 @@ type DiagnosticsPayload = {
 };
 
 const QuoteHistoryContext = createContext<Record<string, SparkPoint[]>>({});
+
+class DashboardRuntimeBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
+  state: { error: Error | null } = { error: null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+
+  componentDidCatch(error: Error) {
+    console.error("Dashboard render failed", error);
+  }
+
+  resetWorkspace = () => {
+    window.localStorage.removeItem("ti_watchlist");
+    window.localStorage.removeItem("ti_journal");
+    window.localStorage.removeItem("ti_paper_trades");
+    window.localStorage.removeItem("ti_assistant_chat");
+    window.location.reload();
+  };
+
+  render() {
+    if (!this.state.error) return this.props.children;
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-[var(--background)] px-4 text-[var(--foreground)]">
+        <section className="w-full max-w-xl rounded-lg border border-rose-300/30 bg-[var(--surface-raised)] p-5 shadow-2xl shadow-black/30">
+          <div className="flex items-center gap-2 text-rose-200">
+            <AlertTriangle className="h-5 w-5" />
+            <h1 className="text-xl font-semibold text-white">Dashboard panel failed to render</h1>
+          </div>
+          <p className="mt-3 text-sm leading-6 text-slate-300">
+            A saved dashboard payload or browser cache entry has a shape this build cannot render. The broker rail is not affected.
+          </p>
+          <pre className="mt-3 max-h-40 overflow-auto rounded-md border border-white/10 bg-black/30 p-3 text-xs text-rose-100">
+            {this.state.error.message}
+          </pre>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              onClick={() => window.location.reload()}
+              className="inline-flex h-10 items-center justify-center rounded-md border border-white/10 bg-white px-3 text-sm font-semibold text-slate-950"
+            >
+              Reload
+            </button>
+            <button
+              onClick={this.resetWorkspace}
+              className="inline-flex h-10 items-center justify-center rounded-md border border-rose-300/30 bg-rose-300 px-3 text-sm font-semibold text-slate-950"
+            >
+              Reset Local Dashboard Cache
+            </button>
+          </div>
+        </section>
+      </main>
+    );
+  }
+}
 
 type Quote = {
   symbol: string;
@@ -2136,6 +2190,7 @@ export default function Home() {
 
   return (
     <QuoteHistoryContext.Provider value={quoteHistory}>
+      <DashboardRuntimeBoundary>
       <main className="min-h-screen overflow-x-hidden bg-[var(--background)] text-[var(--foreground)]">
       <a
         href="#overview"
@@ -3080,6 +3135,7 @@ export default function Home() {
         </aside>
       </section>
       </main>
+      </DashboardRuntimeBoundary>
     </QuoteHistoryContext.Provider>
   );
 }
