@@ -1003,7 +1003,26 @@ export default function Home() {
     () => [...quotes].sort((a, b) => scoreQuote(b) - scoreQuote(a)),
     [quotes],
   );
-  const spark = selectedQuote ? makeSpark(selectedQuote.symbol, selectedQuote.price) : [];
+  const spark = useMemo(
+    () => (selectedQuote ? makeSpark(selectedQuote.symbol, selectedQuote.price) : []),
+    [selectedQuote],
+  );
+  const activeChartActions = useMemo(() => {
+    if (!selectedQuote || spark.length === 0) return [];
+    const symbolTrades = paperTrades
+      .filter((trade) => trade.symbol === selectedQuote.symbol && trade.status === "Watching")
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    if (symbolTrades.length === 0) return [];
+    return symbolTrades.map((trade, index) => ({
+      id: trade.id,
+      label: `${trade.side} ${trade.symbol}`,
+      side: trade.side,
+      status: trade.status,
+      entry: trade.entry,
+      createdAt: trade.createdAt,
+      index: Math.min(spark.length - 1, Math.round(((index + 1) * spark.length) / (symbolTrades.length + 1))),
+    }));
+  }, [selectedQuote, spark, paperTrades]);
   const strategies = selectedQuote
     ? simulateStrategies(selectedQuote.symbol, selectedQuote.price, lookback, backtestRisk)
     : [];
@@ -1867,7 +1886,7 @@ export default function Home() {
               <div className="min-h-[280px] flex-1">
                 <SectionTitle icon={BarChart3} title={`${selectedQuote?.symbol ?? "Watchlist"} Price Map`} />
                 <div className="mt-4 h-64">
-                  <PriceChart data={spark} />
+                  <PriceChart data={spark} actions={activeChartActions} />
                 </div>
               </div>
               <div className="grid gap-3 lg:w-72">
